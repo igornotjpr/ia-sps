@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ferramentas — Seção de Processo Seletivo (TJPR)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    /* Cores institucionais oficiais do TJPR (Manual de Uso da Marca) */
+    --navy: #002a3a;      /* Pantone 303 C — cor primária */
+    --navy-light: #0d4658;
+    --teal: #008c95;      /* Pantone 321 C — cor secundária */
+    --mint: #49c5b1;      /* Pantone 3258 C */
+    --gold: #eeb134;      /* Pantone 116 C */
+    --coral: #eb553b;     /* Pantone 2026 C */
+
+    --paper: #eef1f2;
+    --paper-dark: #dde4e6;
+    --ink: #14232a;
+    --ink-soft: #4d5e64;
+    --line: #c7d2d5;
+    --white: #ffffff;
+
+    /* aliases mantidos para o restante do CSS */
+    --seal: var(--navy);
+    --seal-light: var(--teal);
+    --stamp-red: var(--coral);
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top left, rgba(255,255,255,0.25), transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Barlow', sans-serif;
+    padding:32px 16px 80px;
+  }
+
+  .sheet{
+    max-width:980px;
+    margin:0 auto;
+    background:var(--white);
+    border:1px solid var(--line);
+    box-shadow:0 1px 0 var(--line), 0 18px 40px -24px rgba(35,40,31,0.45);
+    position:relative;
+  }
+
+  .sheet::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:6px;
+    background:linear-gradient(90deg, var(--navy) 0%, var(--navy) 20%, var(--teal) 20%, var(--teal) 40%, var(--mint) 40%, var(--mint) 60%, var(--gold) 60%, var(--gold) 80%, var(--coral) 80%, var(--coral) 100%);
+  }
+
+  .institutional-header{
+    padding:22px 40px;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    border-bottom:1px solid var(--line);
+    background:var(--white);
+  }
+
+  .institutional-header img{
+    height:52px;
+    width:auto;
+    flex-shrink:0;
+  }
+
+  .institutional-header .tjpr-fallback{
+    display:none;
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:700;
+    font-size:22px;
+    color:var(--navy);
+    letter-spacing:0.02em;
+    line-height:1;
+    flex-shrink:0;
+  }
+  .institutional-header .tjpr-fallback small{
+    display:block;
+    font-family:'Barlow', sans-serif;
+    font-weight:500;
+    font-size:9px;
+    letter-spacing:0.08em;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
+  .institutional-header .tjpr-name{
+    font-family:'Barlow', sans-serif;
+    font-size:12px;
+    color:var(--ink-soft);
+    line-height:1.4;
+    border-left:1px solid var(--line);
+    padding-left:18px;
+  }
+  .institutional-header .tjpr-name strong{
+    display:block;
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:var(--navy);
+    letter-spacing:0.01em;
+  }
+
+  .unit-block{
+    padding:18px 40px;
+    background:var(--navy);
+    color:var(--white);
+  }
+
+  .unit-code{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:0.1em;
+    color:var(--mint);
+    margin:0 0 6px;
+  }
+
+  .unit-name{
+    font-family:'Barlow', sans-serif;
+    font-size:13px;
+    line-height:1.5;
+    color:#dce9ec;
+    margin:0 0 4px;
+    max-width:760px;
+  }
+
+  .unit-section{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.01em;
+    color:var(--white);
+    margin:0;
+  }
+
+  .app-header{
+    background:var(--navy);
+  }
+
+  .tab-nav{
+    display:flex;
+    gap:4px;
+    padding:0 40px;
+    border-bottom:1px solid rgba(255,255,255,0.14);
+    overflow-x:auto;
+  }
+
+  .tab-btn{
+    background:transparent;
+    border:none;
+    padding:15px 22px;
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:0.03em;
+    color:rgba(255,255,255,0.55);
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+    margin-bottom:-1px;
+    white-space:nowrap;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .tab-btn:hover{ color:rgba(255,255,255,0.85); }
+  .tab-btn.active{ color:var(--white); border-bottom-color:var(--mint); }
+  .tab-btn:focus-visible{ outline:2px solid var(--mint); outline-offset:-2px; }
+
+  header{
+    padding:28px 40px 24px;
+  }
+
+  .app-header .eyebrow{ color:var(--mint); }
+  .app-header h1{ color:var(--white); }
+
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  .placeholder-panel{
+    text-align:center;
+    padding:70px 20px;
+  }
+  .placeholder-panel .placeholder-tag{
+    display:inline-block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--teal);
+    border:1px solid var(--line);
+    padding:4px 12px;
+    margin-bottom:14px;
+  }
+  .placeholder-panel h2{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-size:22px;
+    font-weight:700;
+    color:var(--ink);
+    margin:0 0 8px;
+  }
+  .placeholder-panel p{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    max-width:420px;
+    margin:0 auto;
+    line-height:1.6;
+  }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--seal);
+    margin:0 0 6px;
+  }
+
+  h1{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-size:30px;
+    font-weight:700;
+    margin:0;
+    line-height:1.15;
+  }
+
+  main{ padding:32px 40px 40px; }
+
+  .step{ margin-bottom:34px; }
+
+  .step-head{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom:10px;
+  }
+
+  .step-num{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--white);
+    background:var(--seal);
+    width:26px; height:26px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+
+  .step-title{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-size:18px;
+    font-weight:600;
+    margin:0;
+  }
+
+  .step-desc{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin:0 0 12px 36px;
+    line-height:1.5;
+  }
+
+  textarea{
+    width:100%;
+    min-height:160px;
+    padding:14px;
+    border:1px solid var(--line);
+    background:#fffdf7;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    line-height:1.5;
+    color:var(--ink);
+    resize:vertical;
+  }
+  textarea:focus, input:focus, button:focus, select:focus{
+    outline:2px solid var(--seal-light);
+    outline-offset:2px;
+  }
+
+  .file-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+
+  .file-btn{
+    font-family:'Barlow', sans-serif;
+    font-weight:500;
+    font-size:13.5px;
+    padding:10px 18px;
+    background:var(--ink);
+    color:var(--white);
+    border:none;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .file-btn:hover{ background:var(--seal); }
+  input[type=file]{ display:none; }
+  .file-name{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+
+  .run-btn{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.02em;
+    padding:14px 28px;
+    background:var(--seal);
+    color:var(--white);
+    border:none;
+    cursor:pointer;
+    width:100%;
+  }
+  .run-btn:hover{ background:var(--seal-light); }
+  .run-btn:disabled{ background:#a7a290; cursor:not-allowed; }
+
+  .divider{
+    border:none;
+    border-top:1px dashed var(--line);
+    margin:32px 0;
+  }
+
+  .stamp-wrap{
+    display:none;
+    align-items:center;
+    gap:18px;
+    margin-bottom:22px;
+    padding:16px 18px;
+    border:1px solid var(--line);
+    background:#fffdf7;
+    flex-wrap:wrap;
+  }
+  .stamp-wrap.show{ display:flex; }
+
+  .stamp{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:0.06em;
+    color:var(--seal);
+    border:3px solid var(--seal);
+    border-radius:50%;
+    width:74px; height:74px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    text-transform:uppercase;
+    transform:rotate(-8deg);
+    flex-shrink:0;
+    line-height:1.15;
+  }
+  .stamp.warn{
+    color:var(--stamp-red);
+    border-color:var(--stamp-red);
+  }
+
+  .stamp-text{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+  .stamp-text strong{ color:var(--ink); }
+
+  .warn-list{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--stamp-red);
+    margin:6px 0 0;
+    padding-left:18px;
+  }
+  .warn-list li{ margin-bottom:3px; }
+
+  .table-scroll{
+    overflow-x:auto;
+    border:1px solid var(--line);
+    max-height:480px;
+    overflow-y:auto;
+  }
+
+  table{
+    border-collapse:collapse;
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    white-space:nowrap;
+  }
+
+  thead th{
+    position:sticky; top:0;
+    background:var(--ink);
+    color:var(--white);
+    text-align:left;
+    padding:9px 10px;
+    font-weight:500;
+    letter-spacing:0.02em;
+    border-right:1px solid rgba(255,255,255,0.12);
+  }
+
+  tbody td{
+    padding:7px 10px;
+    border-bottom:1px solid var(--paper-dark);
+    border-right:1px solid var(--paper-dark);
+  }
+
+  tbody tr:nth-child(even){ background:#fbfaf4; }
+  tbody tr.unmatched{ background:#f7e9e4; }
+  tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
+
+  .download-row{
+    margin-top:22px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  .download-btn{
+    font-family:'Barlow Semi Condensed', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    padding:13px 26px;
+    background:var(--stamp-red);
+    color:var(--white);
+    border:none;
+    cursor:pointer;
+  }
+  .download-btn:hover{ background:#722525; }
+  .download-btn:disabled{ background:#a7a290; cursor:not-allowed; }
+
+  .count-note{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+
+  .empty-hint{
+    font-size:13px;
+    color:var(--ink-soft);
+    font-style:italic;
+    padding:18px 0;
+  }
+
+  footer{
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    padding:20px;
+    letter-spacing:0.04em;
+  }
+
+  @media (max-width:600px){
+    header{ padding:26px 20px 18px; }
+    main{ padding:24px 20px 32px; }
+    h1{ font-size:24px; }
+    .step-desc{ margin-left:0; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    * { transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div class="institutional-header">
+    <img src="https://www.tjpr.jus.br/documents/18319/18636849/logo_TJ.png/27c1fd01-c3a9-5746-4df0-f5345fd1d259?t=1561744266619"
+         alt="TJPR — Tribunal de Justiça do Estado do Paraná"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+    <div class="tjpr-fallback">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>
+    <div class="tjpr-name">
+      <strong>Tribunal de Justiça do Estado do Paraná</strong>
+      Secretaria de Gestão de Pessoas
+    </div>
+  </div>
+
+  <div class="unit-block">
+   	<p class="unit-section">Seção de Processo Seletivo</p>
+	<p class="unit-name">Ferramentas de apoio para importação de dados no Hércules</p>
+  </div>
+
+  <div class="app-header">
+    <nav class="tab-nav" id="tabNav">
+      <button class="tab-btn active" type="button" data-tab="ponto26" data-eyebrow="Processamento de classificação" data-title="Agrupador de Tabelas — Ponto 26">Ponto 26</button>
+      <button class="tab-btn" type="button" data-tab="ponto20" data-eyebrow="Em desenvolvimento" data-title="Ponto 20">Ponto 20</button>
+    </nav>
+    <header>
+      <div>
+        <p class="eyebrow" id="headerEyebrow">Processamento de classificação</p>
+        <h1 id="headerTitle">Agrupador de Tabelas — Ponto 26</h1>
+      </div>
+    </header>
+  </div>
+
+  <main>
+
+    <div class="tab-panel active" id="panel-ponto26">
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">1</span>
+        <p class="step-title">Cole a Tabela 1 (classificação oficial)</p>
+      </div>
+      <p class="step-desc">A Tabela 1 é a que consta no edital de Classificação Final do processo seletivo no SEI. Cole diretamente do Excel/Word ou como texto puro (ex: copiado de um PDF).</p>
+      <p class="step-desc">Cada linha deve trazer, nesta ordem: ORDEM, INSCRIÇÃO, NOME, NOTA e, quando houver, RESERVA. A primeira linha deve ser o cabeçalho.</p>
+	  <p class="step-desc">Após a colagem, a tabela deve aparecer como no exemplo abaixo:</p>
+
+	  <textarea id="tabela1Input" placeholder="ORDEM	INSCRIÇÃO	NOME	NOTA	RESERVA
+1	1111111	MARIA DA SILVA	0,90	
+2	2222222	FULANO DE TAL	0,85	2.1.1"></textarea>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">2</span>
+        <p class="step-title">Envie a Tabela 2 (dados cadastrais, CSV)</p>
+      </div>
+	  <p class="step-desc">A tabela 2 pode ser baixada da pasta VBA > Importação Classificados, disponível no Sharepoint da unidade.</p>
+      <p class="step-desc">Arquivo .csv separado por vírgulas contendo CPF, Nome do candidato, E-mail, Telefone celular e Telefone fixo.</p>
+      <div class="file-row">
+        <button class="file-btn" id="fileBtn" type="button">Escolher arquivo CSV</button>
+        <input type="file" id="tabela2File" accept=".csv,text/csv">
+        <span class="file-name" id="fileName">Nenhum arquivo selecionado</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <button class="run-btn" id="processBtn" disabled>Processar e cruzar tabelas</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="stamp-wrap" id="stampWrap">
+      <div class="stamp" id="stampBadge">OK</div>
+      <div class="stamp-text" id="stampText"></div>
+    </div>
+
+    <div id="resultArea">
+      <p class="empty-hint">A tabela final aparecerá aqui após o processamento.</p>
+    </div>
+
+    <div class="download-row" id="downloadRow" style="display:none;">
+      <button class="download-btn" id="downloadBtn">Baixar CSV (UTF-8)</button>
+      <span class="count-note" id="countNote"></span>
+    </div>
+
+    </div>
+
+    <div class="tab-panel" id="panel-ponto20">
+      <div class="placeholder-panel">
+        <span class="placeholder-tag">Em construção</span>
+        <h2>Ponto 20</h2>
+        <p>Esta aba ainda não possui conteúdo. A ferramenta será adicionada aqui em uma próxima versão.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+	  <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+		<strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+		É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+	  </p>
+	  <p>ORDEM · INSCRIÇÃO · CLASSIFICAÇÃO — cruzamento automático por nome do candidato</p>
+	  <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de IA por Igor Pankiewicz</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const fileBtn = document.getElementById('fileBtn');
+  const fileInput = document.getElementById('tabela2File');
+  const fileName = document.getElementById('fileName');
+  const processBtn = document.getElementById('processBtn');
+  const tabela1Input = document.getElementById('tabela1Input');
+  const resultArea = document.getElementById('resultArea');
+  const downloadRow = document.getElementById('downloadRow');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const countNote = document.getElementById('countNote');
+  const stampWrap = document.getElementById('stampWrap');
+  const stampBadge = document.getElementById('stampBadge');
+  const stampText = document.getElementById('stampText');
+
+  let tabela2Rows = [];
+  let outputRows = [];
+
+  const OUT_COLS = ["Classificação","CPF","Nome do candidato","Nota final","E-mail","Telefone celular","Telefone fixo","PNE","VS","AFRO","INDÍGENA"];
+
+  // Navegação entre abas
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const headerEyebrow = document.getElementById('headerEyebrow');
+  const headerTitle = document.getElementById('headerTitle');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+      tabPanels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + target));
+      headerEyebrow.textContent = btn.dataset.eyebrow;
+      headerTitle.textContent = btn.dataset.title;
+    });
+  });
+
+  fileBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    if(fileInput.files && fileInput.files[0]){
+      fileName.textContent = fileInput.files[0].name;
+      checkReady();
+    } else {
+      fileName.textContent = 'Nenhum arquivo selecionado';
+    }
+  });
+
+  tabela1Input.addEventListener('input', checkReady);
+
+  function checkReady(){
+    const hasTabela1 = tabela1Input.value.trim().length > 0;
+    const hasTabela2 = fileInput.files && fileInput.files[0];
+    processBtn.disabled = !(hasTabela1 && hasTabela2);
+  }
+
+  function normName(s){
+    if(!s) return '';
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toUpperCase()
+      .replace(/[^A-Z\s]/g,'')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+
+  function detectDelimiter(text){
+    const firstLine = text.split(/\r\n|\r|\n/)[0] || '';
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semiCount = (firstLine.match(/;/g) || []).length;
+    return semiCount > commaCount ? ';' : ',';
+  }
+
+  // Robust CSV line parser (handles quoted fields; delimiter is auto-detected —
+  // Excel exportado em locale pt-BR normalmente usa ";" em vez de ",")
+  function parseCSV(text){
+    const delim = detectDelimiter(text);
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+    // normalize line endings
+    text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    for(let i=0; i<text.length; i++){
+      const c = text[i];
+      if(inQuotes){
+        if(c === '"'){
+          if(text[i+1] === '"'){ field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else {
+        if(c === '"'){ inQuotes = true; }
+        else if(c === delim){ row.push(field); field=''; }
+        else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+        else { field += c; }
+      }
+    }
+    if(field.length > 0 || row.length > 0){ row.push(field); rows.push(row); }
+    return rows.filter(r => !(r.length===1 && r[0].trim()===''));
+  }
+
+  // Table 1 always has the fixed shape ORDEM / INSCRIÇÃO / NOME / NOTA / RESERVA(opcional).
+  // Rather than splitting on delimiters (fragile when names have single spaces and the
+  // paste is plain aligned text, not real tabs), each data line is matched against a
+  // pattern that recognizes the two leading numbers, a trailing decimal (NOTA), and an
+  // optional trailing X.X.X code (RESERVA) — everything in between is the NOME.
+  const ROW_RE = /^(\d+)\s+(\d+)\s+(.+?)\s+(\d{1,3}(?:[.,]\d{1,2})?)(?:\s+(\d(?:[.,]\d){1,3}))?\s*$/;
+
+  function parseTabela1(text){
+    const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l=>l.trim()).filter(l => l !== '');
+    if(lines.length < 2) return { rows: [], errors: [] };
+
+    // skip the header line (identified by containing "ORDEM"); if not found, assume line 0 is header anyway
+    let startIdx = 0;
+    if(/ORDEM/i.test(lines[0])) startIdx = 1;
+
+    const rows = [];
+    const errors = [];
+    for(let i=startIdx;i<lines.length;i++){
+      const line = lines[i];
+      const m = line.match(ROW_RE);
+      if(!m){
+        errors.push(line);
+        continue;
+      }
+      rows.push({
+        ORDEM: m[1],
+        INSCRICAO: m[2],
+        NOME: m[3].trim(),
+        NOTA: m[4].replace(',', '.'),
+        RESERVA: m[5] || ''
+      });
+    }
+    return { rows, errors };
+  }
+
+  function findCol(headers, candidates){
+    for(const cand of candidates){
+      const idx = headers.findIndex(h => normName(h) === normName(cand));
+      if(idx !== -1) return headers[idx];
+    }
+    return null;
+  }
+
+  function processFiles(){
+    const t1 = parseTabela1(tabela1Input.value);
+    if(t1.rows.length === 0){
+      alert('Não foi possível interpretar nenhuma linha da Tabela 1. Verifique se cada linha começa com ORDEM e INSCRIÇÃO numéricos, seguidos do nome e de uma nota (ex: 1  5116156  KADU LAIBIDA CORREA  8.00).');
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e){
+      let text = e.target.result;
+      // strip BOM
+      if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const csvRows = parseCSV(text);
+      if(csvRows.length < 2){
+        alert('O arquivo CSV da Tabela 2 parece vazio ou inválido.');
+        return;
+      }
+      const h2 = csvRows[0].map(h => h.trim());
+      const colCPF = findCol(h2, ['CPF']);
+      const colNome2 = findCol(h2, ['Nome do candidato','Nome']);
+      const colEmail = findCol(h2, ['E-mail','Email']);
+      const colCel = findCol(h2, ['Telefone celular','Celular']);
+      const colFixo = findCol(h2, ['Telefone fixo','Fixo']);
+
+      tabela2Rows = csvRows.slice(1).map(r => {
+        const obj = {};
+        h2.forEach((h,idx) => obj[h] = r[idx] !== undefined ? r[idx] : '');
+        return obj;
+      });
+
+      // build lookup by normalized name
+      const lookup = {};
+      const dupNames = new Set();
+      tabela2Rows.forEach(r => {
+        const key = normName(colNome2 ? r[colNome2] : '');
+        if(!key) return;
+        if(lookup[key]) dupNames.add(key);
+        else lookup[key] = r;
+      });
+
+      const unmatched = [];
+      outputRows = t1.rows.map(r1 => {
+        const nome1 = r1.NOME || '';
+        const key = normName(nome1);
+        const match = lookup[key];
+        if(!match) unmatched.push(nome1);
+
+        const reserva = r1.RESERVA || '';
+        const flag = (code) => reserva.indexOf(code) !== -1 ? 'S' : 'N';
+
+        return {
+          "Classificação": r1.ORDEM || '',
+          "CPF": match && colCPF ? match[colCPF] : '',
+          "Nome do candidato": match && colNome2 ? match[colNome2] : nome1,
+          "Nota final": (r1.NOTA || '').replace('.', ','),
+          "E-mail": match && colEmail ? match[colEmail] : '',
+          "Telefone celular": match && colCel ? match[colCel] : '',
+          "Telefone fixo": match && colFixo ? match[colFixo] : '',
+          "PNE": flag('2.1.2'),
+          "VS": flag('2.1.4'),
+          "AFRO": flag('2.1.1'),
+          "INDÍGENA": flag('2.1.3'),
+          "_unmatched": !match
+        };
+      });
+
+      renderResults(unmatched, dupNames.size, t1.errors);
+    };
+    reader.onerror = function(){
+      alert('Erro ao ler o arquivo CSV.');
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function renderResults(unmatched, dupCount, parseErrors){
+    parseErrors = parseErrors || [];
+    // stamp
+    stampWrap.classList.add('show');
+    if(unmatched.length === 0 && parseErrors.length === 0){
+      stampBadge.classList.remove('warn');
+      stampBadge.textContent = 'CONFERIDO';
+      stampText.innerHTML = '<strong>' + outputRows.length + ' registros</strong> cruzados com sucesso. Todos os nomes da Tabela 1 foram encontrados na Tabela 2.';
+    } else {
+      stampBadge.classList.add('warn');
+      stampBadge.textContent = 'REVISAR';
+      let html = '<strong>' + outputRows.length + ' registros</strong> gerados';
+      if(unmatched.length > 0){
+        html += ' — <strong style="color:var(--stamp-red)">' + unmatched.length + ' sem correspondência</strong> na Tabela 2 (linhas destacadas abaixo, campos vazios preenchidos apenas com dados da Tabela 1)';
+      }
+      html += '.';
+      if(dupCount > 0){
+        html += '<br>Atenção: ' + dupCount + ' nome(s) duplicado(s) na Tabela 2 — usada a primeira ocorrência.';
+      }
+      if(unmatched.length > 0){
+        html += '<ul class="warn-list">' + unmatched.slice(0,12).map(n => '<li>' + escapeHtml(n) + '</li>').join('') + (unmatched.length>12 ? '<li>… e mais ' + (unmatched.length-12) + '</li>' : '') + '</ul>';
+      }
+      if(parseErrors.length > 0){
+        html += '<br><strong style="color:var(--stamp-red)">' + parseErrors.length + ' linha(s) da Tabela 1 não reconhecida(s)</strong> e ignorada(s) — confira o formato (ORDEM  INSCRIÇÃO  NOME  NOTA  RESERVA):';
+        html += '<ul class="warn-list">' + parseErrors.slice(0,8).map(n => '<li>' + escapeHtml(n) + '</li>').join('') + (parseErrors.length>8 ? '<li>… e mais ' + (parseErrors.length-8) + '</li>' : '') + '</ul>';
+      }
+      stampText.innerHTML = html;
+    }
+
+    // table
+    let html = '<div class="table-scroll"><table><thead><tr>' +
+      OUT_COLS.map(c => '<th>'+c+'</th>').join('') +
+      '</tr></thead><tbody>';
+    outputRows.forEach(r => {
+      html += '<tr' + (r._unmatched ? ' class="unmatched"' : '') + '>' +
+        OUT_COLS.map(c => '<td>'+escapeHtml(r[c] || '')+'</td>').join('') +
+        '</tr>';
+    });
+    html += '</tbody></table></div>';
+    resultArea.innerHTML = html;
+
+    downloadRow.style.display = 'flex';
+    countNote.textContent = outputRows.length + ' linha(s) — CSV separado por ";" (abre em colunas automaticamente no Excel PT-BR).';
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function csvEscape(val){
+    val = String(val === undefined || val === null ? '' : val);
+    if(/[";\n]/.test(val)){
+      return '"' + val.replace(/"/g,'""') + '"';
+    }
+    return val;
+  }
+
+  function downloadCSV(){
+    const lines = [];
+    lines.push(OUT_COLS.map(csvEscape).join(';'));
+    outputRows.forEach(r => {
+      lines.push(OUT_COLS.map(c => csvEscape(r[c])).join(';'));
+    });
+    const csvContent = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const now = new Date();
+    const stamp = now.toISOString().slice(0,10);
+    a.href = url;
+    a.download = 'tabela_final_classificacao_' + stamp + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  processBtn.addEventListener('click', processFiles);
+  downloadBtn.addEventListener('click', downloadCSV);
+})();
+</script>
+
+</body>
+</html>
