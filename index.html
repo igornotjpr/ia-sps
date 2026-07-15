@@ -150,6 +150,7 @@
     padding:0 40px;
     border-bottom:1px solid rgba(255,255,255,0.14);
     overflow-x:auto;
+    overflow-y:hidden;
   }
 
   .tab-btn{
@@ -527,8 +528,9 @@
 
   <div class="app-header">
     <nav class="tab-nav" id="tabNav">
-      <button class="tab-btn active" type="button" data-tab="ponto26" data-eyebrow="Processamento de classificação" data-title="Agrupador de Tabelas — Ponto 26">Ponto 26</button>
+      <button class="tab-btn" type="button" data-tab="edital" data-eyebrow="Referência normativa" data-title="Edital">Edital</button>
       <button class="tab-btn" type="button" data-tab="ponto20" data-eyebrow="Cruzamento de classificação e inscritos" data-title="Cruzador Classificação × Inscritos — Ponto 20">Ponto 20</button>
+      <button class="tab-btn active" type="button" data-tab="ponto26" data-eyebrow="Processamento de classificação" data-title="Agrupador de Tabelas — Ponto 26">Ponto 26</button>
     </nav>
     <header>
       <div>
@@ -539,6 +541,14 @@
   </div>
 
   <main>
+
+    <div class="tab-panel" id="panel-edital">
+      <div class="placeholder-panel">
+        <span class="placeholder-tag">Em construção</span>
+        <h2>Edital</h2>
+        <p>Esta aba ainda não possui conteúdo. O material de referência do edital será adicionado aqui em uma próxima versão.</p>
+      </div>
+    </div>
 
     <div class="tab-panel active" id="panel-ponto26">
     <div class="step">
