@@ -300,16 +300,12 @@
   table.simple-table{
     border-collapse:collapse;
     width:100%;
-    font-family:'Barlow', sans-serif;
-    font-size:13.5px;
   }
   table.simple-table th,
   table.simple-table td{
     border:1pt solid #000000;
     padding:6px 10px;
     text-align:left;
-    color:#000000;
-    background:#ffffff;
   }
   table.simple-table th{
     font-weight:700;
@@ -513,8 +509,8 @@
 
 <div class="sheet">
   <div class="institutional-header">
-    <img src="./Ferramentas — Seção de Processo Seletivo (TJPR)_files/logo_TJ.png" alt="TJPR — Tribunal de Justiça do Estado do Paraná" onerror="this.style.display=&#39;none&#39;; this.nextElementSibling.style.display=&#39;block&#39;;">
-    <div class="tjpr-fallback">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>
+    <img src="./Ferramentas — Seção de Processo Seletivo (TJPR)_files/logo_TJ.png" alt="TJPR — Tribunal de Justiça do Estado do Paraná" onerror="this.style.display=&#39;none&#39;; this.nextElementSibling.style.display=&#39;block&#39;;" style="display: none;">
+    <div class="tjpr-fallback" style="display: block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>
     <div class="tjpr-name">
       <strong>Tribunal de Justiça do Estado do Paraná</strong>
       Secretaria de Gestão de Pessoas
@@ -529,13 +525,13 @@
   <div class="app-header">
     <nav class="tab-nav" id="tabNav">
       <button class="tab-btn" type="button" data-tab="edital" data-eyebrow="Referência normativa" data-title="Edital">Edital</button>
-      <button class="tab-btn" type="button" data-tab="ponto20" data-eyebrow="Cruzamento de classificação e inscritos" data-title="Cruzador Classificação × Inscritos — Ponto 20">Ponto 20</button>
-      <button class="tab-btn active" type="button" data-tab="ponto26" data-eyebrow="Processamento de classificação" data-title="Agrupador de Tabelas — Ponto 26">Ponto 26</button>
+      <button class="tab-btn active" type="button" data-tab="ponto20" data-eyebrow="Cruzamento de classificação e inscritos" data-title="Cruzador Classificação × Inscritos — Ponto 20">Ponto 20</button>
+      <button class="tab-btn" type="button" data-tab="ponto26" data-eyebrow="Processamento de classificação" data-title="Agrupador de Tabelas — Ponto 26">Ponto 26</button>
     </nav>
     <header>
       <div>
-        <p class="eyebrow" id="headerEyebrow">Processamento de classificação</p>
-        <h1 id="headerTitle">Agrupador de Tabelas — Ponto 26</h1>
+        <p class="eyebrow" id="headerEyebrow">Cruzamento de classificação e inscritos</p>
+        <h1 id="headerTitle">Cruzador Classificação × Inscritos — Ponto 20</h1>
       </div>
     </header>
   </div>
@@ -550,7 +546,7 @@
       </div>
     </div>
 
-    <div class="tab-panel active" id="panel-ponto26">
+    <div class="tab-panel" id="panel-ponto26">
     <div class="step">
       <div class="step-head">
         <span class="step-num">1</span>
@@ -601,7 +597,7 @@
 
     </div>
 
-    <div class="tab-panel" id="panel-ponto20">
+    <div class="tab-panel active" id="panel-ponto20">
 
     <div class="step">
       <div class="step-head">
@@ -612,7 +608,7 @@
       <div class="file-row">
         <button class="file-btn" id="p20FileBtn1" type="button">Escolher arquivo (Tabela 1)</button>
         <input type="file" id="p20Tabela1File" accept=".xlsx,.xls,.csv">
-        <span class="file-name" id="p20FileName1">Nenhum arquivo selecionado</span>
+        <span class="file-name" id="p20FileName1">Relatorio-de-classificacao-final_5e4d66b7-5538-4b49-93f3-f3dc01c3adf4..xlsx</span>
       </div>
     </div>
 
@@ -625,7 +621,7 @@
       <div class="file-row">
         <button class="file-btn" id="p20FileBtn2" type="button">Escolher arquivo (Tabela 2)</button>
         <input type="file" id="p20Tabela2File" accept=".xlsx,.xls,.csv">
-        <span class="file-name" id="p20FileName2">Nenhum arquivo selecionado</span>
+        <span class="file-name" id="p20FileName2">Relatorio-de-inscritos_8caf52c8-f5f5-4ee7-b7cc-984be5ba3830..xlsx</span>
       </div>
     </div>
 
@@ -639,22 +635,22 @@
     </div>
 
     <div class="step">
-      <button class="run-btn" id="p20ProcessBtn" disabled>Processar e cruzar tabelas</button>
+      <button class="run-btn" id="p20ProcessBtn">Processar e cruzar tabelas</button>
     </div>
 
     <hr class="divider">
 
-    <div class="stamp-wrap" id="p20StampWrap">
-      <div class="stamp" id="p20StampBadge">CONFERIDO</div>
-      <div class="stamp-text" id="p20StampText"></div>
+    <div class="stamp-wrap show" id="p20StampWrap">
+      <div class="stamp warn" id="p20StampBadge">REVISAR</div>
+      <div class="stamp-text" id="p20StampText"><strong>5 registros</strong> gerados — atenção: a Tabela 1 possui apenas <strong>5</strong> candidato(s) classificado(s) (não-REPROVADO), menos do que os 10 solicitados.</div>
     </div>
 
-    <div id="p20ResultArea"><p class="empty-hint">A tabela final aparecerá aqui após o processamento.</p></div>
+    <div id="p20ResultArea"><div class="simple-table-wrap"><table class="simple-table"><thead><tr><th>ORDEM</th><th>INSCRIÇÃO</th><th>NOME</th><th>NOTA</th><th>RESERVA</th></tr></thead><tbody><tr><td>1</td><td>5182649</td><td>DANNA KALI FRANKE</td><td>9,75</td><td></td></tr><tr><td>2</td><td>5185295</td><td>ANDREA LUDMILA SILVA DE LIMA</td><td>9,25</td><td></td></tr><tr><td>3</td><td>5185999</td><td>GABRIELA BRAGHIROLLI</td><td>9,00</td><td></td></tr><tr><td>4</td><td>5199970</td><td>GIOVANA DE ABREU ROCHA</td><td>8,25</td><td></td></tr><tr><td>5</td><td>5184668</td><td>JULIA FURUKAWA</td><td>8,00</td><td></td></tr></tbody></table></div></div>
 
-    <div class="download-row" id="p20DownloadRow" style="display:none;">
+    <div class="download-row" id="p20DownloadRow" style="display: flex;">
       <button class="download-btn" id="p20CopyBtn">Copiar tabela (com cabeçalho)</button>
       <button class="download-btn" id="p20DownloadBtn" style="background:var(--ink);">Baixar CSV (UTF-8)</button>
-      <span class="count-note" id="p20CountNote"></span>
+      <span class="count-note" id="p20CountNote">5 linha(s) na tabela final.</span>
     </div>
 
     </div>
@@ -1294,34 +1290,86 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     return lines.join('\n');
   }
 
-  copyBtn.addEventListener('click', async function(){
+  // HTML de tabela "limpo" só para a área de transferência: sem font-family, sem
+  // font-size, sem cor de destaque das linhas sem correspondência — apenas bordas
+  // de 1pt em preto e negrito no cabeçalho. É esse HTML (não a tabela da tela) que
+  // o navegador cola no Word/Excel como uma tabela de verdade, sem herdar
+  // formatação extra da página.
+  function buildCleanTableHTML(){
+    // Importante: usar <td> em vez de <th> para o cabeçalho. Quando o destino é
+    // Word/Excel, a tag <th> é reconhecida como "linha de cabeçalho" e o próprio
+    // aplicativo aplica seu estilo automático de tabela (fonte maior, centralizada),
+    // ignorando o text-align/negrito definidos aqui. Usando só <td> com negrito via
+    // style, nada além do que está explícito abaixo é aplicado.
+    const cellStyle = 'border:1pt solid #000000;text-align:left;padding:4px 8px;font-weight:normal;';
+    const headerStyle = 'border:1pt solid #000000;text-align:left;padding:4px 8px;font-weight:bold;';
+    let html = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;">';
+    html += '<tr>' + OUT_COLS.map(c =>
+      '<td style="' + headerStyle + '">' + escapeHtml(c) + '</td>'
+    ).join('') + '</tr>';
+    outputRows.forEach(r => {
+      html += '<tr>' + OUT_COLS.map(c =>
+        '<td style="' + cellStyle + '">' + escapeHtml(r[c] === undefined || r[c] === null ? '' : r[c]) + '</td>'
+      ).join('') + '</tr>';
+    });
+    html += '</table>';
+    return html;
+  }
+
+  async function copyTableToClipboard(){
     if(outputRows.length === 0) return;
     const tsv = buildTSV();
-    try{
-      await navigator.clipboard.writeText(tsv);
-      const original = copyBtn.textContent;
-      copyBtn.textContent = 'Copiado!';
-      setTimeout(() => { copyBtn.textContent = original; }, 1800);
-    } catch(err){
-      // Fallback para navegadores/contextos sem permissão de clipboard
-      const ta = document.createElement('textarea');
-      ta.value = tsv;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
+    const htmlTable = buildCleanTableHTML();
+
+    // Caminho principal: grava HTML (para ser reconhecido como tabela ao colar
+    // no Word/Excel/e-mail) e texto puro (fallback) ao mesmo tempo.
+    if(navigator.clipboard && window.ClipboardItem){
       try{
-        document.execCommand('copy');
-        const original = copyBtn.textContent;
-        copyBtn.textContent = 'Copiado!';
-        setTimeout(() => { copyBtn.textContent = original; }, 1800);
-      } catch(err2){
-        alert('Não foi possível copiar automaticamente. Selecione a tabela manualmente e copie com Ctrl+C.');
+        const item = new ClipboardItem({
+          'text/html': new Blob([htmlTable], {type:'text/html'}),
+          'text/plain': new Blob([tsv], {type:'text/plain'})
+        });
+        await navigator.clipboard.write([item]);
+        showCopied();
+        return;
+      }catch(err){
+        // segue para os fallbacks abaixo
       }
-      document.body.removeChild(ta);
     }
-  });
+
+    // Fallback para navegadores sem suporte a ClipboardItem: usa um elemento
+    // temporário editável na página, seleciona o conteúdo (como tabela real do
+    // DOM) e copia com execCommand — isso ainda preserva a estrutura de tabela,
+    // diferente de copiar um textarea (que só copia texto puro).
+    const holder = document.createElement('div');
+    holder.contentEditable = 'true';
+    holder.style.position = 'fixed';
+    holder.style.opacity = '0';
+    holder.style.pointerEvents = 'none';
+    holder.innerHTML = htmlTable;
+    document.body.appendChild(holder);
+    const range = document.createRange();
+    range.selectNodeContents(holder);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    try{
+      document.execCommand('copy');
+      showCopied();
+    }catch(err2){
+      alert('Não foi possível copiar automaticamente. Selecione a tabela manualmente e copie com Ctrl+C.');
+    }
+    sel.removeAllRanges();
+    document.body.removeChild(holder);
+  }
+
+  function showCopied(){
+    const original = copyBtn.textContent;
+    copyBtn.textContent = 'Copiado!';
+    setTimeout(() => { copyBtn.textContent = original; }, 1800);
+  }
+
+  copyBtn.addEventListener('click', copyTableToClipboard);
 
   downloadBtn.addEventListener('click', function(){
     if(outputRows.length === 0) return;
