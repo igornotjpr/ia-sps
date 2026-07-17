@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ponto 18 — Agrupador de E-mails</title>
+<link rel="stylesheet" href="core.css">
+</head><body><div class="sheet">
+<div class="institutional-header"><div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div><div class="tjpr-name"><strong>Tribunal de Justiça do Estado do Paraná</strong>Secretaria de Gestão de Pessoas</div></div>
+<div class="unit-block"><p class="unit-section">Seção de Processo Seletivo</p><p class="unit-name">Ferramentas de apoio para importação de dados no Hércules</p></div>
+<div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
+<main>
+<div class="step">
+   <p class="step-desc">Essa ferramenta permite colar uma tabela/lista de informações e a partir dela gerar um bloco de texto com todos os valores separados por ponto e vírgula.</p>
+   <p class="step-desc">Utilize sempre que precisar enviar emails a uma lista de contatos no SEI, por exemplo.</p>
+  <div class="step-head">
+    <span class="step-num">1</span><p class="step-title">Cole a coluna de e-mails</p></div>
+<textarea id="input" placeholder="Cole aqui a coluna copiada do Excel"></textarea></div>
+<div class="step"><button class="run-btn" id="process">Processar</button></div>
+<div class="step"><div class="step-head"><span class="step-num">2</span><p class="step-title">Resultado</p></div>
+<textarea id="output" readonly></textarea>
+<div style="margin-top:16px"><button class="run-btn" id="copy">Copiar</button></div></div>
+</main></div>
+<script src="ponto18_logic.js"></script><script src="ferramentas.js"></script>
+<script src="layout.js"></script>
+</body></html>

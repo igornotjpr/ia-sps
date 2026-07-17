@@ -1,0 +1,560 @@
+/*
+  core.css — estilo institucional compartilhado (TJPR / Seção de Processo Seletivo)
+  Usado por todas as ferramentas (Ponto XX) e pelo índice. Referenciar sempre por
+  caminho relativo: <link rel="stylesheet" href="core.css">
+  100% offline: nenhuma fonte, imagem ou script é carregado por URL externa.
+*/
+
+:root{
+  /* Cores institucionais oficiais do TJPR (Manual de Uso da Marca) */
+  --navy: #002a3a;      /* Pantone 303 C — cor primária */
+  --navy-light: #0d4658;
+  --teal: #008c95;      /* Pantone 321 C — cor secundária */
+  --mint: #49c5b1;      /* Pantone 3258 C */
+  --gold: #eeb134;      /* Pantone 116 C */
+  --coral: #eb553b;     /* Pantone 2026 C */
+
+  --paper: #eef1f2;
+  --paper-dark: #dde4e6;
+  --ink: #14232a;
+  --ink-soft: #4d5e64;
+  --line: #c7d2d5;
+  --white: #ffffff;
+
+  /* aliases mantidos para o restante do CSS */
+  --seal: var(--navy);
+  --seal-light: var(--teal);
+  --stamp-red: var(--coral);
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse at top left, rgba(255,255,255,0.25), transparent 60%),
+    var(--paper);
+  color:var(--ink);
+  font-family:'Barlow', system-ui, sans-serif;
+  padding:32px 16px 80px;
+}
+
+.sheet{
+  max-width:980px;
+  margin:0 auto;
+  background:var(--white);
+  border:1px solid var(--line);
+  box-shadow:0 1px 0 var(--line), 0 18px 40px -24px rgba(35,40,31,0.45);
+  position:relative;
+}
+
+.sheet::before{
+  content:"";
+  position:absolute; top:0; left:0; right:0; height:6px;
+  background:linear-gradient(90deg, var(--navy) 0%, var(--navy) 20%, var(--teal) 20%, var(--teal) 40%, var(--mint) 40%, var(--mint) 60%, var(--gold) 60%, var(--gold) 80%, var(--coral) 80%, var(--coral) 100%);
+}
+
+.institutional-header{
+  padding:22px 40px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  border-bottom:1px solid var(--line);
+  background:var(--white);
+}
+
+.institutional-header img{
+  height:52px;
+  width:auto;
+  flex-shrink:0;
+}
+
+.institutional-header .tjpr-fallback{
+  display:none;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:22px;
+  color:var(--navy);
+  letter-spacing:0.02em;
+  line-height:1;
+  flex-shrink:0;
+}
+.institutional-header .tjpr-fallback small{
+  display:block;
+  font-family:'Barlow', system-ui, sans-serif;
+  font-weight:500;
+  font-size:9px;
+  letter-spacing:0.08em;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+
+.institutional-header .tjpr-name{
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:12px;
+  color:var(--ink-soft);
+  line-height:1.4;
+  border-left:1px solid var(--line);
+  padding-left:18px;
+}
+.institutional-header .tjpr-name strong{
+  display:block;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:600;
+  font-size:14px;
+  color:var(--navy);
+  letter-spacing:0.01em;
+}
+
+.unit-block{
+  padding:18px 40px;
+  background:var(--navy);
+  color:var(--white);
+}
+
+.unit-code{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11.5px;
+  letter-spacing:0.1em;
+  color:var(--mint);
+  margin:0 0 6px;
+}
+
+.unit-name{
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:13px;
+  line-height:1.5;
+  color:#dce9ec;
+  margin:0 0 4px;
+  max-width:760px;
+}
+
+.unit-section{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:600;
+  font-size:15px;
+  letter-spacing:0.01em;
+  color:var(--white);
+  margin:0;
+}
+
+.app-header{
+  background:var(--navy);
+}
+
+/* Navegação entre ferramentas: agora é navegação real entre páginas (<a>),
+   não troca de painel via JS — cada arquivo .html é uma ferramenta própria. */
+.tab-nav{
+  display:flex;
+  gap:4px;
+  padding:0 40px;
+  border-bottom:1px solid rgba(255,255,255,0.14);
+  overflow-x:auto;
+  overflow-y:hidden;
+}
+
+.tab-btn{
+  display:inline-block;
+  background:transparent;
+  border:none;
+  padding:15px 22px;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:600;
+  font-size:14px;
+  letter-spacing:0.03em;
+  color:rgba(255,255,255,0.55);
+  text-decoration:none;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  margin-bottom:-1px;
+  white-space:nowrap;
+  transition:color .15s ease, border-color .15s ease;
+}
+.tab-btn:hover{ color:rgba(255,255,255,0.85); }
+.tab-btn.active{ color:var(--white); border-bottom-color:var(--mint); }
+.tab-btn:focus-visible{ outline:2px solid var(--mint); outline-offset:-2px; }
+
+header{
+  padding:28px 40px 24px;
+}
+
+.app-header .eyebrow{ color:var(--mint); }
+.app-header h1{ color:var(--white); }
+
+.placeholder-panel{
+  text-align:center;
+  padding:70px 20px;
+}
+.placeholder-panel .placeholder-tag{
+  display:inline-block;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--teal);
+  border:1px solid var(--line);
+  padding:4px 12px;
+  margin-bottom:14px;
+}
+.placeholder-panel h2{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:22px;
+  font-weight:700;
+  color:var(--ink);
+  margin:0 0 8px;
+}
+.placeholder-panel p{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  max-width:420px;
+  margin:0 auto;
+  line-height:1.6;
+}
+
+.eyebrow{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--seal);
+  margin:0 0 6px;
+}
+
+h1{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:30px;
+  font-weight:700;
+  margin:0;
+  line-height:1.15;
+}
+
+main{ padding:32px 40px 40px; }
+
+.step{ margin-bottom:34px; }
+
+.step-head{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.step-num{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:15px;
+  color:var(--white);
+  background:var(--seal);
+  width:26px; height:26px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+.step-title{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:18px;
+  font-weight:600;
+  margin:0;
+}
+
+.step-desc{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  margin:0 0 12px 36px;
+  line-height:1.5;
+}
+
+/* listas de instrução dentro dos blocos de passo — mesmo tamanho/entrelinha do texto padrão */
+.step-list{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
+  margin:0 0 12px 36px;
+  padding-left:18px;
+}
+.step-list li{ margin-bottom:4px; }
+
+textarea{
+  width:100%;
+  min-height:160px;
+  padding:14px;
+  border:1px solid var(--line);
+  background:#fffdf7;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--ink);
+  resize:vertical;
+}
+textarea:focus, input:focus, button:focus, select:focus{
+  outline:2px solid var(--seal-light);
+  outline-offset:2px;
+}
+
+.num-input{
+  display:block;
+  width:160px;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  background:#fffdf7;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:14px;
+  color:var(--ink);
+}
+
+/* Tabela de formatação simples: bordas de 1pt em preto, texto puro, sem
+   estilização decorativa (usada por ferramentas que exigem tabela "limpa"
+   para colar em Word/Excel, ex: Ponto 20). */
+.simple-table-wrap{ overflow-x:auto; }
+table.simple-table{
+  border-collapse:collapse;
+  width:100%;
+}
+table.simple-table th,
+table.simple-table td{
+  border:1pt solid #000000;
+  padding:6px 10px;
+  text-align:left;
+}
+table.simple-table th{
+  font-weight:700;
+}
+table.simple-table tr.p20-unmatched td{
+  background:#f7e9e4;
+}
+
+.file-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.file-btn{
+  font-family:'Barlow', system-ui, sans-serif;
+  font-weight:500;
+  font-size:13.5px;
+  padding:10px 18px;
+  background:var(--ink);
+  color:var(--white);
+  border:none;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.file-btn:hover{ background:var(--seal); }
+input[type=file]{ display:none; }
+.file-name{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12.5px;
+  color:var(--ink-soft);
+}
+
+.run-btn{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:16px;
+  letter-spacing:0.02em;
+  padding:14px 28px;
+  background:var(--seal);
+  color:var(--white);
+  border:none;
+  cursor:pointer;
+  width:100%;
+}
+.run-btn:hover{ background:var(--seal-light); }
+.run-btn:disabled{ background:#a7a290; cursor:not-allowed; }
+
+.divider{
+  border:none;
+  border-top:1px dashed var(--line);
+  margin:32px 0;
+}
+
+.stamp-wrap{
+  display:none;
+  align-items:center;
+  gap:18px;
+  margin-bottom:22px;
+  padding:16px 18px;
+  border:1px solid var(--line);
+  background:#fffdf7;
+  flex-wrap:wrap;
+}
+.stamp-wrap.show{ display:flex; }
+
+.stamp{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:13px;
+  letter-spacing:0.06em;
+  color:var(--seal);
+  border:3px solid var(--seal);
+  border-radius:50%;
+  width:74px; height:74px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  text-transform:uppercase;
+  transform:rotate(-8deg);
+  flex-shrink:0;
+  line-height:1.15;
+}
+.stamp.warn{
+  color:var(--stamp-red);
+  border-color:var(--stamp-red);
+}
+
+.stamp-text{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
+}
+.stamp-text strong{ color:var(--ink); }
+
+.warn-list{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12px;
+  color:var(--stamp-red);
+  margin:6px 0 0;
+  padding-left:18px;
+}
+.warn-list li{ margin-bottom:3px; }
+
+.table-scroll{
+  overflow-x:auto;
+  border:1px solid var(--line);
+  max-height:480px;
+  overflow-y:auto;
+}
+
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11.5px;
+  white-space:nowrap;
+}
+
+thead th{
+  position:sticky; top:0;
+  background:var(--ink);
+  color:var(--white);
+  text-align:left;
+  padding:9px 10px;
+  font-weight:500;
+  letter-spacing:0.02em;
+  border-right:1px solid rgba(255,255,255,0.12);
+}
+
+tbody td{
+  padding:7px 10px;
+  border-bottom:1px solid var(--paper-dark);
+  border-right:1px solid var(--paper-dark);
+}
+
+tbody tr:nth-child(even){ background:#fbfaf4; }
+tbody tr.unmatched{ background:#f7e9e4; }
+tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
+
+.download-row{
+  margin-top:22px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.download-btn{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:15px;
+  padding:13px 26px;
+  background:var(--stamp-red);
+  color:var(--white);
+  border:none;
+  cursor:pointer;
+}
+.download-btn:hover{ background:#722525; }
+.download-btn:disabled{ background:#a7a290; cursor:not-allowed; }
+
+.count-note{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+}
+
+.empty-hint{
+  font-size:13px;
+  color:var(--ink-soft);
+  font-style:italic;
+  padding:18px 0;
+}
+
+/* Cartões de ferramenta usados no índice */
+.tool-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+  gap:16px;
+}
+.tool-card{
+  display:block;
+  border:1px solid var(--line);
+  padding:20px;
+  text-decoration:none;
+  color:inherit;
+  background:#fffdf7;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.tool-card:hover{
+  border-color:var(--seal-light);
+  box-shadow:0 6px 16px -8px rgba(35,40,31,0.35);
+}
+.tool-card .tool-card-tag{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--teal);
+  margin:0 0 8px;
+}
+.tool-card h2{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:18px;
+  font-weight:700;
+  margin:0 0 6px;
+  color:var(--ink);
+}
+.tool-card p{
+  font-size:13px;
+  color:var(--ink-soft);
+  margin:0;
+  line-height:1.5;
+}
+.tool-card.disabled{
+  opacity:0.55;
+  pointer-events:none;
+}
+
+footer{
+  text-align:center;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  padding:20px;
+  letter-spacing:0.04em;
+}
+
+@media (max-width:600px){
+  header{ padding:26px 20px 18px; }
+  main{ padding:24px 20px 32px; }
+  h1{ font-size:24px; }
+  .step-desc{ margin-left:0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  * { transition:none !important; }
+}

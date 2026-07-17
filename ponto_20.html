@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ponto 20 — Cruzamento de Classificação × Inscritos (TJPR)</title>
+<link rel="stylesheet" href="core.css">
+</head>
+<body>
+
+<div class="sheet">
+
+  <div class="institutional-header">
+    <div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>
+    <div class="tjpr-name">
+      <strong>Tribunal de Justiça do Estado do Paraná</strong>
+      Secretaria de Gestão de Pessoas
+    </div>
+  </div>
+
+  <div class="unit-block">
+    <p class="unit-section">Seção de Processo Seletivo</p>
+    <p class="unit-name">Ferramentas de apoio para importação de dados no Hércules</p>
+  </div>
+
+  <div class="app-header">
+    <div id="menu-placeholder"></div>
+    <div id="header-title"></div>
+  </div>
+
+  <main>
+    <div class="step" style="background:#f8fbfc;">
+      <div class="step-head">
+        <span class="step-num">i</span>
+        <p class="step-title">Como obter as tabelas na Fábrica de Provas</p>
+      </div>
+    
+      <p class="step-desc">Na plataforma <strong>Fábrica de Provas</strong>, menu <strong>RELATÓRIOS &rarr; PERSONALIZADOS</strong>, selecione o processo seletivo e baixe:</p>
+      <ol class="step-list">
+        <li>o <strong>Relatório de Classificação Final</strong> (Tabela 1);</li>
+        <li>o <strong>Relatório de Inscritos</strong> (Tabela 2).</li>
+      </ol>
+      <p class="step-desc">Exporte ambos em <strong>.xlsx</strong>, sem alterar o conteúdo, e envie-os nos passos abaixo.</p>
+    </div>
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">1</span>
+        <p class="step-title">Envie a Tabela 1 (Classificação Final)</p>
+      </div>
+      <p class="step-desc">Baixe o <strong>Relatório de Classificação Final</strong> na Fábrica de Provas e envie o arquivo (.xlsx) aqui. Colunas esperadas: CLASSIFICAÇÃO, INSCRIÇÃO, NOME, E-MAIL, PROVA, ENTREVISTA, FINAL, RESERVA, NASCIMENTO.</p>
+      <div class="file-row">
+        <button class="file-btn" id="p20FileBtn1" type="button">Escolher arquivo (Tabela 1)</button>
+        <input type="file" id="p20Tabela1File" accept=".xlsx,.xls,.csv">
+        <span class="file-name" id="p20FileName1">Nenhum arquivo selecionado</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">2</span>
+        <p class="step-title">Envie a Tabela 2 (Relatório de inscritos)</p>
+      </div>
+      <p class="step-desc">Baixe o <strong>Relatório de inscritos</strong> na Fábrica de Provas e envie o arquivo (.xlsx) aqui. Colunas esperadas incluem Inscrição, Nome, E-mail, Reserva especial, entre outras.</p>
+      <div class="file-row">
+        <button class="file-btn" id="p20FileBtn2" type="button">Escolher arquivo (Tabela 2)</button>
+        <input type="file" id="p20Tabela2File" accept=".xlsx,.xls,.csv">
+        <span class="file-name" id="p20FileName2">Nenhum arquivo selecionado</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">3</span>
+        <p class="step-title">Quantidade máxima de classificados/aprovados</p>
+      </div>
+      <p class="step-desc">Informe o número total de candidatos que devem constar na tabela final (ex.: "5" ou "21"). Candidatos marcados como REPROVADO na Tabela 1 nunca entram na lista, independentemente deste número.</p>
+      <input type="text" inputmode="numeric" class="num-input" id="p20MaxInput" placeholder="Ex.: 10">
+    </div>
+
+    <div class="step">
+      <button class="run-btn" id="p20ProcessBtn" disabled>Processar e cruzar tabelas</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="stamp-wrap" id="p20StampWrap">
+      <div class="stamp" id="p20StampBadge">OK</div>
+      <div class="stamp-text" id="p20StampText"></div>
+    </div>
+
+    <div id="p20ResultArea">
+      <p class="empty-hint">A tabela final aparecerá aqui após o processamento.</p>
+    </div>
+
+    <div class="download-row" id="p20DownloadRow" style="display:none;">
+      <button class="download-btn" id="p20CopyBtn">Copiar tabela (com cabeçalho)</button>
+      <button class="download-btn" id="p20DownloadBtn" style="background:var(--ink);">Baixar CSV (UTF-8)</button>
+      <span class="count-note" id="p20CountNote"></span>
+    </div>
+
+  </main>
+
+  <footer>
+    <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+      <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+      É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+    </p>
+    <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+  </footer>
+</div>
+
+<script src="vendor/xlsx.min.js"></script>
+<script src="core.js"></script>
+<script src="ponto20_logic.js"></script>
+
+<script src="ferramentas.js"></script>
+<script src="layout.js"></script>
+</body>
+</html>

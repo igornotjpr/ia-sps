@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ponto 26 — Agrupador de Tabelas (TJPR)</title>
+<link rel="stylesheet" href="core.css">
+</head>
+<body>
+
+<div class="sheet">
+
+  <div class="institutional-header">
+    <div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>
+    <div class="tjpr-name">
+      <strong>Tribunal de Justiça do Estado do Paraná</strong>
+      Secretaria de Gestão de Pessoas
+    </div>
+  </div>
+
+  <div class="unit-block">
+    <p class="unit-section">Seção de Processo Seletivo</p>
+    <p class="unit-name">Ferramentas de apoio para importação de dados no Hércules</p>
+  </div>
+
+  <div class="app-header">
+    <div id="menu-placeholder"></div>
+    <div id="header-title"></div>
+  </div>
+
+  <main>
+    <div class="step" style="background:#f8fbfc;">
+      <div class="step-head">
+        <span class="step-num">i</span>
+        <p class="step-title">Como obter a tabela de Classificação Final</p>
+      </div>
+
+      <p class="step-desc">Esta ferramenta gera o arquivo <strong>.CSV</strong> para importar a <strong>Classificação Final</strong> no sistema <strong>Hércules</strong>.</p>
+      <ol class="step-list">
+        <li>No <strong>SEI</strong>, abra o processo seletivo e baixe (ou salve) o <strong>Edital de Classificação Final</strong> em PDF.</li>
+        <li>Envie o PDF no <strong>Passo 1</strong> — a tabela de classificação é extraída automaticamente.</li>
+        <li>Confira os dados extraídos e envie o CSV cadastral no <strong>Passo 2</strong>.</li>
+      </ol>
+      <p class="step-desc">Se preferir, ainda é possível colar a tabela manualmente (Excel/Word ou texto puro copiado do PDF) usando o link no final do Passo 1.</p>
+    </div>
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">1</span>
+        <p class="step-title">Envie o PDF do Edital de Classificação Final</p>
+      </div>
+      <p class="step-desc">Envie o arquivo PDF exatamente como baixado do SEI. A ferramenta localiza a tabela de classificação (ORDEM, INSCRIÇÃO, NOME, NOTA e, quando houver, RESERVA) e extrai os dados automaticamente.</p>
+      <div class="file-row">
+        <button class="file-btn" id="pdfFileBtn" type="button">Escolher arquivo PDF</button>
+        <input type="file" id="pdfFileInput" accept=".pdf,application/pdf">
+        <span class="file-name" id="pdfFileName">Nenhum arquivo selecionado</span>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="run-btn" id="btnLerPdf" type="button">Ler PDF e extrair tabela</button>
+      </div>
+
+      <p class="step-desc" id="pdfStatusMsg" style="display:none;margin-top:14px;margin-left:0;padding:10px 12px;background:#f8fbfc;border:1px solid var(--line);"></p>
+
+      <p class="step-desc" style="margin-top:14px;margin-left:0;">PDF digitalizado (foto/imagem) não tem texto extraível. Nesse caso, ou se preferir revisar/colar a tabela manualmente, <button type="button" id="btnColarManual" style="background:none;border:none;color:var(--teal);cursor:pointer;font-size:13.5px;text-decoration:underline;padding:0;">clique aqui para colar o texto da tabela</button>.</p>
+
+      <div id="colarWrap" style="display:none;margin-top:10px;">
+        <p class="step-desc" style="margin-left:0;">Cole diretamente do Excel/Word ou como texto puro (ex: copiado de um PDF). Cada linha deve trazer, nesta ordem: ORDEM, INSCRIÇÃO, NOME, NOTA e, quando houver, RESERVA. A primeira linha deve ser o cabeçalho. Este campo também é preenchido automaticamente após a leitura do PDF, para conferência.</p>
+        <textarea id="tabela1Input" placeholder="ORDEM	INSCRIÇÃO	NOME	NOTA	RESERVA
+1	1111111	MARIA DA SILVA	0,90	
+2	2222222	FULANO DE TAL	0,85	2.1.1"></textarea>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">2</span>
+        <p class="step-title">Envie a Tabela 2 (dados cadastrais, CSV)</p>
+      </div>
+      <p class="step-desc">A tabela 2 pode ser baixada da pasta VBA &gt; Importação Classificados, disponível no Sharepoint da unidade.</p>
+      <p class="step-desc">Arquivo .csv separado por vírgulas contendo CPF, Nome do candidato, E-mail, Telefone celular e Telefone fixo.</p>
+      <div class="file-row">
+        <button class="file-btn" id="fileBtn" type="button">Escolher arquivo CSV</button>
+        <input type="file" id="tabela2File" accept=".csv,text/csv">
+        <span class="file-name" id="fileName">Nenhum arquivo selecionado</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <button class="run-btn" id="processBtn" disabled>Processar e cruzar tabelas</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="stamp-wrap" id="stampWrap">
+      <div class="stamp" id="stampBadge">OK</div>
+      <div class="stamp-text" id="stampText"></div>
+    </div>
+
+    <div id="resultArea">
+      <p class="empty-hint">A tabela final aparecerá aqui após o processamento.</p>
+    </div>
+
+    <div class="download-row" id="downloadRow" style="display:none;">
+      <button class="download-btn" id="downloadBtn">Baixar CSV (UTF-8)</button>
+      <span class="count-note" id="countNote"></span>
+    </div>
+
+  </main>
+
+  <footer>
+    <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+      <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+      É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+    </p>
+    <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+  </footer>
+</div>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.worker.min.js"></script>
+<script src="core.js"></script>
+<script src="ponto26_logic.js"></script>
+
+<script src="ferramentas.js"></script>
+<script src="layout.js"></script>
+</body>
+</html>
