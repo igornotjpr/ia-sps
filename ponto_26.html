@@ -38,32 +38,33 @@
       <p class="step-desc">Esta ferramenta gera o arquivo <strong>.CSV</strong> para importar a <strong>Classificação Final</strong> no sistema <strong>Hércules</strong>.</p>
       <ol class="step-list">
         <li>No <strong>SEI</strong>, abra o processo seletivo e baixe (ou salve) o <strong>Edital de Classificação Final</strong> em PDF.</li>
-        <li>Envie o PDF no <strong>Passo 1</strong> — a tabela de classificação é extraída automaticamente.</li>
-        <li>Confira os dados extraídos e envie o CSV cadastral no <strong>Passo 2</strong>.</li>
+        <li>Envie o PDF no <strong>Passo 1</strong> — a tabela de classificação é extraída automaticamente, sem etapas intermediárias.</li>
+        <li>Confira os dados extraídos, envie o CSV cadastral no <strong>Passo 2</strong> e processe.</li>
       </ol>
-      <p class="step-desc">Se preferir, ainda é possível colar a tabela manualmente (Excel/Word ou texto puro copiado do PDF) usando o link no final do Passo 1.</p>
+      <p class="step-desc">Se preferir, também é possível colar a tabela manualmente (Excel/Word ou texto puro copiado do PDF), pelo botão "Colar tabela manualmente" no Passo 1.</p>
     </div>
     <div class="step">
       <div class="step-head">
         <span class="step-num">1</span>
         <p class="step-title">Envie o PDF do Edital de Classificação Final</p>
       </div>
-      <p class="step-desc">Envie o arquivo PDF exatamente como baixado do SEI. A ferramenta localiza a tabela de classificação (ORDEM, INSCRIÇÃO, NOME, NOTA e, quando houver, RESERVA) e extrai os dados automaticamente.</p>
-      <div class="file-row">
+      <p class="step-desc">Envie o arquivo exatamente como baixado do SEI. A tabela de classificação (ORDEM, INSCRIÇÃO, NOME, NOTA e, quando houver, RESERVA) é lida e extraída automaticamente assim que o arquivo é escolhido.</p>
+
+      <div class="upload-panel">
         <button class="file-btn" id="pdfFileBtn" type="button">Escolher arquivo PDF</button>
         <input type="file" id="pdfFileInput" accept=".pdf,application/pdf">
         <span class="file-name" id="pdfFileName">Nenhum arquivo selecionado</span>
       </div>
-      <div style="margin-top:14px;">
-        <button class="run-btn" id="btnLerPdf" type="button">Ler PDF e extrair tabela</button>
+
+      <p class="notice-banner" id="pdfStatusMsg" style="display:none;"></p>
+
+      <div class="alt-action">
+        <span>PDF digitalizado (foto/imagem) não tem texto extraível — ou, se preferir, cole a tabela você mesmo:</span>
+        <button type="button" id="btnColarManual" class="link-btn">Colar tabela manualmente</button>
       </div>
 
-      <p class="step-desc" id="pdfStatusMsg" style="display:none;margin-top:14px;margin-left:0;padding:10px 12px;background:#f8fbfc;border:1px solid var(--line);"></p>
-
-      <p class="step-desc" style="margin-top:14px;margin-left:0;">PDF digitalizado (foto/imagem) não tem texto extraível. Nesse caso, ou se preferir revisar/colar a tabela manualmente, <button type="button" id="btnColarManual" style="background:none;border:none;color:var(--teal);cursor:pointer;font-size:13.5px;text-decoration:underline;padding:0;">clique aqui para colar o texto da tabela</button>.</p>
-
-      <div id="colarWrap" style="display:none;margin-top:10px;">
-        <p class="step-desc" style="margin-left:0;">Cole diretamente do Excel/Word ou como texto puro (ex: copiado de um PDF). Cada linha deve trazer, nesta ordem: ORDEM, INSCRIÇÃO, NOME, NOTA e, quando houver, RESERVA. A primeira linha deve ser o cabeçalho. Este campo também é preenchido automaticamente após a leitura do PDF, para conferência.</p>
+      <div id="colarWrap" class="collapse-panel" style="display:none;">
+        <p class="step-desc" style="margin-left:0;">Cole diretamente do Excel/Word ou como texto puro (ex: copiado de um PDF). Cada linha deve trazer, nesta ordem: ORDEM, INSCRIÇÃO, NOME, NOTA e, quando houver, RESERVA. A primeira linha deve ser o cabeçalho. Após a leitura de um PDF, este campo é preenchido automaticamente para conferência — e pode ser editado antes de processar.</p>
         <textarea id="tabela1Input" placeholder="ORDEM	INSCRIÇÃO	NOME	NOTA	RESERVA
 1	1111111	MARIA DA SILVA	0,90	
 2	2222222	FULANO DE TAL	0,85	2.1.1"></textarea>

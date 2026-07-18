@@ -17,7 +17,6 @@
   const pdfFileBtn = document.getElementById('pdfFileBtn');
   const pdfFileInput = document.getElementById('pdfFileInput');
   const pdfFileName = document.getElementById('pdfFileName');
-  const btnLerPdf = document.getElementById('btnLerPdf');
   const pdfStatusMsg = document.getElementById('pdfStatusMsg');
   const btnColarManual = document.getElementById('btnColarManual');
   const colarWrap = document.getElementById('colarWrap');
@@ -32,15 +31,34 @@
 
   pdfFileBtn.addEventListener('click', () => pdfFileInput.click());
 
+  // Um novo upload sempre descarta o estado anterior (extração, resultado do
+  // cruzamento, download) — evita mistura de dados quando o usuário troca o
+  // arquivo, por exemplo após enviar o PDF errado.
+  function resetarEstado(){
+    tabela1Input.value = '';
+    outputRows = [];
+    tabela2Rows = [];
+    pdfStatusMsg.style.display = 'none';
+    pdfStatusMsg.className = 'notice-banner';
+    colarWrap.style.display = 'none';
+    stampWrap.classList.remove('show');
+    resultArea.innerHTML = '<p class="empty-hint">A tabela final aparecerá aqui após o processamento.</p>';
+    downloadRow.style.display = 'none';
+    checkReady();
+  }
+
+  // A extração começa automaticamente assim que o arquivo é escolhido —
+  // sem botão intermediário.
   pdfFileInput.addEventListener('change', () => {
-    pdfFileName.textContent = (pdfFileInput.files && pdfFileInput.files[0]) ? pdfFileInput.files[0].name : 'Nenhum arquivo selecionado';
+    const file = pdfFileInput.files && pdfFileInput.files[0];
+    pdfFileName.textContent = file ? file.name : 'Nenhum arquivo selecionado';
+    resetarEstado();
+    if(file) lerPdf();
   });
 
   btnColarManual.addEventListener('click', () => {
     colarWrap.style.display = colarWrap.style.display === 'none' ? 'block' : 'none';
   });
-
-  btnLerPdf.addEventListener('click', lerPdf);
 
   fileBtn.addEventListener('click', () => fileInput.click());
 
@@ -140,14 +158,16 @@
     return rows.map(r => r.ordem + '\t' + r.inscricao + '\t' + r.buffer);
   }
 
+  function mostrarStatus(html, tipo){ // tipo: '' (andamento) | 'ok' | 'warn'
+    pdfStatusMsg.className = 'notice-banner' + (tipo ? ' ' + tipo : '');
+    pdfStatusMsg.innerHTML = html;
+    pdfStatusMsg.style.display = 'block';
+  }
+
   async function lerPdf(){
     const file = pdfFileInput.files && pdfFileInput.files[0];
-    if(!file){
-      alert('Selecione o arquivo PDF do Edital de Classificação Final antes de continuar.');
-      return;
-    }
-    btnLerPdf.disabled = true;
-    btnLerPdf.textContent = 'Lendo PDF...';
+    if(!file) return;
+    mostrarStatus('Lendo o PDF e extraindo a tabela de classificação...');
     try{
       const texto = await TJPRCore.pdfToText(file);
       if(texto.replace(/\s+/g,'').length < 30){
@@ -155,7 +175,7 @@
       }
       const linhas = pdfTextToTabela1Lines(texto);
       if(linhas.length === 0){
-        alert('Não foi possível localizar a tabela de classificação neste PDF. Confira se o arquivo é o Edital de Classificação Final, ou cole o conteúdo manualmente usando o link abaixo do botão.');
+        mostrarStatus('<strong>Não foi possível localizar a tabela de classificação neste PDF.</strong> Confira se o arquivo é o Edital de Classificação Final, ou cole o conteúdo manualmente pelo botão "Colar tabela manualmente".', 'warn');
         return;
       }
 
@@ -164,22 +184,16 @@
       // reaproveita o parser já usado na colagem manual para conferir e avisar
       // o usuário de eventuais linhas não reconhecidas, antes do Passo 2
       const conferencia = parseTabela1(tabela1Input.value);
-      let msg = '<strong>' + conferencia.rows.length + ' registro(s)</strong> extraído(s) do PDF.';
       if(conferencia.errors.length > 0){
-        msg += ' <strong style="color:var(--stamp-red)">' + conferencia.errors.length + ' linha(s) não reconhecida(s)</strong> — confira e corrija no texto abaixo antes de processar.';
+        mostrarStatus('<strong>' + conferencia.rows.length + ' registro(s)</strong> extraído(s) do PDF, mas <strong>' + conferencia.errors.length + ' linha(s) não reconhecida(s)</strong> — confira e corrija no quadro abaixo antes de processar.', 'warn');
       } else {
-        msg += ' Confira os dados abaixo (pode editar se necessário) antes de enviar o CSV cadastral no Passo 2.';
+        mostrarStatus('<strong>' + conferencia.rows.length + ' registro(s)</strong> extraído(s) do PDF. Confira os dados no quadro abaixo (pode editar se necessário) e envie o CSV cadastral no Passo 2.', 'ok');
       }
-      pdfStatusMsg.innerHTML = msg;
-      pdfStatusMsg.style.display = 'block';
       colarWrap.style.display = 'block'; // abre a tabela para conferência do usuário
 
       checkReady();
     }catch(e){
-      alert('Não foi possível ler o PDF (' + e.message + '). Se o arquivo for uma digitalização (imagem), copie o texto da tabela e cole manualmente usando o link abaixo do botão.');
-    }finally{
-      btnLerPdf.disabled = false;
-      btnLerPdf.textContent = 'Ler PDF e extrair tabela';
+      mostrarStatus('<strong>Não foi possível ler o PDF</strong> (' + TJPRCore.escapeHtml(e.message) + '). Se o arquivo for uma digitalização (imagem), copie o texto da tabela e cole manualmente pelo botão "Colar tabela manualmente".', 'warn');
     }
   }
 

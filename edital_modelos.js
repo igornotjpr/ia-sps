@@ -16,7 +16,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio obrigatório não remunerado, destinado a estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio obrigatório não remunerado, destinado a <b>estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
 "c": {
 "obrig": [
 "S"
@@ -28,7 +28,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
 "c": {
 "obrig": [
 "N"
@@ -40,7 +40,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a estudantes de nível médio {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível médio {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
 "c": {
 "obrig": [
 "N"
@@ -52,7 +52,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a estudantes de nível superior de pós-graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível superior de pós-graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
 "c": {
 "obrig": [
 "N"
@@ -413,7 +413,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "{{DATA_PROVA_ONLINE}}",
+"h": "A prova será realizada na modalidade à distância, e ficará disponível em data e horário a serem divulgados por meio de Edital de Ensalamento, a ser disponibilizado na respectiva página do processo seletivo, no portal do TJPR.",
 "c": {
 "modal": [
 "ON"
@@ -658,7 +658,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "A contagem do tempo para resolução das questões da prova terá início quando o candidato clicar no ícone COMEÇAR <b>AGORA</b>.",
+"h": "A contagem do tempo para resolução das questões da prova terá início quando o candidato clicar no ícone <b>COMEÇAR</b>.",
 "c": {
 "modal": [
 "ON"
@@ -676,7 +676,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "Ao responder todas as questões, o candidato deverá clicar no ícone ENTREGAR <b>AGORA!</b>.",
+"h": "Ao responder todas as questões, o candidato deverá clicar no ícone <b>CONCLUIR A PROVA</b>.",
 "c": {
 "modal": [
 "ON"

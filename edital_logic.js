@@ -23,7 +23,11 @@ const LIMITES_61 = ["a todos os candidatos que atingirem a nota mínima","a todo
 /* def: valor inicial | grupo: agrupamento visual | show(): visibilidade conforme eixos */
 const FIELDS = {
   UNIDADE:            {grupo:'ident', label:'Unidade solicitante (nome por extenso, para o título do edital)', type:'text', def:'', hint:'Ex.: VARA DE EXECUÇÕES PENAIS E CORREGEDORIA DOS PRESÍDIOS DE FRANCISCO BELTRÃO'},
-  NUM_EDITAL:         {grupo:'ident', label:'Número do edital (Nº/ano)', type:'text', def:'', hint:'Ex.: 2870/2026', hintHtml:'Para obter a numeração do Edital, abra o sistema Athos do TJPR (<a href="https://portal.tjpr.jus.br/tjpr-athos/index.do" target="_blank" rel="noopener">portal.tjpr.jus.br/tjpr-athos</a>). Navegue até o menu "Documento" e selecione a opção "Novo".<br>Na nova tela, escolha a opção "DIVISÃO DE ESTÁGIO - DIRETORIA - DEPARTAMENTO DE GESTÃO DE RECURSOS HUMANOS - Edital de Processo Seletivo de Estagiários" e salve o documento para gerar automaticamente a numeração do edital que será utilizada abaixo.'},
+  NUM_EDITAL:         {grupo:'ident', label:'Número do edital (Nº/ano)', type:'text', def:'', hint:'Ex.: 2870/2026', hintHtml:'Para obter a numeração do edital:'
+    +'<span style="display:block;margin-top:6px;">1. Abra o sistema Athos do TJPR: <a href="https://portal.tjpr.jus.br/tjpr-athos/index.do" target="_blank" rel="noopener">portal.tjpr.jus.br/tjpr-athos</a>;</span>'
+    +'<span style="display:block;margin-top:4px;">2. No menu "Documento", selecione a opção "Novo";</span>'
+    +'<span style="display:block;margin-top:4px;">3. Na nova tela, escolha "DIVISÃO DE ESTÁGIO - DIRETORIA - DEPARTAMENTO DE GESTÃO DE RECURSOS HUMANOS - Edital de Processo Seletivo de Estagiários";</span>'
+    +'<span style="display:block;margin-top:4px;">4. Salve o documento — a numeração é gerada automaticamente e deve ser informada no campo acima.</span>'},
   NUM_SEI:            {grupo:'ident', label:'Número do processo SEI', type:'text', def:'', hint:'Ex.: 0031724-38.2026.8.16.6000'},
   ORGAO:              {grupo:'corpo', label:'Órgão que assina o preâmbulo', type:'text', def:'A Secretaria de Gestão de Pessoas'},
   CURSO:              {grupo:'corpo', label:'Curso (área de conhecimento)', type:'datalist', opts:CURSOS, def:'', hint:'Formato "em [Curso]" — ex.: em Direito'},
@@ -37,7 +41,6 @@ const FIELDS = {
   COMPOSICAO_PROVA:   {grupo:'prova', label:'Composição da prova (item 5.2)', type:'textarea', def:'', hint:'Ex.: 10 (dez) questões objetivas avaliadas em 0,5 (zero vírgula cinco) ponto cada e 1 (uma) questão discursiva avaliada em 5 (cinco) pontos'},
   DURACAO_PROVA:      {grupo:'prova', label:'Duração da prova', type:'text', def:'03h00min'},
   DATA_PROVA_PRESENCIAL:{grupo:'prova', label:'Data, horário e local da prova presencial', type:'preset', opts:['A data, o horário e o local de aplicação da prova serão divulgados por meio de Edital de Ensalamento, a ser disponibilizado na respectiva página do processo seletivo, no portal do TJPR.','A data, o horário e o local de aplicação da prova serão divulgados por meio de documento oficial de ensalamento.','A prova será realizada presencialmente em 00/00/0000, das 00h00min às 00h00min, no [LOCAL], situado à [ENDEREÇO].','A prova será realizada presencialmente em 00/00/0000, das 00h00min às 00h00min. O local de aplicação da prova será divulgado por meio de documento oficial de ensalamento.'], def:'A data, o horário e o local de aplicação da prova serão divulgados por meio de Edital de Ensalamento, a ser disponibilizado na respectiva página do processo seletivo, no portal do TJPR.', show:a=>a.modal==='PR'},
-  DATA_PROVA_ONLINE:  {grupo:'prova', label:'Data e horário da prova on-line', type:'preset', opts:['A prova será realizada na modalidade à distância, e ficará disponível em 00/00/0000, das 00h00min às 00h00min.','A prova será realizada na modalidade à distância, e ficará disponível das 00h00min de 00/00/0000 às 00h00min de 00/00/0000.'], def:'A prova será realizada na modalidade à distância, e ficará disponível em 00/00/0000, das 00h00min às 00h00min.', show:a=>a.modal==='ON'},
   LIMITE_CONVOCADOS:  {grupo:'prova', label:'Item 6.1 — Quem será convocado para a entrevista', type:'preset', opts:LIMITES_61, def:'a todos os candidatos que atingirem a nota mínima', show:a=>a.entrev==='S'},
   DESEMPATE_INTRO:    {grupo:'prova', label:'Item 6.1.1 — Situação de empate (início do item)', type:'text', def:'Havendo candidatos empatados com a nota de corte do último classificado', show:a=>a.entrev==='S'},
   DESEMPATE_TEXTO:    {grupo:'prova', label:'Item 6.1.1 — Regra aplicada ao empate', type:'preset', opts:['serão convocados para entrevista todos aqueles empatados com a mesma nota do último classificado','será utilizado critério de desempate (data de nascimento)'], def:'serão convocados para entrevista todos aqueles empatados com a mesma nota do último classificado', show:a=>a.entrev==='S'},
@@ -529,9 +532,12 @@ function htmlComEstilosInline(){
   const clone = $('edSaida').cloneNode(true);
   clone.querySelectorAll('p').forEach(pEl=>{
     const est=[];
-    if(pEl.classList.contains('ed-c')) est.push('text-align:center');
-    if(pEl.classList.contains('ed-j')) est.push('text-align:justify');
-    if(pEl.classList.contains('ed-b')) est.push('font-weight:bold');
+    // Além do estilo inline, usa a marcação HTML "clássica" (atributo align e
+    // tag <b>) — editores com filtro de colagem (SEI/CKEditor, Word) podem
+    // descartar o atributo style, mas preservam align e <b>.
+    if(pEl.classList.contains('ed-c')){ est.push('text-align:center'); pEl.setAttribute('align','center'); }
+    if(pEl.classList.contains('ed-j')){ est.push('text-align:justify'); pEl.setAttribute('align','justify'); }
+    if(pEl.classList.contains('ed-b')){ est.push('font-weight:bold'); pEl.innerHTML='<b>'+pEl.innerHTML+'</b>'; }
     est.push('margin:0 0 8pt');
     pEl.setAttribute('style', est.join(';'));
     pEl.removeAttribute('class');
@@ -539,25 +545,37 @@ function htmlComEstilosInline(){
   return '<div style="font-family:Calibri,\'Carlito\',Arial,sans-serif;font-size:11pt;line-height:1.35;">'
     + clone.innerHTML + '</div>';
 }
-async function copiarTudo(){
+// Reproduz programaticamente a cópia manual (selecionar o quadro + Ctrl+C):
+// ao copiar uma seleção viva da página, o navegador embute os estilos
+// computados (alinhamento, negrito) no HTML da área de transferência — é por
+// isso que a cópia manual sempre preservou a formatação. O botão agora usa
+// exatamente esse caminho.
+function copiarSelecaoViva(){
   const el=$('edSaida');
-  const html=htmlComEstilosInline();
-  const texto=el.innerText;
+  const r=document.createRange(); r.selectNodeContents(el);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  let ok=false;
+  try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
+  sel.removeAllRanges();
+  return ok;
+}
+async function copiarTudo(){
+  if(copiarSelecaoViva()){
+    avisoCopiado('Texto copiado com formatação — cole no Word ou no editor do SEI.');
+    return;
+  }
+  // fallback: API assíncrona com HTML de estilos inline + marcação legada
   try{
     if(navigator.clipboard && window.ClipboardItem){
       await navigator.clipboard.write([new ClipboardItem({
-        'text/html': new Blob([html],{type:'text/html'}),
-        'text/plain': new Blob([texto],{type:'text/plain'})
+        'text/html': new Blob([htmlComEstilosInline()],{type:'text/html'}),
+        'text/plain': new Blob([$('edSaida').innerText],{type:'text/plain'})
       })]);
-    } else { throw new Error('sem ClipboardItem'); }
-    avisoCopiado('Texto copiado com formatação — cole no Word ou no editor do SEI.');
-  }catch(e){
-    // fallback: seleção + execCommand
-    const r=document.createRange(); r.selectNodeContents(el);
-    const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
-    const ok=document.execCommand('copy'); sel.removeAllRanges();
-    avisoCopiado(ok?'Texto copiado — cole no Word ou no editor do SEI.':'Não foi possível copiar automaticamente. Selecione o texto e use Ctrl+C.');
-  }
+      avisoCopiado('Texto copiado com formatação — cole no Word ou no editor do SEI.');
+      return;
+    }
+  }catch(e){}
+  avisoCopiado('Não foi possível copiar automaticamente. Selecione o texto e use Ctrl+C.');
 }
 function avisoCopiado(msg){ const n=$('edMsgAcao'); n.textContent=msg; setTimeout(()=>{ if(n.textContent===msg) n.textContent=''; },6000); }
 
