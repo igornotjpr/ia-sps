@@ -19,8 +19,26 @@ function navHtml(cur){
   return h;
 }
 
+// Monta o cabeçalho institucional padrão (logo + identificação da unidade),
+// idêntico em todas as páginas — assim o header é definido em um só lugar.
+// A "Seção de Processo Seletivo" agora fica como terceira linha do bloco
+// tjpr-name, logo abaixo de "Secretaria de Gestão de Pessoas".
+function institutionalHtml(){
+  return '<div class="institutional-header">'
+    +'<div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>'
+    +'<div class="tjpr-name">'
+    +'<strong>Tribunal de Justiça do Estado do Paraná</strong>'
+    +'<span class="tjpr-line">Secretaria de Gestão de Pessoas</span>'
+    +'<span class="tjpr-line">Seção de Processo Seletivo</span>'
+    +'</div></div>';
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   const cur=location.pathname.split('/').pop()||'index.html';
+
+  // 0) cabeçalho institucional padrão (mesmo em todas as páginas)
+  const ih=document.getElementById('institutional-placeholder');
+  if(ih){ ih.outerHTML=institutionalHtml(); }
 
   // 1) menu de navegação
   const p=document.getElementById('menu-placeholder');

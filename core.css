@@ -105,38 +105,9 @@ body{
   color:var(--navy);
   letter-spacing:0.01em;
 }
-
-.unit-block{
-  padding:18px 40px;
-  background:var(--navy);
-  color:var(--white);
-}
-
-.unit-code{
-  font-family:'IBM Plex Mono', 'Consolas', monospace;
-  font-size:11.5px;
-  letter-spacing:0.1em;
-  color:var(--mint);
-  margin:0 0 6px;
-}
-
-.unit-name{
-  font-family:'Barlow', system-ui, sans-serif;
-  font-size:13px;
-  line-height:1.5;
-  color:#dce9ec;
-  margin:0 0 4px;
-  max-width:760px;
-}
-
-.unit-section{
-  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
-  font-weight:600;
-  font-size:15px;
-  letter-spacing:0.01em;
-  color:var(--white);
-  margin:0;
-}
+/* cada linha da identificação (secretaria, seção) numa linha própria,
+   mantendo a formatação do bloco tjpr-name */
+.institutional-header .tjpr-name .tjpr-line{ display:block; }
 
 .app-header{
   background:var(--navy);
@@ -738,8 +709,8 @@ tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
 }
 
 /* Header fixo miniaturizado: aparece quando o cabeçalho principal sai de
-   vista ao rolar. Só navegação + botão "Topo", com a faixa institucional
-   de cinco cores na base. Montado dinamicamente pelo layout.js. */
+   vista ao rolar. Só navegação + botão "Topo"; sem faixa colorida, apenas o
+   destaque (sublinhado) da ferramenta ativa. Montado pelo layout.js. */
 .mini-header{
   position:fixed;
   top:0; left:0; right:0;
@@ -750,12 +721,6 @@ tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
   box-shadow:0 8px 20px -10px rgba(0,42,58,0.55);
 }
 .mini-header.show{ transform:translateY(0); }
-.mini-header::after{
-  content:"";
-  display:block;
-  height:4px;
-  background:linear-gradient(90deg, var(--navy) 0 20%, var(--teal) 20% 40%, var(--mint) 40% 60%, var(--gold) 60% 80%, var(--coral) 80% 100%);
-}
 .mini-header-inner{
   max-width:980px;
   margin:0 auto;
