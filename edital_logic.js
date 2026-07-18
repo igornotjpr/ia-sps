@@ -30,7 +30,7 @@ const FIELDS = {
     +'<span style="display:block;margin-top:4px;">4. Salve o documento — a numeração é gerada automaticamente e deve ser informada no campo acima.</span>'
     +'</details>'},
   NUM_SEI:            {grupo:'ident', label:'Número do processo SEI', type:'text', def:'', hint:'Ex.: 0031724-38.2026.8.16.6000'},
-  URL_INSCRICAO:      {grupo:'corpo', label:'Endereço eletrônico das inscrições (item 4.2)', type:'text', def:'https://www.tjpr.jus.br/concursos/estagiario', hint:'Processos com prova aplicada pela Mestre GR usam http://tjpr.mestregr.com.br/'},
+  URL_INSCRICAO:      {grupo:'corpo', label:'Endereço eletrônico das inscrições (item 4.2)', type:'text', def:'https://www.tjpr.jus.br/concursos/estagiario', hint:'Informe o endereço completo, no formato https://www... (ex.: https://www.tjpr.jus.br/concursos/estagiario), exatamente como deverá constar no edital.'},
   CURSO:              {grupo:'corpo', label:'Curso (área de conhecimento)', type:'datalist', opts:CURSOS, def:'', hint:'Formato "em [Curso]" — ex.: em Direito'},
   PERIODO_INICIAL:    {grupo:'corpo', label:'Semestre inicial', type:'select', opts:['',...ORDINAIS], def:'', hint:'Deixe vazio para omitir o trecho "cursando do ... ao ... semestre" (ex.: pós-graduação)'},
   PERIODO_FINAL:      {grupo:'corpo', label:'Semestre final', type:'select', opts:['',...ORDINAIS], def:''},
@@ -600,6 +600,9 @@ function alternarEdicao(){
   el.setAttribute('contenteditable', ligado?'false':'true');
   btn.textContent = ligado?'Editar texto':'Concluir edição';
   el.classList.toggle('ed-editando', !ligado);
+  // barra de formatação acompanha o modo de edição
+  const tb=$('edToolbar');
+  if(tb) tb.classList.toggle('show', !ligado);
   if(!ligado) el.focus();
 }
 
@@ -645,6 +648,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('edBtnCopiar').addEventListener('click',copiarTudo);
   $('edBtnPDF').addEventListener('click',baixarPDF);
   $('edBtnEditar').addEventListener('click',alternarEdicao);
+  // botões de formatação do modo de edição: mousedown com preventDefault para
+  // não roubar o foco/seleção do quadro de texto antes de aplicar o comando
+  document.querySelectorAll('#edToolbar button[data-cmd]').forEach(b=>{
+    b.addEventListener('mousedown',e=>e.preventDefault());
+    b.addEventListener('click',()=>{
+      document.execCommand(b.dataset.cmd,false,null);
+      $('edSaida').focus();
+    });
+  });
   $('edBtnColar').addEventListener('click',()=>{
     const area=$('edColarWrap');
     area.style.display = area.style.display==='none' ? 'block' : 'none';

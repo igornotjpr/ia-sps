@@ -484,8 +484,35 @@ input[type=file]{ display:none; }
 .notice-banner.ok{ border-left-color:var(--mint); background:#f2faf8; }
 .notice-banner.warn{ border-left-color:var(--coral); background:#fdf3f1; }
 
+/* Recuo padrão para conteúdo sob o cabeçalho numerado de um passo (mesma
+   coluna do step-desc/upload-panel) — usar para textareas, botões etc. */
+.step-content{ margin-left:36px; }
+
+/* Bloco de assinatura do chefe da unidade (Ponto 20): painel com o texto
+   institucional e botão de cópia lado a lado. */
+.sig-block{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  margin-left:36px;
+  border:1px solid var(--line);
+  border-left:4px solid var(--accent, var(--teal));
+  background:#fffdf7;
+  padding:18px 20px;
+}
+.sig-text{
+  font-size:13px;
+  color:var(--ink-soft);
+  line-height:1.6;
+  margin:0;
+  text-align:center;
+}
+.sig-text strong{ color:var(--ink); }
+
 @media (max-width:600px){
-  .upload-panel, .alt-action, .collapse-panel, .notice-banner, .num-input{ margin-left:0; }
+  .upload-panel, .alt-action, .collapse-panel, .notice-banner, .num-input,
+  .step-content, .sig-block{ margin-left:0; }
 }
 
 .divider{
@@ -709,6 +736,56 @@ tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
   filter:grayscale(1);
   box-shadow:none;
 }
+
+/* Header fixo miniaturizado: aparece quando o cabeçalho principal sai de
+   vista ao rolar. Só navegação + botão "Topo", com a faixa institucional
+   de cinco cores na base. Montado dinamicamente pelo layout.js. */
+.mini-header{
+  position:fixed;
+  top:0; left:0; right:0;
+  z-index:60;
+  background:var(--navy);
+  transform:translateY(-100%);
+  transition:transform .25s ease;
+  box-shadow:0 8px 20px -10px rgba(0,42,58,0.55);
+}
+.mini-header.show{ transform:translateY(0); }
+.mini-header::after{
+  content:"";
+  display:block;
+  height:4px;
+  background:linear-gradient(90deg, var(--navy) 0 20%, var(--teal) 20% 40%, var(--mint) 40% 60%, var(--gold) 60% 80%, var(--coral) 80% 100%);
+}
+.mini-header-inner{
+  max-width:980px;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 16px;
+}
+.mini-header .tab-nav{
+  flex:1;
+  border-bottom:none;
+  padding:0;
+}
+.mini-header .tab-btn{ padding:12px 16px; }
+.top-btn{
+  flex-shrink:0;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:600;
+  font-size:12.5px;
+  letter-spacing:0.03em;
+  color:var(--white);
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.28);
+  padding:7px 14px;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:background .15s ease;
+}
+.top-btn:hover{ background:rgba(255,255,255,0.2); }
+.top-btn:focus-visible{ outline:2px solid var(--mint); outline-offset:2px; }
 
 footer{
   text-align:center;

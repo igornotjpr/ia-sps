@@ -18,6 +18,9 @@
   const stampText = document.getElementById('p20StampText');
 
   const OUT_COLS = ["ORDEM","INSCRIÇÃO","NOME","NOTA","RESERVA"];
+  // colunas efetivamente exibidas/exportadas — RESERVA é suprimida quando
+  // nenhum aprovado é cotista e todos os nomes foram cruzados (ver processFiles)
+  let activeCols = OUT_COLS;
 
   const RESERVA_MAP = [
     { match: 'PRETO OU PARDO', code: '2.1.1' },
@@ -226,7 +229,15 @@
       };
     });
 
-    renderResults({ reprovadosCount, classErrors, notaErrors, unmatched, totalDisponivel, maxNum });
+    // A coluna RESERVA só é suprimida quando está comprovadamente vazia:
+    // nenhum aprovado com código de reserva E todos os nomes cruzados com a
+    // Tabela 2 (se houver candidato sem correspondência, a reserva dele é
+    // desconhecida — a coluna permanece para evidenciar a lacuna).
+    const temReserva = outputRows.some(r => r["RESERVA"] !== '');
+    const reservaSuprimida = !temReserva && unmatched.length === 0;
+    activeCols = reservaSuprimida ? OUT_COLS.filter(c => c !== 'RESERVA') : OUT_COLS;
+
+    renderResults({ reprovadosCount, classErrors, notaErrors, unmatched, totalDisponivel, maxNum, reservaSuprimida });
   }
 
   function renderResults(info){
@@ -236,7 +247,11 @@
     if(!temAviso){
       stampBadge.classList.remove('warn');
       stampBadge.textContent = 'CONFERIDO';
-      stampText.innerHTML = '<strong>' + outputRows.length + ' registros</strong> gerados com sucesso. Todos os nomes foram cruzados com a Tabela 2.';
+      let okHtml = '<strong>' + outputRows.length + ' registros</strong> gerados com sucesso. Todos os nomes foram cruzados com a Tabela 2.';
+      if(info.reservaSuprimida){
+        okHtml += '<br>Nenhum candidato aprovado é cotista — a coluna RESERVA, vazia, foi suprimida da tabela final.';
+      }
+      stampText.innerHTML = okHtml;
     } else {
       stampBadge.classList.add('warn');
       stampBadge.textContent = 'REVISAR';
@@ -247,6 +262,9 @@
       html += '.';
       if(info.reprovadosCount > 0){
         html += '<br>' + info.reprovadosCount + ' candidato(s) marcado(s) como REPROVADO foram excluídos automaticamente.';
+      }
+      if(info.reservaSuprimida){
+        html += '<br>Nenhum candidato aprovado é cotista — a coluna RESERVA, vazia, foi suprimida da tabela final.';
       }
       if(info.unmatched.length > 0){
         html += '<br><strong style="color:var(--stamp-red)">' + info.unmatched.length + ' candidato(s) sem correspondência</strong> na Tabela 2 (RESERVA deixado em branco, linhas destacadas abaixo):';
@@ -264,11 +282,11 @@
     }
 
     let html = '<div class="simple-table-wrap"><table class="simple-table"><thead><tr>' +
-      OUT_COLS.map(c => '<th>'+escapeHtml(c)+'</th>').join('') +
+      activeCols.map(c => '<th>'+escapeHtml(c)+'</th>').join('') +
       '</tr></thead><tbody>';
     outputRows.forEach(r => {
       html += '<tr' + (r._unmatched ? ' class="p20-unmatched"' : '') + '>' +
-        OUT_COLS.map(c => '<td>'+escapeHtml(r[c] === undefined || r[c] === null ? '' : r[c])+'</td>').join('') +
+        activeCols.map(c => '<td>'+escapeHtml(r[c] === undefined || r[c] === null ? '' : r[c])+'</td>').join('') +
         '</tr>';
     });
     html += '</tbody></table></div>';
@@ -286,15 +304,15 @@
   }
 
   copyBtn.addEventListener('click', () => {
-    TJPRCore.copyTableToClipboard(OUT_COLS, outputRows, getCellValue, copyBtn);
+    TJPRCore.copyTableToClipboard(activeCols, outputRows, getCellValue, copyBtn);
   });
 
   downloadBtn.addEventListener('click', function(){
     if(outputRows.length === 0) return;
     const lines = [];
-    lines.push(OUT_COLS.map(csvEscape).join(';'));
+    lines.push(activeCols.map(csvEscape).join(';'));
     outputRows.forEach(r => {
-      lines.push(OUT_COLS.map(c => csvEscape(r[c])).join(';'));
+      lines.push(activeCols.map(c => csvEscape(r[c])).join(';'));
     });
     const csvContent = '\uFEFF' + lines.join('\r\n');
     const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
@@ -309,4 +327,40 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
+
+  // ---- Bloco de assinatura do chefe da unidade (copiar e colar) ----
+  const sigCopyBtn = document.getElementById('p20SigCopyBtn');
+  const sigText = document.getElementById('p20SigText');
+  if(sigCopyBtn && sigText){
+    sigCopyBtn.addEventListener('click', async function(){
+      // texto puro: uma linha por item, como será colado no edital
+      const lines = sigText.innerText.split('\n').map(s => s.trim()).filter(Boolean);
+      const plain = lines.join('\n');
+      const html = '<p style="text-align:center;margin:0;"><strong>' + escapeHtml(lines[0]) + '</strong><br>'
+        + lines.slice(1).map(escapeHtml).join('<br>') + '</p>';
+
+      function showCopied(){
+        const original = sigCopyBtn.textContent;
+        sigCopyBtn.textContent = 'Copiado!';
+        setTimeout(() => { sigCopyBtn.textContent = original; }, 1800);
+      }
+
+      if(navigator.clipboard && window.ClipboardItem){
+        try{
+          await navigator.clipboard.write([new ClipboardItem({
+            'text/html': new Blob([html], {type:'text/html'}),
+            'text/plain': new Blob([plain], {type:'text/plain'})
+          })]);
+          showCopied();
+          return;
+        }catch(err){ /* segue para o fallback */ }
+      }
+      try{
+        await navigator.clipboard.writeText(plain);
+        showCopied();
+      }catch(err){
+        alert('Não foi possível copiar automaticamente. Selecione o texto da assinatura e use Ctrl+C.');
+      }
+    });
+  }
 })();

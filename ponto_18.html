@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="core.css">
 </head><body><div class="sheet">
 <div class="institutional-header"><div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div><div class="tjpr-name"><strong>Tribunal de Justiça do Estado do Paraná</strong>Secretaria de Gestão de Pessoas</div></div>
-<div class="unit-block"><p class="unit-section">Seção de Processo Seletivo</p><p class="unit-name">Ferramentas de apoio para importação de dados no Hércules</p></div>
+<div class="unit-block"><p class="unit-section">Seção de Processo Seletivo</p></div>
 <div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
 <main>
 
@@ -25,7 +25,9 @@
       <p class="step-title">Cole a coluna de e-mails</p>
     </div>
     <p class="step-desc">Cole aqui a coluna copiada do Excel (um valor por linha).</p>
-    <textarea id="input" placeholder="Cole aqui a coluna copiada do Excel"></textarea>
+    <div class="step-content">
+      <textarea id="input" placeholder="Cole aqui a coluna copiada do Excel"></textarea>
+    </div>
   </div>
 
   <div class="step">
@@ -40,9 +42,11 @@
       <p class="step-title">Resultado</p>
     </div>
     <p class="step-desc">Lista pronta, separada por ponto e vírgula — use o botão abaixo para copiar.</p>
-    <textarea id="output" readonly></textarea>
-    <div class="download-row">
-      <button class="download-btn" id="copy" style="background:var(--ink);">Copiar resultado</button>
+    <div class="step-content">
+      <textarea id="output" readonly></textarea>
+      <div class="download-row">
+        <button class="download-btn" id="copy">Copiar resultado</button>
+      </div>
     </div>
   </div>
 

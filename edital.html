@@ -38,13 +38,46 @@
     font-family:Calibri,"Carlito",Arial,sans-serif; font-size:11pt; line-height:1.35; color:#000;
   }
   #edSaida.ed-editando{ outline:2px solid var(--teal); background:#fffdf2; }
+  /* barra de formatação exibida apenas no modo de edição */
+  .ed-toolbar{
+    display:none;
+    align-items:center;
+    gap:4px;
+    flex-wrap:wrap;
+    border:1px solid var(--line);
+    border-bottom:none;
+    background:#f8fbfc;
+    padding:8px 10px;
+  }
+  .ed-toolbar.show{ display:flex; }
+  .ed-toolbar button{
+    min-width:32px; height:30px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line);
+    background:var(--white);
+    color:var(--ink);
+    font-family:Georgia, 'Times New Roman', serif;
+    font-size:14px;
+    cursor:pointer;
+    padding:0 8px;
+  }
+  .ed-toolbar button:hover{ border-color:var(--teal); color:var(--teal); }
+  .ed-toolbar button svg{ display:block; }
+  .ed-toolbar button:hover svg line{ stroke:var(--teal); }
+  .ed-toolbar-sep{ width:1px; height:20px; background:var(--line); margin:0 6px; }
+  .ed-toolbar-hint{
+    margin-left:auto;
+    font-family:'Barlow',system-ui,sans-serif;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
   #edSaida p{ margin:0 0 8pt; }
   .ed-j{ text-align:justify; } .ed-c{ text-align:center; } .ed-b{ font-weight:bold; }
   @media (max-width:640px){ .ed-grid{ grid-template-columns:1fr; } #edSaida{ padding:20px; } }
 </style>
 </head><body><div class="sheet">
 <div class="institutional-header"><div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div><div class="tjpr-name"><strong>Tribunal de Justiça do Estado do Paraná</strong>Secretaria de Gestão de Pessoas</div></div>
-<div class="unit-block"><p class="unit-section">Seção de Processo Seletivo</p><p class="unit-name">Ferramentas de apoio para importação de dados no Hércules</p></div>
+<div class="unit-block"><p class="unit-section">Seção de Processo Seletivo</p></div>
 <div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
 <main>
 
@@ -81,10 +114,21 @@
   <div class="step" id="edEtapa3" style="display:none;">
     <div class="step-head"><span class="step-num">3</span><p class="step-title">Texto final do edital</p></div>
     <p class="step-desc">Confira o texto integralmente antes de utilizar. Você pode editar diretamente no quadro (botão "Editar texto"), copiar tudo com formatação ou salvar em PDF.</p>
+    <div id="edToolbar" class="ed-toolbar">
+      <button type="button" data-cmd="bold" title="Negrito (Ctrl+B)"><b>N</b></button>
+      <button type="button" data-cmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
+      <button type="button" data-cmd="underline" title="Sublinhado (Ctrl+U)"><u>S</u></button>
+      <span class="ed-toolbar-sep"></span>
+      <button type="button" data-cmd="justifyLeft" title="Alinhar à esquerda"><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><line x1="1" y1="2" x2="15" y2="2" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="5.5" x2="10" y2="5.5" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="12.5" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button type="button" data-cmd="justifyCenter" title="Centralizar"><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><line x1="1" y1="2" x2="15" y2="2" stroke="currentColor" stroke-width="1.6"/><line x1="3.5" y1="5.5" x2="12.5" y2="5.5" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="3.5" y1="12.5" x2="12.5" y2="12.5" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button type="button" data-cmd="justifyRight" title="Alinhar à direita"><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><line x1="1" y1="2" x2="15" y2="2" stroke="currentColor" stroke-width="1.6"/><line x1="6" y1="5.5" x2="15" y2="5.5" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="6" y1="12.5" x2="15" y2="12.5" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button type="button" data-cmd="justifyFull" title="Justificar"><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><line x1="1" y1="2" x2="15" y2="2" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="5.5" x2="15" y2="5.5" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="12.5" x2="15" y2="12.5" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <span class="ed-toolbar-hint">Atalhos: Ctrl+B negrito &middot; Ctrl+I itálico &middot; Ctrl+U sublinhado</span>
+    </div>
     <div id="edSaida" contenteditable="false"></div>
     <div class="download-row" style="display:flex;">
       <button class="download-btn" id="edBtnCopiar">Copiar tudo</button>
-      <button class="download-btn" id="edBtnPDF" style="background:var(--teal);">Baixar PDF (imprimir)</button>
+      <button class="download-btn" id="edBtnPDF" style="background:var(--ink);">Baixar PDF (imprimir)</button>
       <button class="download-btn" id="edBtnEditar" style="background:var(--navy);">Editar texto</button>
       <span class="count-note" id="edMsgAcao"></span>
     </div>

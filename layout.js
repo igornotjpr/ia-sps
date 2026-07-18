@@ -6,21 +6,25 @@
 
 function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// Monta o HTML do menu de navegação (usado no cabeçalho da página e no
+// header fixo miniaturizado) — cada aba carrega o emoji da ferramenta.
+function navHtml(cur){
+  let h='<nav class="tab-nav">';
+  h+=`<a class="tab-btn ${cur==='index.html'?'active':''}" href="index.html"><span class="tab-emoji" aria-hidden="true">🏠</span>Início</a>`;
+  FERRAMENTAS.forEach(t=>{
+    const em=t.emoji?`<span class="tab-emoji" aria-hidden="true">${escHtml(t.emoji)}</span>`:'';
+    h+=`<a class="tab-btn ${cur===t.arquivo?'active':''}" href="${t.arquivo}">${em}${escHtml(rotuloFerramenta(t))}</a>`;
+  });
+  h+='</nav>';
+  return h;
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   const cur=location.pathname.split('/').pop()||'index.html';
 
-  // 1) menu de navegação — cada aba carrega o emoji da ferramenta
+  // 1) menu de navegação
   const p=document.getElementById('menu-placeholder');
-  if(p){
-    let h='<nav class="tab-nav">';
-    h+=`<a class="tab-btn ${cur==='index.html'?'active':''}" href="index.html"><span class="tab-emoji" aria-hidden="true">🏠</span>Início</a>`;
-    FERRAMENTAS.forEach(t=>{
-      const em=t.emoji?`<span class="tab-emoji" aria-hidden="true">${escHtml(t.emoji)}</span>`:'';
-      h+=`<a class="tab-btn ${cur===t.arquivo?'active':''}" href="${t.arquivo}">${em}${escHtml(rotuloFerramenta(t))}</a>`;
-    });
-    h+='</nav>';
-    p.outerHTML=h;
-  }
+  if(p){ p.outerHTML=navHtml(cur); }
 
   // 2) cabeçalho da página de ferramenta (selo de emoji + eyebrow + h1) vindo do
   //    registro; a cor de acento da ferramenta é aplicada ao cabeçalho inteiro
@@ -63,5 +67,32 @@ document.addEventListener('DOMContentLoaded',()=>{
       +`<h2>Próxima ferramenta</h2>`
       +`<p class="tool-card-desc">Novas ferramentas aparecerão aqui conforme forem desenvolvidas.</p>`
       +`</div>`);
+  }
+
+  // 4) header fixo miniaturizado: só navegação + botão "Topo", exibido quando
+  //    o cabeçalho principal (app-header) sai de vista ao rolar a página
+  const appHeader=document.querySelector('.app-header');
+  if(appHeader){
+    const mini=document.createElement('div');
+    mini.className='mini-header';
+    mini.innerHTML='<div class="mini-header-inner">'+navHtml(cur)
+      +'<button type="button" class="top-btn" title="Voltar ao topo da página">Topo <span aria-hidden="true">↑</span></button></div>';
+    document.body.appendChild(mini);
+    mini.querySelector('.top-btn').addEventListener('click',()=>{
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(entries=>{
+        const e=entries[0];
+        // só mostra quando o cabeçalho saiu por CIMA da tela (rolagem para baixo)
+        mini.classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0);
+      },{threshold:0}).observe(appHeader);
+    } else {
+      // fallback para navegadores sem IntersectionObserver
+      window.addEventListener('scroll',()=>{
+        const r=appHeader.getBoundingClientRect();
+        mini.classList.toggle('show', r.bottom<0);
+      },{passive:true});
+    }
   }
 });
