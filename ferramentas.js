@@ -6,6 +6,8 @@ const FERRAMENTAS=[
     arquivo:"edital.html",
     rotulo:"Edital",
     ordem:0,
+    emoji:"📜",
+    cor:"--coral",
     eyebrow:"Abertura de processo seletivo",
     titulo:"Gerador do Edital de Abertura",
     descricao:"Lê o formulário de abertura do processo seletivo (PDF do SEI), permite conferir/editar as respostas e gera o texto completo do Edital de Abertura a partir do modelo adequado."
@@ -13,6 +15,8 @@ const FERRAMENTAS=[
   {
     arquivo:"ponto_18.html",
     ponto:"18",
+    emoji:"📧",
+    cor:"--teal",
     eyebrow:"Ferramenta de apoio",
     titulo:"Agrupador de E-mails",
     descricao:"Converte uma coluna de e-mails em uma lista separada por ponto e vírgula."
@@ -20,6 +24,8 @@ const FERRAMENTAS=[
   {
     arquivo:"ponto_20.html",
     ponto:"20",
+    emoji:"🏅",
+    cor:"--mint",
     eyebrow:"Cruzamento de classificação e inscritos",
     titulo:"Elaboração do Edital de classificação final",
     descricao:"Cruza o Relatório de Classificação Final com o Relatório de Inscritos (planilhas da Fábrica de Provas), aplicando cotas de reserva e limite de aprovados."
@@ -27,9 +33,11 @@ const FERRAMENTAS=[
   {
     arquivo:"ponto_26.html",
     ponto:"26",
+    emoji:"📥",
+    cor:"--gold",
     eyebrow:"Processamento de classificação",
     titulo:"Gerar arquivo para importar no Hércules",
-    descricao:"Cruza a classificação final (colada do edital) com os dados cadastrais dos candidatos (CSV), gerando a tabela para importação no Hércules."
+    descricao:"Cruza a classificação final (extraída do PDF do edital) com os dados cadastrais dos candidatos (CSV), gerando a tabela para importação no Hércules."
   }
 ].sort((a,b)=>{
   const oa=(a.ordem!==undefined)?a.ordem:Number(a.ponto);

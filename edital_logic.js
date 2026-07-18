@@ -22,20 +22,20 @@ const LIMITES_61 = ["a todos os candidatos que atingirem a nota mínima","a todo
 
 /* def: valor inicial | grupo: agrupamento visual | show(): visibilidade conforme eixos */
 const FIELDS = {
-  UNIDADE:            {grupo:'ident', label:'Unidade solicitante (nome por extenso, para o título do edital)', type:'text', def:'', hint:'Ex.: VARA DE EXECUÇÕES PENAIS E CORREGEDORIA DOS PRESÍDIOS DE FRANCISCO BELTRÃO'},
-  NUM_EDITAL:         {grupo:'ident', label:'Número do edital (Nº/ano)', type:'text', def:'', hint:'Ex.: 2870/2026', hintHtml:'Para obter a numeração do edital:'
+  UNIDADE:            {grupo:'ident', full:true, label:'Unidade solicitante (nome por extenso, para o título do edital)', type:'text', def:'', hint:'Ex.: VARA DE EXECUÇÕES PENAIS E CORREGEDORIA DOS PRESÍDIOS DE FRANCISCO BELTRÃO'},
+  NUM_EDITAL:         {grupo:'ident', label:'Número do edital (Nº/ano)', type:'text', def:'', hint:'Ex.: 2870/2026', hintHtml:'<details class="ed-hint-details"><summary>Como obter a numeração no sistema Athos</summary>'
     +'<span style="display:block;margin-top:6px;">1. Abra o sistema Athos do TJPR: <a href="https://portal.tjpr.jus.br/tjpr-athos/index.do" target="_blank" rel="noopener">portal.tjpr.jus.br/tjpr-athos</a>;</span>'
     +'<span style="display:block;margin-top:4px;">2. No menu "Documento", selecione a opção "Novo";</span>'
     +'<span style="display:block;margin-top:4px;">3. Na nova tela, escolha "DIVISÃO DE ESTÁGIO - DIRETORIA - DEPARTAMENTO DE GESTÃO DE RECURSOS HUMANOS - Edital de Processo Seletivo de Estagiários";</span>'
-    +'<span style="display:block;margin-top:4px;">4. Salve o documento — a numeração é gerada automaticamente e deve ser informada no campo acima.</span>'},
+    +'<span style="display:block;margin-top:4px;">4. Salve o documento — a numeração é gerada automaticamente e deve ser informada no campo acima.</span>'
+    +'</details>'},
   NUM_SEI:            {grupo:'ident', label:'Número do processo SEI', type:'text', def:'', hint:'Ex.: 0031724-38.2026.8.16.6000'},
-  ORGAO:              {grupo:'corpo', label:'Órgão que assina o preâmbulo', type:'text', def:'A Secretaria de Gestão de Pessoas'},
+  URL_INSCRICAO:      {grupo:'corpo', label:'Endereço eletrônico das inscrições (item 4.2)', type:'text', def:'https://www.tjpr.jus.br/concursos/estagiario', hint:'Processos com prova aplicada pela Mestre GR usam http://tjpr.mestregr.com.br/'},
   CURSO:              {grupo:'corpo', label:'Curso (área de conhecimento)', type:'datalist', opts:CURSOS, def:'', hint:'Formato "em [Curso]" — ex.: em Direito'},
   PERIODO_INICIAL:    {grupo:'corpo', label:'Semestre inicial', type:'select', opts:['',...ORDINAIS], def:'', hint:'Deixe vazio para omitir o trecho "cursando do ... ao ... semestre" (ex.: pós-graduação)'},
   PERIODO_FINAL:      {grupo:'corpo', label:'Semestre final', type:'select', opts:['',...ORDINAIS], def:''},
   LIMITE_CLASSIFICADOS:{grupo:'corpo', label:'Item 1.2.1 — Quem constará na classificação final', type:'preset', opts:LIMITES_121, def:'apenas os 10 (dez) melhores classificados'},
   VIGENCIA:           {grupo:'corpo', label:'Vigência do processo seletivo', type:'select', opts:['1 (um) ano, não prorrogável','6 (seis) meses, prorrogável por igual período','3 (três) meses, prorrogável por igual período'], def:'1 (um) ano, não prorrogável'},
-  URL_INSCRICAO:      {grupo:'corpo', label:'Endereço eletrônico das inscrições (item 4.2)', type:'select', opts:['https://www.tjpr.jus.br/concursos/estagiario','http://tjpr.mestregr.com.br/'], def:'https://www.tjpr.jus.br/concursos/estagiario'},
   PERIODO_INSCRICOES: {grupo:'corpo', label:'Item 4.3 — Disponibilidade das inscrições', type:'preset', opts:['a partir do quinto dia útil subsequente à publicação deste edital no Diário da Justiça Eletrônico (e-DJ), conforme o artigo 12 do Decreto Judiciário nº 345/2019','das 00h00min de [DATA DEFINIR] às 23h59min de [DATA DEFINIR]'], def:'a partir do quinto dia útil subsequente à publicação deste edital no Diário da Justiça Eletrônico (e-DJ), conforme o artigo 12 do Decreto Judiciário nº 345/2019', hint:'O texto do modelo original usa datas fixas; a opção do "quinto dia útil" segue os editais publicados recentemente'},
   INSCRICOES_SUBITEM: {grupo:'corpo', label:'Item 4.3.1 — Prazo das inscrições (deixe vazio para omitir o subitem)', type:'text', def:''},
   COMPOSICAO_PROVA:   {grupo:'prova', label:'Composição da prova (item 5.2)', type:'textarea', def:'', hint:'Ex.: 10 (dez) questões objetivas avaliadas em 0,5 (zero vírgula cinco) ponto cada e 1 (uma) questão discursiva avaliada em 5 (cinco) pontos'},
@@ -55,6 +55,9 @@ const FIELDS = {
 const GRUPOS = [['ident','Identificação do edital'],['corpo','Campos do corpo do edital'],['prova','Prova, entrevista e classificação'],['anexo','Anexo I — Conteúdo programático'],['assin','Assinatura']];
 const values = {};
 Object.keys(FIELDS).forEach(k => values[k] = FIELDS[k].def);
+// O órgão que assina o preâmbulo é fixo — o placeholder {{ORGAO}} dos modelos
+// continua sendo substituído, apenas sem campo editável no formulário.
+values.ORGAO = 'A Secretaria de Gestão de Pessoas';
 
 /* ============================== UTIL ============================== */
 const $ = id => document.getElementById(id);
@@ -375,7 +378,7 @@ function renderConfirma(avisos){
     let g='<div class="ed-grupo"><p class="ed-grupo-tit">'+esc(gtit)+'</p><div class="ed-grid">';
     campos.forEach(k=>{
       const f=FIELDS[k]; const v=values[k]||'';
-      g+='<label class="ed-campo'+(f.type==='textarea'||f.type==='preset'?' ed-campo-full':'')+'"><span>'+esc(f.label)+':</span>';
+      g+='<label class="ed-campo'+(f.full||f.type==='textarea'||f.type==='preset'?' ed-campo-full':'')+'"><span>'+esc(f.label)+':</span>';
       if(f.type==='select'){
         g+='<select data-campo="'+k+'">'+f.opts.map(o=>'<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
       } else if(f.type==='datalist'){

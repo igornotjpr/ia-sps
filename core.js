@@ -1,186 +1,733 @@
 /*
-  core.js — funções compartilhadas entre todas as ferramentas (Ponto XX) da
-  Seção de Processo Seletivo (TJPR). Referenciar sempre por caminho relativo:
-  <script src="core.js"></script>
-
-  100% client-side, sem chamadas a APIs externas.
-
-  Para usar em uma nova ferramenta:
-    const { escapeHtml, csvEscape, normName, detectDelimiter, parseCSV,
-            copyTableToClipboard } = TJPRCore;
+  core.css — estilo institucional compartilhado (TJPR / Seção de Processo Seletivo)
+  Usado por todas as ferramentas (Ponto XX) e pelo índice. Referenciar sempre por
+  caminho relativo: <link rel="stylesheet" href="core.css">
+  100% offline: nenhuma fonte, imagem ou script é carregado por URL externa.
 */
-window.TJPRCore = (function(){
 
-  function escapeHtml(s){
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+:root{
+  /* Cores institucionais oficiais do TJPR (Manual de Uso da Marca) */
+  --navy: #002a3a;      /* Pantone 303 C — cor primária */
+  --navy-light: #0d4658;
+  --teal: #008c95;      /* Pantone 321 C — cor secundária */
+  --mint: #49c5b1;      /* Pantone 3258 C */
+  --gold: #eeb134;      /* Pantone 116 C */
+  --coral: #eb553b;     /* Pantone 2026 C */
 
-  function csvEscape(val){
-    val = String(val === undefined || val === null ? '' : val);
-    if(/[";\n]/.test(val)){
-      return '"' + val.replace(/"/g,'""') + '"';
-    }
-    return val;
-  }
+  --paper: #eef1f2;
+  --paper-dark: #dde4e6;
+  --ink: #14232a;
+  --ink-soft: #4d5e64;
+  --line: #c7d2d5;
+  --white: #ffffff;
 
-  function normName(s){
-    if(!s) return '';
-    return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-      .toUpperCase()
-      .replace(/[^A-Z\s]/g,'')
-      .replace(/\s+/g,' ')
-      .trim();
-  }
+  /* aliases mantidos para o restante do CSS */
+  --seal: var(--navy);
+  --seal-light: var(--teal);
+  --stamp-red: var(--coral);
+}
 
-  function detectDelimiter(text){
-    const firstLine = text.split(/\r\n|\r|\n/)[0] || '';
-    const commaCount = (firstLine.match(/,/g) || []).length;
-    const semiCount = (firstLine.match(/;/g) || []).length;
-    return semiCount > commaCount ? ';' : ',';
-  }
+*{ box-sizing:border-box; }
 
-  // Parser de CSV robusto (lida com campos entre aspas; delimitador é
-  // autodetectado — Excel exportado em locale pt-BR normalmente usa ";")
-  function parseCSV(text){
-    const delim = detectDelimiter(text);
-    const rows = [];
-    let row = [];
-    let field = '';
-    let inQuotes = false;
-    text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-    for(let i=0; i<text.length; i++){
-      const c = text[i];
-      if(inQuotes){
-        if(c === '"'){
-          if(text[i+1] === '"'){ field += '"'; i++; }
-          else { inQuotes = false; }
-        } else {
-          field += c;
-        }
-      } else {
-        if(c === '"'){ inQuotes = true; }
-        else if(c === delim){ row.push(field); field=''; }
-        else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
-        else { field += c; }
-      }
-    }
-    if(field.length > 0 || row.length > 0){ row.push(field); rows.push(row); }
-    return rows.filter(r => !(r.length===1 && r[0].trim()===''));
-  }
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse at top left, rgba(255,255,255,0.25), transparent 60%),
+    var(--paper);
+  color:var(--ink);
+  font-family:'Barlow', system-ui, sans-serif;
+  padding:32px 16px 80px;
+}
 
-  // Monta um HTML de tabela "limpo" (sem font-family, sem font-size, sem cor)
-  // para uso exclusivo na área de transferência. Usa <td> em vez de <th> no
-  // cabeçalho porque Word/Excel reconhecem <th> como linha de cabeçalho e
-  // aplicam seu próprio estilo automático (fonte maior, centralizada),
-  // ignorando qualquer CSS definido aqui.
-  function buildCleanTableHTML(cols, rows, getCell){
-    const cellStyle = 'border:1pt solid #000000;text-align:left;padding:4px 8px;font-weight:normal;';
-    const headerStyle = 'border:1pt solid #000000;text-align:left;padding:4px 8px;font-weight:bold;';
-    let html = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;">';
-    html += '<tr>' + cols.map(c =>
-      '<td style="' + headerStyle + '">' + escapeHtml(c) + '</td>'
-    ).join('') + '</tr>';
-    rows.forEach(r => {
-      html += '<tr>' + cols.map(c =>
-        '<td style="' + cellStyle + '">' + escapeHtml(getCell(r, c)) + '</td>'
-      ).join('') + '</tr>';
-    });
-    html += '</table>';
-    return html;
-  }
+.sheet{
+  max-width:980px;
+  margin:0 auto;
+  background:var(--white);
+  border:1px solid var(--line);
+  box-shadow:0 1px 0 var(--line), 0 18px 40px -24px rgba(35,40,31,0.45);
+  position:relative;
+}
 
-  function buildTSV(cols, rows, getCell){
-    const lines = [cols.join('\t')];
-    rows.forEach(r => {
-      lines.push(cols.map(c => String(getCell(r, c))).join('\t'));
-    });
-    return lines.join('\n');
-  }
+.sheet::before{
+  content:"";
+  position:absolute; top:0; left:0; right:0; height:6px;
+  background:linear-gradient(90deg, var(--navy) 0%, var(--navy) 20%, var(--teal) 20%, var(--teal) 40%, var(--mint) 40%, var(--mint) 60%, var(--gold) 60%, var(--gold) 80%, var(--coral) 80%, var(--coral) 100%);
+}
 
-  // Copia cols/rows para a área de transferência como tabela real (HTML) +
-  // texto puro (fallback). getCell(row, col) deve devolver o valor de cada
-  // célula. buttonEl recebe o feedback visual "Copiado!".
-  async function copyTableToClipboard(cols, rows, getCell, buttonEl){
-    if(rows.length === 0) return;
-    const tsv = buildTSV(cols, rows, getCell);
-    const htmlTable = buildCleanTableHTML(cols, rows, getCell);
+.institutional-header{
+  padding:22px 40px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  border-bottom:1px solid var(--line);
+  background:var(--white);
+}
 
-    function showCopied(){
-      if(!buttonEl) return;
-      const original = buttonEl.textContent;
-      buttonEl.textContent = 'Copiado!';
-      setTimeout(() => { buttonEl.textContent = original; }, 1800);
-    }
+.institutional-header img{
+  height:52px;
+  width:auto;
+  flex-shrink:0;
+}
 
-    if(navigator.clipboard && window.ClipboardItem){
-      try{
-        const item = new ClipboardItem({
-          'text/html': new Blob([htmlTable], {type:'text/html'}),
-          'text/plain': new Blob([tsv], {type:'text/plain'})
-        });
-        await navigator.clipboard.write([item]);
-        showCopied();
-        return;
-      }catch(err){
-        // segue para o fallback abaixo
-      }
-    }
+.institutional-header .tjpr-fallback{
+  display:none;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:22px;
+  color:var(--navy);
+  letter-spacing:0.02em;
+  line-height:1;
+  flex-shrink:0;
+}
+.institutional-header .tjpr-fallback small{
+  display:block;
+  font-family:'Barlow', system-ui, sans-serif;
+  font-weight:500;
+  font-size:9px;
+  letter-spacing:0.08em;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
 
-    const holder = document.createElement('div');
-    holder.contentEditable = 'true';
-    holder.style.position = 'fixed';
-    holder.style.opacity = '0';
-    holder.style.pointerEvents = 'none';
-    holder.innerHTML = htmlTable;
-    document.body.appendChild(holder);
-    const range = document.createRange();
-    range.selectNodeContents(holder);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    try{
-      document.execCommand('copy');
-      showCopied();
-    }catch(err2){
-      alert('Não foi possível copiar automaticamente. Selecione a tabela manualmente e copie com Ctrl+C.');
-    }
-    sel.removeAllRanges();
-    document.body.removeChild(holder);
-  }
+.institutional-header .tjpr-name{
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:12px;
+  color:var(--ink-soft);
+  line-height:1.4;
+  border-left:1px solid var(--line);
+  padding-left:18px;
+}
+.institutional-header .tjpr-name strong{
+  display:block;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:600;
+  font-size:14px;
+  color:var(--navy);
+  letter-spacing:0.01em;
+}
 
-  // Extrai o texto de um PDF usando pdf.js (vendor/pdf.min.js + vendor/pdf.worker.min.js
-  // precisam estar incluídos na página, via <script>, antes de chamar esta função).
-  // Agrupa os itens de texto por linha (coordenada Y) e ordena por X, reconstruindo
-  // a leitura visual do documento — inclusive tabelas simples.
-  async function pdfToText(file){
-    if(typeof pdfjsLib === 'undefined'){
-      throw new Error('Biblioteca pdf.js não carregada (vendor/pdf.min.js).');
-    }
-    try{ pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js'; }catch(e){}
-    const buf = await file.arrayBuffer();
-    const doc = await pdfjsLib.getDocument({data: buf}).promise;
-    let out = '';
-    for(let p=1; p<=doc.numPages; p++){
-      const page = await doc.getPage(p);
-      const tc = await page.getTextContent();
-      const linhas = {};
-      tc.items.forEach(it => {
-        if(!it.str) return;
-        const y = Math.round(it.transform[5]);
-        (linhas[y] = linhas[y] || []).push({x: it.transform[4], t: it.str});
-      });
-      const ys = Object.keys(linhas).map(Number).sort((a,b) => b-a);
-      ys.forEach(y => {
-        const l = linhas[y].sort((a,b) => a.x-b.x).map(o => o.t).join(' ').replace(/\s+/g,' ').trim();
-        if(l) out += l + '\n';
-      });
-      out += '\n';
-    }
-    return out;
-  }
+.unit-block{
+  padding:18px 40px;
+  background:var(--navy);
+  color:var(--white);
+}
 
-  return {
-    escapeHtml, csvEscape, normName, detectDelimiter, parseCSV,
-    buildCleanTableHTML, buildTSV, copyTableToClipboard, pdfToText
-  };
-})();
+.unit-code{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11.5px;
+  letter-spacing:0.1em;
+  color:var(--mint);
+  margin:0 0 6px;
+}
+
+.unit-name{
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:13px;
+  line-height:1.5;
+  color:#dce9ec;
+  margin:0 0 4px;
+  max-width:760px;
+}
+
+.unit-section{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:600;
+  font-size:15px;
+  letter-spacing:0.01em;
+  color:var(--white);
+  margin:0;
+}
+
+.app-header{
+  background:var(--navy);
+  /* filete de acento na base do cabeçalho — mesma lógica do cartão da home;
+     a cor é definida por página (layout.js) a partir do registro da ferramenta */
+  border-bottom:4px solid var(--accent, var(--mint));
+}
+/* variante do índice: filete com as cinco cores institucionais, ecoando a faixa do topo da folha */
+.app-header.rainbow{ border-bottom:none; }
+.app-header.rainbow::after{
+  content:"";
+  display:block;
+  height:4px;
+  background:linear-gradient(90deg, var(--navy) 0 20%, var(--teal) 20% 40%, var(--mint) 40% 60%, var(--gold) 60% 80%, var(--coral) 80% 100%);
+}
+
+/* Navegação entre ferramentas: agora é navegação real entre páginas (<a>),
+   não troca de painel via JS — cada arquivo .html é uma ferramenta própria. */
+.tab-nav{
+  display:flex;
+  gap:4px;
+  padding:0 40px;
+  border-bottom:1px solid rgba(255,255,255,0.14);
+  overflow-x:auto;
+  overflow-y:hidden;
+}
+
+.tab-btn{
+  display:inline-block;
+  background:transparent;
+  border:none;
+  padding:15px 22px;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:600;
+  font-size:14px;
+  letter-spacing:0.03em;
+  color:rgba(255,255,255,0.55);
+  text-decoration:none;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  margin-bottom:-1px;
+  white-space:nowrap;
+  transition:color .15s ease, border-color .15s ease;
+}
+.tab-btn:hover{ color:rgba(255,255,255,0.85); }
+.tab-btn.active{ color:var(--white); border-bottom-color:var(--mint); }
+.tab-btn:focus-visible{ outline:2px solid var(--mint); outline-offset:-2px; }
+
+header{
+  padding:28px 40px 24px;
+}
+
+/* cabeçalho de página com selo de emoji — versão para o fundo azul-marinho */
+.page-header{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  padding:28px 40px 24px;
+}
+.page-emoji{
+  flex-shrink:0;
+  width:56px; height:56px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px;
+  line-height:1;
+  background:#fffdf7;
+  border:1px solid rgba(255,255,255,0.28);
+  box-shadow:3px 3px 0 var(--accent, var(--mint));
+}
+.page-title-block{ min-width:0; }
+
+.tab-emoji{
+  font-size:13px;
+  margin-right:7px;
+  /* emojis coloridos destoariam do menu monocromático quando inativos;
+     tons de cinza por padrão, cor plena só na aba ativa/hover */
+  filter:grayscale(1);
+  opacity:0.75;
+  transition:filter .15s ease, opacity .15s ease;
+}
+.tab-btn:hover .tab-emoji,
+.tab-btn.active .tab-emoji{ filter:none; opacity:1; }
+
+/* Bloco informativo ("i" — como usar) no topo das ferramentas: mesma família
+   visual do notice-banner, com borda esquerda na cor de acento da página. */
+.step-info{
+  background:#f8fbfc;
+  border:1px solid var(--line);
+  border-left:4px solid var(--accent, var(--teal));
+  padding:18px 20px 8px;
+}
+
+.app-header .eyebrow{ color:var(--mint); }
+.app-header h1{ color:var(--white); }
+
+.placeholder-panel{
+  text-align:center;
+  padding:70px 20px;
+}
+.placeholder-panel .placeholder-tag{
+  display:inline-block;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--teal);
+  border:1px solid var(--line);
+  padding:4px 12px;
+  margin-bottom:14px;
+}
+.placeholder-panel h2{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:22px;
+  font-weight:700;
+  color:var(--ink);
+  margin:0 0 8px;
+}
+.placeholder-panel p{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  max-width:420px;
+  margin:0 auto;
+  line-height:1.6;
+}
+
+.eyebrow{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--seal);
+  margin:0 0 6px;
+}
+
+h1{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:30px;
+  font-weight:700;
+  margin:0;
+  line-height:1.15;
+}
+
+main{ padding:32px 40px 40px; }
+
+.step{ margin-bottom:34px; }
+
+.step-head{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.step-num{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:15px;
+  color:var(--white);
+  background:var(--seal);
+  width:26px; height:26px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+.step-title{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:18px;
+  font-weight:600;
+  margin:0;
+}
+
+.step-desc{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  margin:0 0 12px 36px;
+  line-height:1.5;
+}
+
+/* listas de instrução dentro dos blocos de passo — mesmo tamanho/entrelinha do texto padrão */
+.step-list{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
+  margin:0 0 12px 36px;
+  padding-left:18px;
+}
+.step-list li{ margin-bottom:4px; }
+
+textarea{
+  width:100%;
+  min-height:160px;
+  padding:14px;
+  border:1px solid var(--line);
+  background:#fffdf7;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--ink);
+  resize:vertical;
+}
+textarea:focus, input:focus, button:focus, select:focus{
+  outline:2px solid var(--seal-light);
+  outline-offset:2px;
+}
+
+.num-input{
+  display:block;
+  width:160px;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  background:#fffdf7;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:14px;
+  color:var(--ink);
+  /* mesmo recuo dos demais elementos de passo (step-desc, upload-panel) */
+  margin-left:36px;
+}
+
+/* Tabela de formatação simples: bordas de 1pt em preto, texto puro, sem
+   estilização decorativa (usada por ferramentas que exigem tabela "limpa"
+   para colar em Word/Excel, ex: Ponto 20). */
+.simple-table-wrap{ overflow-x:auto; }
+table.simple-table{
+  border-collapse:collapse;
+  width:100%;
+}
+table.simple-table th,
+table.simple-table td{
+  border:1pt solid #000000;
+  padding:6px 10px;
+  text-align:left;
+}
+table.simple-table th{
+  font-weight:700;
+}
+table.simple-table tr.p20-unmatched td{
+  background:#f7e9e4;
+}
+
+.file-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.file-btn{
+  font-family:'Barlow', system-ui, sans-serif;
+  font-weight:500;
+  font-size:13.5px;
+  padding:10px 18px;
+  background:var(--ink);
+  color:var(--white);
+  border:none;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.file-btn:hover{ background:var(--seal); }
+input[type=file]{ display:none; }
+.file-name{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12.5px;
+  color:var(--ink-soft);
+}
+
+.run-btn{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:16px;
+  letter-spacing:0.02em;
+  padding:14px 28px;
+  background:var(--seal);
+  color:var(--white);
+  border:none;
+  cursor:pointer;
+  width:100%;
+}
+.run-btn:hover{ background:var(--seal-light); }
+.run-btn:disabled{ background:#a7a290; cursor:not-allowed; }
+
+/* Painel que agrupa a escolha de arquivo dentro de um passo (ex.: Ponto 26). */
+.upload-panel{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:14px 20px;
+  border:1px solid var(--line);
+  background:#fbfdfd;
+  padding:16px 20px;
+  margin:4px 0 0 36px;
+}
+
+/* Ação secundária/alternativa a um fluxo principal (ex.: "colar manualmente"
+   como alternativa ao upload): texto explicativo + botão-link lado a lado. */
+.alt-action{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px 14px;
+  margin:14px 0 0 36px;
+  font-size:13px;
+  color:var(--ink-soft);
+  line-height:1.5;
+}
+
+.link-btn{
+  font-family:'Barlow', system-ui, sans-serif;
+  font-weight:600;
+  font-size:12.5px;
+  letter-spacing:0.01em;
+  color:var(--teal);
+  background:none;
+  border:1px solid var(--teal);
+  padding:7px 14px;
+  cursor:pointer;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.link-btn:hover{ background:var(--teal); color:var(--white); }
+
+/* Painel revelado sob demanda dentro de um passo (ex.: campo de colagem
+   manual). Separado visualmente por um traço. */
+.collapse-panel{
+  margin:16px 0 0 36px;
+  padding-top:16px;
+  border-top:1px dashed var(--line);
+}
+
+/* Aviso/status inline dentro de um passo.
+   Uso: class="notice-banner" (neutro/andamento) | "notice-banner ok" (sucesso)
+   | "notice-banner warn" (atenção/erro). */
+.notice-banner{
+  margin:14px 0 0 36px;
+  padding:12px 16px;
+  border-left:4px solid var(--teal);
+  background:#f3fafa;
+  font-size:13px;
+  color:var(--ink-soft);
+  line-height:1.55;
+}
+.notice-banner strong{ color:var(--ink); }
+.notice-banner.ok{ border-left-color:var(--mint); background:#f2faf8; }
+.notice-banner.warn{ border-left-color:var(--coral); background:#fdf3f1; }
+
+@media (max-width:600px){
+  .upload-panel, .alt-action, .collapse-panel, .notice-banner, .num-input{ margin-left:0; }
+}
+
+.divider{
+  border:none;
+  border-top:1px dashed var(--line);
+  margin:32px 0;
+}
+
+.stamp-wrap{
+  display:none;
+  align-items:center;
+  gap:18px;
+  margin-bottom:22px;
+  padding:16px 18px;
+  border:1px solid var(--line);
+  background:#fffdf7;
+  flex-wrap:wrap;
+}
+.stamp-wrap.show{ display:flex; }
+
+.stamp{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:13px;
+  letter-spacing:0.06em;
+  color:var(--seal);
+  border:3px solid var(--seal);
+  border-radius:50%;
+  width:74px; height:74px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  text-transform:uppercase;
+  transform:rotate(-8deg);
+  flex-shrink:0;
+  line-height:1.15;
+}
+.stamp.warn{
+  color:var(--stamp-red);
+  border-color:var(--stamp-red);
+}
+
+.stamp-text{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
+}
+.stamp-text strong{ color:var(--ink); }
+
+.warn-list{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12px;
+  color:var(--stamp-red);
+  margin:6px 0 0;
+  padding-left:18px;
+}
+.warn-list li{ margin-bottom:3px; }
+
+.table-scroll{
+  overflow-x:auto;
+  border:1px solid var(--line);
+  max-height:480px;
+  overflow-y:auto;
+}
+
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11.5px;
+  white-space:nowrap;
+}
+
+thead th{
+  position:sticky; top:0;
+  background:var(--ink);
+  color:var(--white);
+  text-align:left;
+  padding:9px 10px;
+  font-weight:500;
+  letter-spacing:0.02em;
+  border-right:1px solid rgba(255,255,255,0.12);
+}
+
+tbody td{
+  padding:7px 10px;
+  border-bottom:1px solid var(--paper-dark);
+  border-right:1px solid var(--paper-dark);
+}
+
+tbody tr:nth-child(even){ background:#fbfaf4; }
+tbody tr.unmatched{ background:#f7e9e4; }
+tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
+
+.download-row{
+  margin-top:22px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.download-btn{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700;
+  font-size:15px;
+  padding:13px 26px;
+  background:var(--stamp-red);
+  color:var(--white);
+  border:none;
+  cursor:pointer;
+}
+.download-btn:hover{ background:#722525; }
+.download-btn:disabled{ background:#a7a290; cursor:not-allowed; }
+
+.count-note{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12px;
+  color:var(--ink-soft);
+}
+
+.empty-hint{
+  font-size:13px;
+  color:var(--ink-soft);
+  font-style:italic;
+  padding:18px 0;
+}
+
+/* Cartões de ferramenta usados no índice.
+   Cada cartão recebe uma cor institucional via --accent (definida inline pelo
+   layout.js a partir do registro em ferramentas.js), ecoando a barra de cinco
+   cores do topo da folha. Cantos retos e traço fino, coerentes com o restante
+   da identidade. */
+.tool-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));
+  gap:18px;
+}
+.tool-card{
+  --accent: var(--teal);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  border:1px solid var(--line);
+  border-top:none;
+  padding:20px 20px 16px;
+  text-decoration:none;
+  color:inherit;
+  background:var(--white);
+  transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+/* filete de acento no topo — mesma linguagem da faixa institucional da folha */
+.tool-card::before{
+  content:"";
+  position:absolute; top:0; left:0; right:0; height:4px;
+  background:var(--accent);
+}
+.tool-card:hover{
+  border-color:var(--accent);
+  box-shadow:0 10px 22px -10px rgba(0,42,58,0.35);
+  transform:translateY(-2px);
+}
+.tool-card:focus-visible{
+  outline:2px solid var(--seal-light);
+  outline-offset:2px;
+}
+
+.tool-card-top{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+/* selo quadrado do emoji — remete a um carimbo/selo de protocolo */
+.tool-card-emoji{
+  flex-shrink:0;
+  width:46px; height:46px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px;
+  line-height:1;
+  background:#fffdf7;
+  border:1px solid var(--line);
+  box-shadow:2px 2px 0 var(--paper-dark);
+}
+.tool-card:hover .tool-card-emoji{
+  border-color:var(--accent);
+  box-shadow:2px 2px 0 var(--accent);
+}
+.tool-card .tool-card-tag{
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--teal);
+  margin:0;
+}
+.tool-card h2{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:18px;
+  font-weight:700;
+  margin:0 0 6px;
+  color:var(--ink);
+  line-height:1.25;
+}
+.tool-card .tool-card-desc{
+  font-size:13px;
+  color:var(--ink-soft);
+  margin:0;
+  line-height:1.55;
+}
+
+.tool-card.disabled{
+  opacity:0.6;
+  pointer-events:none;
+  border-style:dashed;
+  background:#fbfcfc;
+}
+.tool-card.disabled::before{ background:var(--line); }
+.tool-card.disabled .tool-card-emoji{
+  filter:grayscale(1);
+  box-shadow:none;
+}
+
+footer{
+  text-align:center;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+  padding:20px;
+  letter-spacing:0.04em;
+}
+
+@media (max-width:600px){
+  header{ padding:26px 20px 18px; }
+  .page-header{ padding:24px 20px 18px; gap:14px; }
+  .page-emoji{ width:46px; height:46px; font-size:23px; }
+  main{ padding:24px 20px 32px; }
+  h1{ font-size:24px; }
+  .step-desc{ margin-left:0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  * { transition:none !important; }
+}

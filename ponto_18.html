@@ -9,17 +9,53 @@
 <div class="unit-block"><p class="unit-section">Seção de Processo Seletivo</p><p class="unit-name">Ferramentas de apoio para importação de dados no Hércules</p></div>
 <div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
 <main>
-<div class="step">
-   <p class="step-desc">Essa ferramenta permite colar uma tabela/lista de informações e a partir dela gerar um bloco de texto com todos os valores separados por ponto e vírgula.</p>
-   <p class="step-desc">Utilize sempre que precisar enviar emails a uma lista de contatos no SEI, por exemplo.</p>
-  <div class="step-head">
-    <span class="step-num">1</span><p class="step-title">Cole a coluna de e-mails</p></div>
-<textarea id="input" placeholder="Cole aqui a coluna copiada do Excel"></textarea></div>
-<div class="step"><button class="run-btn" id="process">Processar</button></div>
-<div class="step"><div class="step-head"><span class="step-num">2</span><p class="step-title">Resultado</p></div>
-<textarea id="output" readonly></textarea>
-<div style="margin-top:16px"><button class="run-btn" id="copy">Copiar</button></div></div>
-</main></div>
+
+  <div class="step step-info">
+    <div class="step-head">
+      <span class="step-num">i</span>
+      <p class="step-title">Como funciona</p>
+    </div>
+    <p class="step-desc">Cole uma coluna de e-mails (ou qualquer lista de valores) e a ferramenta gera um bloco de texto com todos os valores separados por ponto e vírgula.</p>
+    <p class="step-desc">Útil, por exemplo, para enviar e-mails a uma lista de contatos no SEI.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <p class="step-title">Cole a coluna de e-mails</p>
+    </div>
+    <p class="step-desc">Cole aqui a coluna copiada do Excel (um valor por linha).</p>
+    <textarea id="input" placeholder="Cole aqui a coluna copiada do Excel"></textarea>
+  </div>
+
+  <div class="step">
+    <button class="run-btn" id="process">Processar</button>
+  </div>
+
+  <hr class="divider">
+
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <p class="step-title">Resultado</p>
+    </div>
+    <p class="step-desc">Lista pronta, separada por ponto e vírgula — use o botão abaixo para copiar.</p>
+    <textarea id="output" readonly></textarea>
+    <div class="download-row">
+      <button class="download-btn" id="copy" style="background:var(--ink);">Copiar resultado</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+    <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+    É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+  </p>
+  <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+</footer>
+</div>
 <script src="ponto18_logic.js"></script><script src="ferramentas.js"></script>
 <script src="layout.js"></script>
 </body></html>
