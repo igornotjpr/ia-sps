@@ -22,14 +22,14 @@ const LIMITES_61 = ["a todos os candidatos que atingirem a nota mínima","a todo
 
 /* def: valor inicial | grupo: agrupamento visual | show(): visibilidade conforme eixos */
 const FIELDS = {
-  UNIDADE:            {grupo:'ident', full:true, label:'Unidade solicitante (nome por extenso, para o título do edital)', type:'text', def:'', hint:'Ex.: VARA DE EXECUÇÕES PENAIS E CORREGEDORIA DOS PRESÍDIOS DE FRANCISCO BELTRÃO'},
-  NUM_EDITAL:         {grupo:'ident', label:'Número do edital (Nº/ano)', type:'text', def:'', hint:'Ex.: 2870/2026', hintHtml:'<details class="ed-hint-details"><summary>Como obter a numeração no sistema Athos</summary>'
+  UNIDADE:            {grupo:'ident', full:true, req:true, label:'Unidade solicitante (nome por extenso, para o título do edital)', type:'text', def:'', hint:'Ex.: VARA DE EXECUÇÕES PENAIS E CORREGEDORIA DOS PRESÍDIOS DE FRANCISCO BELTRÃO'},
+  NUM_EDITAL:         {grupo:'ident', req:true, label:'Número do edital (Nº/ano)', type:'text', def:'', hint:'Ex.: 2870/2026', hintHtml:'<details class="ed-hint-details"><summary>Como obter a numeração no sistema Athos</summary>'
     +'<span style="display:block;margin-top:6px;">1. Abra o sistema Athos do TJPR: <a href="https://portal.tjpr.jus.br/tjpr-athos/index.do" target="_blank" rel="noopener">portal.tjpr.jus.br/tjpr-athos</a>;</span>'
     +'<span style="display:block;margin-top:4px;">2. No menu "Documento", selecione a opção "Novo";</span>'
     +'<span style="display:block;margin-top:4px;">3. Na nova tela, escolha "DIVISÃO DE ESTÁGIO - DIRETORIA - DEPARTAMENTO DE GESTÃO DE RECURSOS HUMANOS - Edital de Processo Seletivo de Estagiários";</span>'
     +'<span style="display:block;margin-top:4px;">4. Salve o documento — a numeração é gerada automaticamente e deve ser informada no campo acima.</span>'
     +'</details>'},
-  NUM_SEI:            {grupo:'ident', label:'Número do processo SEI', type:'text', def:'', hint:'Ex.: 0031724-38.2026.8.16.6000'},
+  NUM_SEI:            {grupo:'ident', req:true, label:'Número do processo SEI', type:'text', def:'', hint:'Ex.: 0031724-38.2026.8.16.6000'},
   URL_INSCRICAO:      {grupo:'corpo', label:'Endereço eletrônico das inscrições (item 4.2)', type:'text', def:'https://www.tjpr.jus.br/concursos/estagiario', hint:'Informe o endereço completo, no formato https://www... (ex.: https://www.tjpr.jus.br/concursos/estagiario), exatamente como deverá constar no edital.'},
   CURSO:              {grupo:'corpo', label:'Curso (área de conhecimento)', type:'datalist', opts:CURSOS, def:'', hint:'Formato "em [Curso]" — ex.: em Direito'},
   PERIODO_INICIAL:    {grupo:'corpo', label:'Semestre inicial', type:'select', opts:['',...ORDINAIS], def:'', hint:'Deixe vazio para omitir o trecho "cursando do ... ao ... semestre" (ex.: pós-graduação)'},
@@ -37,9 +37,9 @@ const FIELDS = {
   LIMITE_CLASSIFICADOS:{grupo:'corpo', label:'Item 1.2.1 — Quem constará na classificação final', type:'preset', opts:LIMITES_121, def:'apenas os 10 (dez) melhores classificados'},
   VIGENCIA:           {grupo:'corpo', label:'Vigência do processo seletivo', type:'select', opts:['1 (um) ano, não prorrogável','6 (seis) meses, prorrogável por igual período','3 (três) meses, prorrogável por igual período'], def:'1 (um) ano, não prorrogável'},
   PERIODO_INSCRICOES: {grupo:'corpo', label:'Item 4.3 — Disponibilidade das inscrições', type:'preset', opts:['a partir do quinto dia útil subsequente à publicação deste edital no Diário da Justiça Eletrônico (e-DJ), conforme o artigo 12 do Decreto Judiciário nº 345/2019','das 00h00min de [DATA DEFINIR] às 23h59min de [DATA DEFINIR]'], def:'a partir do quinto dia útil subsequente à publicação deste edital no Diário da Justiça Eletrônico (e-DJ), conforme o artigo 12 do Decreto Judiciário nº 345/2019', hint:'O texto do modelo original usa datas fixas; a opção do "quinto dia útil" segue os editais publicados recentemente'},
-  INSCRICOES_SUBITEM: {grupo:'corpo', label:'Item 4.3.1 — Prazo das inscrições (deixe vazio para omitir o subitem)', type:'text', def:''},
+  INSCRICOES_SUBITEM: {grupo:'corpo', full:true, label:'Item 4.3.1 — Prazo das inscrições (deixe vazio para omitir o subitem)', type:'text', def:''},
   COMPOSICAO_PROVA:   {grupo:'prova', label:'Composição da prova (item 5.2)', type:'textarea', def:'', hint:'Ex.: 10 (dez) questões objetivas avaliadas em 0,5 (zero vírgula cinco) ponto cada e 1 (uma) questão discursiva avaliada em 5 (cinco) pontos'},
-  DURACAO_PROVA:      {grupo:'prova', label:'Duração da prova', type:'text', def:'03h00min'},
+  DURACAO_PROVA:      {grupo:'prova', label:'Duração da prova', type:'text', def:'03h00min', hint:'Formato: 00h00min (ex.: 04h00min)'},
   DATA_PROVA_PRESENCIAL:{grupo:'prova', label:'Data, horário e local da prova presencial', type:'preset', opts:['A data, o horário e o local de aplicação da prova serão divulgados por meio de Edital de Ensalamento, a ser disponibilizado na respectiva página do processo seletivo, no portal do TJPR.','A data, o horário e o local de aplicação da prova serão divulgados por meio de documento oficial de ensalamento.','A prova será realizada presencialmente em 00/00/0000, das 00h00min às 00h00min, no [LOCAL], situado à [ENDEREÇO].','A prova será realizada presencialmente em 00/00/0000, das 00h00min às 00h00min. O local de aplicação da prova será divulgado por meio de documento oficial de ensalamento.'], def:'A data, o horário e o local de aplicação da prova serão divulgados por meio de Edital de Ensalamento, a ser disponibilizado na respectiva página do processo seletivo, no portal do TJPR.', show:a=>a.modal==='PR'},
   LIMITE_CONVOCADOS:  {grupo:'prova', label:'Item 6.1 — Quem será convocado para a entrevista', type:'preset', opts:LIMITES_61, def:'a todos os candidatos que atingirem a nota mínima', show:a=>a.entrev==='S'},
   DESEMPATE_INTRO:    {grupo:'prova', label:'Item 6.1.1 — Situação de empate (início do item)', type:'text', def:'Havendo candidatos empatados com a nota de corte do último classificado', show:a=>a.entrev==='S'},
@@ -353,14 +353,30 @@ function aplicarDados(d, avisos){
 }
 
 /* ============================== TELA DE CONFIRMAÇÃO ============================== */
+// avisos da leitura do PDF ficam guardados para poderem conviver com os
+// avisos dinâmicos de campos obrigatórios ainda vazios.
+let avisosLeitura=[];
+function nomeCurto(lbl){ return String(lbl).replace(/\s*\([^)]*\)\s*$/,'').trim(); }
+function reqEmptyAvisos(){
+  return Object.keys(FIELDS)
+    .filter(k=>FIELDS[k].req && !String(values[k]||'').trim())
+    .map(k=>'Campo obrigatório ainda não preenchido: "'+nomeCurto(FIELDS[k].label)+'".');
+}
+// (re)desenha o bloco REVISAR combinando obrigatórios vazios + avisos da leitura.
+function renderAvisos(){
+  const box=$('edAvisos'); if(!box) return;
+  const lista=reqEmptyAvisos().concat(avisosLeitura||[]);
+  box.innerHTML = lista.length
+    ? '<div class="stamp-wrap show" style="margin-bottom:20px;"><div class="stamp warn">REVISAR</div><div class="stamp-text"><strong>Pontos de atenção:</strong><ul class="warn-list">'+lista.map(a=>'<li>'+esc(a)+'</li>').join('')+'</ul></div></div>'
+    : '';
+}
 function renderConfirma(avisos){
   const box=$('edConfirma');
   let h='';
-  if(avisos && avisos.length){
-    h+='<div class="stamp-wrap show" style="margin-bottom:20px;"><div class="stamp warn">REVISAR</div><div class="stamp-text"><strong>Pontos de atenção da leitura:</strong><ul class="warn-list">'+avisos.map(a=>'<li>'+esc(a)+'</li>').join('')+'</ul></div></div>';
-  }
+  if(avisos) avisosLeitura = avisos.slice();
+  h+='<div id="edAvisos"></div>';
   // bloco de eixos (montado numa variável para poder ser posicionado após a Identificação)
-  let hEixos='<div class="ed-grupo"><p class="ed-grupo-tit">Modelo de edital (eixos)</p><div class="ed-grid">';
+  let hEixos='<div class="ed-grupo"><p class="ed-grupo-tit">Modelo de edital (eixos)</p><p class="ed-modelo-nome" id="edModeloNome"></p><div class="ed-grid">';
   Object.keys(AXES_DEF).forEach(ax=>{
     const def=AXES_DEF[ax];
     const disabled = (ax==='webcam' && !(axes.modal==='ON' && axes.consulta==='N')) ||
@@ -369,7 +385,7 @@ function renderConfirma(avisos){
     def.opts.forEach(([v,t])=>{ hEixos+='<option value="'+v+'"'+(axes[ax]===v?' selected':'')+'>'+esc(t)+'</option>'; });
     hEixos+='</select></label>';
   });
-  hEixos+='</div><p class="ed-modelo-nome" id="edModeloNome"></p></div>';
+  hEixos+='</div></div>';
 
   // monta um grupo de campos (retorna '' se não houver campos visíveis)
   function grupoHtml(gid, gtit){
@@ -378,7 +394,7 @@ function renderConfirma(avisos){
     let g='<div class="ed-grupo"><p class="ed-grupo-tit">'+esc(gtit)+'</p><div class="ed-grid">';
     campos.forEach(k=>{
       const f=FIELDS[k]; const v=values[k]||'';
-      g+='<label class="ed-campo'+(f.full||f.type==='textarea'||f.type==='preset'?' ed-campo-full':'')+'"><span>'+esc(f.label)+':</span>';
+      g+='<label class="ed-campo'+(f.full||f.type==='textarea'||f.type==='preset'?' ed-campo-full':'')+(f.req&&String(v).trim()?' ed-req-filled':'')+'"><span>'+esc(f.label)+':'+(f.req?' <span class="ed-req-mark">obrigatório</span>':'')+'</span>';
       if(f.type==='select'){
         g+='<select data-campo="'+k+'">'+f.opts.map(o=>'<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
       } else if(f.type==='datalist'){
@@ -391,7 +407,8 @@ function renderConfirma(avisos){
       } else if(f.type==='check'){
         g+='<span style="font-weight:400;"><input type="checkbox" data-check="'+k+'"'+(v?' checked':'')+' style="width:auto;margin-right:8px;vertical-align:middle;">'+'Sim, incluir</span>';
       } else {
-        g+='<input type="text" data-campo="'+k+'" value="'+esc(v).replace(/"/g,'&quot;')+'">';
+        const reqCls=f.req?('ed-required'+(String(v).trim()?'':' ed-empty')):'';
+        g+='<input type="text"'+(reqCls?' class="'+reqCls+'"':'')+' data-campo="'+k+'" value="'+esc(v).replace(/"/g,'&quot;')+'">';
       }
       if(f.hintHtml) g+='<small>'+f.hintHtml+'</small>';
       else if(f.hint) g+='<small>'+esc(f.hint)+'</small>';
@@ -413,7 +430,10 @@ function renderConfirma(avisos){
     if(axes.obrig==='S') axes.nivel='G';
     renderConfirma();
   }));
-  box.querySelectorAll('[data-campo]').forEach(el=>el.addEventListener('input',()=>{ values[el.dataset.campo]=el.value; }));
+  box.querySelectorAll('[data-campo]').forEach(el=>el.addEventListener('input',()=>{
+    const k=el.dataset.campo; values[k]=el.value;
+    if(FIELDS[k] && FIELDS[k].req){ const has=!!el.value.trim(); el.classList.toggle('ed-empty', !has); el.closest('.ed-campo').classList.toggle('ed-req-filled', has); renderAvisos(); }
+  }));
   box.querySelectorAll('[data-check]').forEach(el=>el.addEventListener('change',()=>{ values[el.dataset.check]=el.checked; }));
   box.querySelectorAll('[data-preset]').forEach(el=>el.addEventListener('change',()=>{
     if(!el.value) return;
@@ -429,7 +449,8 @@ function renderConfirma(avisos){
   nome.push(axes.entrev==='S'?'Com entrevista':'Sem entrevista');
   nome.push(axes.consulta==='S'?'Com consulta':'Sem consulta');
   if(axes.modal==='ON'&&axes.consulta==='N') nome.push(axes.webcam==='S'?'Com webcam':'Sem webcam');
-  $('edModeloNome').textContent='Modelo identificado: '+nome.join(' · ');
+  $('edModeloNome').innerHTML='<span class="ed-modelo-tag">Modelo identificado</span><span class="ed-modelo-val">'+esc(nome.join(' · '))+'</span>';
+  renderAvisos();
   $('edEtapa2').style.display='block';
 }
 
