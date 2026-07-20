@@ -110,7 +110,7 @@ function sugestaoComposicao(qObj, qDis, pesoDis){
     const pdS = pd>0 ? fmtNota(pd) : '0,00';
     const pdExt = extensoNota(pdS) || 'zero vírgula zero zero';
     partes.push(qDis+' ('+fem(qDis)+') '+(qDis===1?'questão discursiva avaliada':'questões discursivas avaliadas')
-      +' em '+pdS+' ('+pdExt+') '+(pd===1?'ponto':'pontos'));
+      +' em '+pdS+' ('+pdExt+') '+(pd===1?'ponto':'pontos')+(qDis===1?'':' cada'));
   }
   return partes.join(' e ');
 }
@@ -467,7 +467,7 @@ function condOk(c){ if(!c) return true; return Object.keys(c).every(ax=>c[ax].in
 function subTokens(h){
   // remoção do trecho de semestres quando vazios
   if(!values.PERIODO_INICIAL && !values.PERIODO_FINAL){
-    h=h.replace(/, cursando do \{\{PERIODO_INICIAL\}\} ao \{\{PERIODO_FINAL\}\} semestre no ato da inscrição/g,'');
+    h=h.replace(/, cursando do \{\{PERIODO_INICIAL\}\} ao \{\{PERIODO_FINAL\}\} semestre no ato da admissão/g,'');
   }
   // item 4.3: quando o texto começa com "a partir", a preposição "das" do modelo sai
   if(/^a partir/i.test(values.PERIODO_INSCRICOES||'')){
