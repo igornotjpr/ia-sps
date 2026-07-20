@@ -33,6 +33,66 @@ function institutionalHtml(){
     +'</div></div>';
 }
 
+// Monta o HTML de um cartão de ferramenta/jogo — usado tanto para a grade de
+// ferramentas (índice) quanto para a grade de jogos (jogos.html), garantindo
+// que as duas usem exatamente o mesmo HTML/classes.
+function cardHtml(item, rotuloTexto){
+  const accent=item.cor||'--teal';
+  return `<a class="tool-card" href="${item.arquivo}" style="--accent:var(${accent});">`
+    +`<div class="tool-card-top"><span class="tool-card-emoji" aria-hidden="true">${escHtml(item.emoji||'🛠️')}</span>`
+    +`<p class="tool-card-tag">${escHtml(rotuloTexto)}</p></div>`
+    +`<h2>${escHtml(item.titulo)}</h2>`
+    +`<p class="tool-card-desc">${escHtml(item.descricao)}</p>`
+    +`</a>`;
+}
+
+// Monta o cartão desabilitado "Em breve" ao fim de uma grade. `id` é opcional
+// e serve apenas para permitir que UM cartão específico (o de ferramentas, no
+// índice) seja localizado depois e receba a função secreta — cartões sem esse
+// id (ex.: o de jogos.html) continuam totalmente inertes.
+function placeholderCardHtml(id, h2, desc){
+  return `<div class="tool-card disabled"${id?` id="${id}"`:''} style="--accent:var(--line);">`
+    +`<div class="tool-card-top"><span class="tool-card-emoji" aria-hidden="true">🚧</span>`
+    +`<p class="tool-card-tag">Em breve</p></div>`
+    +`<h2>${escHtml(h2)}</h2>`
+    +`<p class="tool-card-desc">${escHtml(desc)}</p>`
+    +`</div>`;
+}
+
+// Função secreta: 10 cliques no cartão "Em breve" das ferramentas (só no
+// índice — nunca no cartão equivalente de jogos.html) leva a jogos.html. A
+// cada clique é exibida, por instantes, a contagem regressiva de cliques
+// restantes (10, 9, 8, ... 1); se o usuário demorar mais de 1,5s entre dois
+// cliques, a contagem reinicia (evita disparo acidental em uso normal).
+function wireSecretCounter(card){
+  const RESET_MS=1500;    // inatividade acima disso reinicia a contagem em 10
+  const NAV_DELAY_MS=350; // pequena pausa após mostrar "1" antes de navegar
+  let remaining=10;
+  let lastClickAt=0;
+
+  const badge=document.createElement('span');
+  badge.className='secret-countdown';
+  badge.setAttribute('aria-hidden','true');
+  card.appendChild(badge);
+
+  card.addEventListener('click',()=>{
+    const now=Date.now();
+    if(now-lastClickAt>RESET_MS){ remaining=10; }
+    lastClickAt=now;
+
+    badge.textContent=String(remaining);
+    badge.classList.remove('flash');
+    void badge.offsetWidth; // reinicia a animação CSS mesmo em cliques rápidos consecutivos
+    badge.classList.add('flash');
+
+    remaining-=1;
+    if(remaining<=0){
+      card.style.pointerEvents='none'; // trava novos cliques durante a transição
+      setTimeout(()=>{ window.location.href='jogos.html'; },NAV_DELAY_MS);
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   const cur=location.pathname.split('/').pop()||'index.html';
 
@@ -49,7 +109,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   //    (sombra do selo e filete inferior), ecoando o cartão da home
   const ht=document.getElementById('header-title');
   if(ht){
-    const t=ferramentaPorArquivo(cur);
+    let t=ferramentaPorArquivo(cur);
+    let sufixo=' — Seção de Processo Seletivo (TJPR)';
+    if(!t && typeof jogoPorArquivo==='function'){
+      t=jogoPorArquivo(cur);
+      if(t) sufixo=' — TJPR Jogos';
+    }
     if(t){
       const sheet=document.querySelector('.sheet');
       if(sheet) sheet.style.setProperty('--accent','var('+(t.cor||'--teal')+')');
@@ -60,31 +125,32 @@ document.addEventListener('DOMContentLoaded',()=>{
         +`<h1>${escHtml(t.titulo||'')}</h1>`
         +'</div></header>';
       // manter o <title> da aba do navegador em sincronia
-      document.title=(t.titulo||'Ferramenta')+' — Seção de Processo Seletivo (TJPR)';
+      document.title=(t.titulo||'Ferramenta')+sufixo;
     }
   }
 
-  // 3) grade de cartões do índice
+  // 3) grade de cartões: FERRAMENTAS no índice, ou JOGOS em jogos.html
+  //    (detectado via data-registro="jogos" no próprio elemento .tool-grid)
   const grid=document.querySelector('.tool-grid');
   if(grid){
+    const isGamesGrid=grid.dataset.registro==='jogos';
+    const registro=isGamesGrid?(typeof JOGOS!=='undefined'?JOGOS:[]):FERRAMENTAS;
+    const rotuloFn=isGamesGrid?rotuloJogo:rotuloFerramenta;
+
     grid.innerHTML='';
-    FERRAMENTAS.forEach(t=>{
-      const accent=t.cor||'--teal';
-      grid.insertAdjacentHTML('beforeend',
-        `<a class="tool-card" href="${t.arquivo}" style="--accent:var(${accent});">`
-        +`<div class="tool-card-top"><span class="tool-card-emoji" aria-hidden="true">${escHtml(t.emoji||'🛠️')}</span>`
-        +`<p class="tool-card-tag">${escHtml(rotuloFerramenta(t))}</p></div>`
-        +`<h2>${escHtml(t.titulo)}</h2>`
-        +`<p class="tool-card-desc">${escHtml(t.descricao)}</p>`
-        +`</a>`);
+    registro.forEach(item=>{
+      grid.insertAdjacentHTML('beforeend',cardHtml(item,rotuloFn(item)));
     });
-    grid.insertAdjacentHTML('beforeend',
-      `<div class="tool-card disabled" style="--accent:var(--line);">`
-      +`<div class="tool-card-top"><span class="tool-card-emoji" aria-hidden="true">🚧</span>`
-      +`<p class="tool-card-tag">Em breve</p></div>`
-      +`<h2>Próxima ferramenta</h2>`
-      +`<p class="tool-card-desc">Novas ferramentas aparecerão aqui conforme forem desenvolvidas.</p>`
-      +`</div>`);
+
+    if(isGamesGrid){
+      grid.insertAdjacentHTML('beforeend',
+        placeholderCardHtml('jogosEmBreveCard','Próximo jogo','Novos jogos aparecerão aqui conforme forem desenvolvidos.'));
+    } else {
+      grid.insertAdjacentHTML('beforeend',
+        placeholderCardHtml('ferramentasEmBreveCard','Próxima ferramenta','Novas ferramentas aparecerão aqui conforme forem desenvolvidas.'));
+      const secretCard=document.getElementById('ferramentasEmBreveCard');
+      if(secretCard) wireSecretCounter(secretCard);
+    }
   }
 
   // 4) header fixo miniaturizado: só navegação + botão "Topo", exibido quando

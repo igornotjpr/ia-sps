@@ -708,6 +708,39 @@ tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
   box-shadow:none;
 }
 
+/* Cartão especial: único cartão "Em breve" que aceita cliques — usado pela
+   função secreta em layout.js. Os demais cartões desabilitados (inclusive o
+   equivalente em jogos.html) continuam com pointer-events:none acima. Não
+   usamos cursor:pointer para não denunciar visualmente que é clicável. */
+#ferramentasEmBreveCard{
+  pointer-events:auto;
+  cursor:default;
+}
+
+/* Número de contagem regressiva exibido brevemente a cada clique no cartão
+   secreto acima (10, 9, 8, ... 1) — ver wireSecretCounter em layout.js. */
+.secret-countdown{
+  position:absolute;
+  top:8px; right:10px;
+  font-family:'IBM Plex Mono','Consolas',monospace;
+  font-size:22px;
+  font-weight:700;
+  color:var(--coral);
+  opacity:0;
+  pointer-events:none;
+  user-select:none;
+}
+.secret-countdown.flash{
+  animation:secretCountdownPop 600ms ease-out;
+}
+@keyframes secretCountdownPop{
+  0%{ opacity:0; transform:translateY(4px) scale(0.85); }
+  15%{ opacity:1; transform:translateY(0) scale(1.15); }
+  30%{ transform:scale(1); }
+  75%{ opacity:1; }
+  100%{ opacity:0; transform:translateY(-6px) scale(0.9); }
+}
+
 /* Header fixo miniaturizado: aparece quando o cabeçalho principal sai de
    vista ao rolar. Só navegação + botão "Topo"; sem faixa colorida, apenas o
    destaque (sublinhado) da ferramenta ativa. Montado pelo layout.js. */

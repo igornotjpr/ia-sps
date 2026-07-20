@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flappy Bird (ASCII) — TJPR Jogos</title>
+<link rel="stylesheet" href="core.css">
+<style>
+  /* Área de jogo: tudo desenhado com caracteres de texto num <pre>, estilo
+     terminal, coerente com a paleta institucional (fundo navy, traço mint). */
+  .fb-wrap{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .fb-screen{
+    margin:0;
+    background:var(--navy);
+    color:var(--mint);
+    border:1px solid var(--ink);
+    box-shadow:3px 3px 0 var(--line);
+    padding:14px 16px;
+    font-family:'IBM Plex Mono','Consolas',monospace;
+    font-size:15px;
+    line-height:1.15;
+    letter-spacing:0.02em;
+    white-space:pre;
+    user-select:none;
+    outline:none;
+    max-width:100%;
+    overflow-x:auto;
+  }
+  .fb-screen:focus-visible{ box-shadow:3px 3px 0 var(--gold); }
+  .fb-status{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px 22px;
+    font-family:'IBM Plex Mono','Consolas',monospace;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .fb-status strong{ color:var(--ink); }
+  .fb-controls{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:12px;
+    align-items:center;
+  }
+  .fb-key{
+    display:inline-block;
+    font-family:'IBM Plex Mono','Consolas',monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+    color:var(--ink-soft);
+    border:1px solid var(--line);
+    background:#fffdf7;
+    padding:3px 8px;
+    border-radius:3px;
+  }
+  #fbBoard{ max-width:340px; margin:0 auto; }
+  #fbBoard td.fb-this-run{ background:#f2faf8; box-shadow:inset 3px 0 0 var(--mint); }
+</style>
+</head><body><div class="sheet">
+<div id="institutional-placeholder"></div>
+<div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
+<main>
+
+  <div class="step step-info">
+    <div class="step-head">
+      <span class="step-num">i</span>
+      <p class="step-title">Como jogar</p>
+    </div>
+    <p class="step-desc">Todo o cenário do jogo — pássaro, obstáculos e chão — é desenhado usando apenas caracteres de texto.</p>
+    <p class="step-desc">Pressione a <strong>barra de espaço</strong> para bater as asas e subir; a gravidade puxa o pássaro para baixo o tempo todo. Desvie dos obstáculos e evite tocar o chão.</p>
+    <p class="step-desc">A pontuação é o <strong>tempo sobrevivido</strong> — quanto mais tempo sem morrer, maior a pontuação. O recorde fica salvo neste navegador.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <p class="step-title">Jogo</p>
+    </div>
+    <div class="step-content">
+      <div class="fb-wrap">
+        <pre id="fbScreen" class="fb-screen" tabindex="0" aria-label="Área do jogo Flappy Bird em ASCII"></pre>
+        <div class="fb-status">
+          <span>Pontuação: <strong id="fbScore">0.0s</strong></span>
+          <span>Recorde: <strong id="fbBest">0.0s</strong></span>
+        </div>
+        <div class="fb-controls">
+          <button class="run-btn" id="fbStartBtn" style="width:auto;padding:12px 28px;">Iniciar jogo</button>
+          <span class="fb-key">ESPAÇO</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <p class="step-title">Recordes locais</p>
+    </div>
+    <p class="step-desc">As 5 melhores pontuações registradas neste navegador (armazenadas localmente — não são enviadas a lugar nenhum).</p>
+    <div class="step-content">
+      <div class="simple-table-wrap" id="fbBoard">
+        <table class="simple-table">
+          <thead><tr><th>#</th><th>Pontuação</th><th>Data</th></tr></thead>
+          <tbody id="fbBoardBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+    <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+    É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+  </p>
+  <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+</footer>
+</div>
+<script src="flappy_logic.js"></script><script src="ferramentas.js"></script><script src="jogos.js"></script>
+<script src="layout.js"></script>
+</body></html>
