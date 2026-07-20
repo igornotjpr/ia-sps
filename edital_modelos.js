@@ -16,7 +16,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio obrigatório não remunerado, destinado a <b>estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio obrigatório não remunerado, destinado a <b>estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da admissão</b>.",
 "c": {
 "obrig": [
 "S"
@@ -28,7 +28,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível superior de graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da admissão</b>.",
 "c": {
 "obrig": [
 "N"
@@ -40,7 +40,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível médio {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível médio {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da admissão</b>.",
 "c": {
 "obrig": [
 "N"
@@ -52,7 +52,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível superior de pós-graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da inscrição</b>.",
+"h": "O processo de seleção destina-se ao preenchimento de vagas e/ou formação de cadastro de reserva de estágio não obrigatório remunerado, destinado a <b>estudantes de nível superior de pós-graduação {{CURSO}}, cursando do {{PERIODO_INICIAL}} ao {{PERIODO_FINAL}} semestre no ato da admissão</b>.",
 "c": {
 "obrig": [
 "N"
@@ -296,7 +296,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 1,
-"h": "Para se inscrever o candidato deverá preencher e enviar o formulário de inscrição disponível na página do processo seletivo, endereço eletrônico {{URL_INSCRICAO}}."
+"h": "Para se inscrever o candidato deverá preencher e enviar o formulário disponível na página do processo seletivo, endereço eletrônico https://www.tjpr.jus.br/concursos/estagiario."
 },
 {
 "l": 1,
@@ -516,7 +516,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 2,
-"h": "As provas ficarão disponíveis na plataforma junto ao menu <b>ATIVIDADES</b>, mediante acesso ao endereço eletrônico http://mgr.mestregr.com.br/ com login e senha cadastrados no formulário de inscrição.",
+"h": "As provas ficarão disponíveis na plataforma junto ao menu <b>ATIVIDADES</b>, mediante acesso ao endereço eletrônico https://tjpr-pse.fabricadeprovas.com.br/login com login e senha cadastrados no formulário de inscrição.",
 "c": {
 "modal": [
 "ON"
@@ -1329,7 +1329,7 @@ const EDITAL_PARAS = [
 },
 {
 "l": 2,
-"h": "O estudante compromete-se a ler atentamente as orientações elencadas no endereço https://www.tjpr.jus.br/estagiario."
+"h": "O estudante compromete-se a ler atentamente as orientações elencadas no endereço https://www.tjpr.jus.br/estagiario-novo."
 },
 {
 "l": 1,
