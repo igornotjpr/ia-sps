@@ -47,7 +47,7 @@ const FIELDS = {
   LIMITE_FINAL:       {grupo:'prova', label:'Item da classificação final — limite de classificados', type:'preset', opts:LIMITES_61, def:'limitada apenas aos 10 (dez) melhores classificados'},
   INCLUIR_COTA_NEGROS:{grupo:'prova', label:'Incluir item 6.1.3 — candidatos cotistas admitidos à entrevista com nota até 20% inferior à mínima (prática dos editais recentes)', type:'check', def:true, show:a=>a.entrev==='S'},
   INCLUIR_SANITARIOS: {grupo:'prova', label:'Incluir itens de protocolos sanitários (máscara, álcool gel, distanciamento) — constam dos modelos, mas foram omitidos nos editais recentes', type:'check', def:false, show:a=>a.modal==='PR'},
-  INCLUIR_CODIGO_ETICA:{grupo:'anexo', full:true, label:'Incluir "Código de Ética e Conduta do Poder Judiciário" no ANEXO I', type:'check', def:true, hint:'Quando marcado, a matéria é acrescentada como último item da lista, após as demais disciplinas informadas abaixo.'},
+  INCLUIR_CODIGO_ETICA:{grupo:'anexo', full:true, label:'Incluir "Código de Ética e Conduta do Poder Judiciário" no ANEXO I', type:'check', def:false, hint:'Quando marcado, a matéria é acrescentada como último item da lista, após as demais disciplinas informadas abaixo.'},
   CONTEUDO_PROGRAMATICO:{grupo:'anexo', label:'Conteúdo programático (ANEXO I) — um item por linha', type:'textarea', def:'', hint:'Não é preciso incluir a linha "Código de Ética e Conduta do Poder Judiciário" aqui — use a opção acima.'},
   DATA_ASSINATURA:    {grupo:'assin', label:'Local e data da assinatura', type:'text', def:''},
   ASSINANTE_NOME:     {grupo:'assin', label:'Nome de quem assina', type:'text', def:'JOÃO PEDRO DE PAULA SOARES VALENTE'},
@@ -521,24 +521,35 @@ function gerarEditalHTML(){
       emitir(2, 'Quanto aos candidatos cotistas, bastará o alcance de nota 20% inferior à nota mínima estabelecida para os demais candidatos, para serem admitidos na próxima fase do certame.');
     }
   });
-  // ANEXO I: conteúdo programático — numerado. O item "Código de Ética e Conduta
-  // do Poder Judiciário" é opcional (INCLUIR_CODIGO_ETICA) e, quando incluído,
-  // entra como ÚLTIMO item da lista, após as demais disciplinas.
-  // Remove numeração que o usuário possa ter colado no início da linha (ex.: "1.", "2)", "3 -",
-  // ou até "2. 1." colado de um edital antigo), para não duplicar com a numeração da ferramenta.
-  // O padrão exige um marcador curto (1-2 dígitos + separador) no começo, então números do
-  // conteúdo real (ex.: "Lei 9.099/95", "Lei 12.153/09") são preservados.
-  const tiraNumeracao = t => {
-    let ant;
-    do { ant=t; t=t.replace(/^\s*\d{1,2}\s*[.)\u2013\u2014\u00ba\u00b0-]\s+/, ''); } while(t!==ant);
-    return t.trim();
-  };
+  // ANEXO I: conteúdo programático — texto puro (sem numeração automática).
+  // A numeração automática foi desativada: o formato de preenchimento varia
+  // muito entre unidades (algumas colam um bloco único já numerado, outras uma
+  // disciplina por linha, etc.) e a tentativa de detectar/remover/renumerar não
+  // acompanhava corretamente todos os formatos. O texto do campo é reproduzido
+  // como o usuário digitou/colou, uma linha por parágrafo. O item "Código de
+  // Ética e Conduta do Poder Judiciário" é opcional (INCLUIR_CODIGO_ETICA) e,
+  // quando incluído, entra como ÚLTIMO parágrafo, após as demais disciplinas —
+  // também sem numeração.
+  //
+  // Lógica antiga de numeração automática, desativada (reativar se necessário):
+  // const tiraNumeracao = t => {
+  //   let ant;
+  //   do { ant=t; t=t.replace(/^\s*\d{1,2}\s*[.)\u2013\u2014\u00ba\u00b0-]\s+/, ''); } while(t!==ant);
+  //   return t.trim();
+  // };
+  // const itensAnexoNumerado = (values.CONTEUDO_PROGRAMATICO||'').split('\n')
+  //   .map(l=>tiraNumeracao(l.trim()))
+  //   .filter(l => l && !/^c[óo]digo de [ée]tica e conduta do poder judici[áa]rio\.?$/i.test(l.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));
+  // if(values.INCLUIR_CODIGO_ETICA) itensAnexoNumerado.push('Código de Ética e Conduta do Poder Judiciário');
+  // itensAnexoNumerado.forEach((l, i)=>{
+  //   partes.push('<p class="ed-j">'+(i+1)+'. '+esc(l)+'</p>');
+  // });
   const itensAnexo = (values.CONTEUDO_PROGRAMATICO||'').split('\n')
-    .map(l=>tiraNumeracao(l.trim()))
+    .map(l=>l.trim())
     .filter(l => l && !/^c[óo]digo de [ée]tica e conduta do poder judici[áa]rio\.?$/i.test(l.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));
   if(values.INCLUIR_CODIGO_ETICA) itensAnexo.push('Código de Ética e Conduta do Poder Judiciário');
-  itensAnexo.forEach((l, i)=>{
-    partes.push('<p class="ed-j">'+(i+1)+'. '+esc(l)+'</p>');
+  itensAnexo.forEach(l=>{
+    partes.push('<p class="ed-j">'+esc(l)+'</p>');
   });
   // assinatura
   partes.push('<p class="ed-c">&nbsp;</p>');
