@@ -483,10 +483,15 @@ function subTokens(h){
   });
   return linkify(h);
 }
+// Nome do órgão no cabeçalho: opcional e desmarcado por padrão, porque a
+// plataforma onde o texto é colado já o exibe. O atributo data-ed-cabecalho
+// serve de âncora para a caixa do passo 3 alternar a linha sem regerar o texto.
+const HTML_CABECALHO_ORGAO = '<p class="ed-c ed-b" data-ed-cabecalho="1">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
+
 function gerarEditalHTML(){
   const partes=[];
   // bloco de título
-  partes.push('<p class="ed-c ed-b">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>');
+  if($('edChkCabecalho') && $('edChkCabecalho').checked) partes.push(HTML_CABECALHO_ORGAO);
   partes.push('<p class="ed-c ed-b">EDITAL DE ABERTURA</p>');
   partes.push('<p class="ed-c ed-b">PROCESSO SELETIVO DE ESTAGIÁRIOS</p>');
   if(values.UNIDADE) partes.push('<p class="ed-c ed-b">'+esc(values.UNIDADE.toUpperCase())+'</p>');
@@ -641,6 +646,20 @@ function alternarEdicao(){
   if(!ligado) el.focus();
 }
 
+// Alterna somente o parágrafo do nome do órgão, sem regerar o edital — assim as
+// edições manuais feitas no quadro são preservadas, e a caixa funciona também
+// com o modo "Editar texto" ligado. Remove todas as ocorrências, caso a edição
+// manual tenha duplicado o parágrafo.
+function alternarCabecalhoOrgao(){
+  const el=$('edSaida');
+  const atuais=el.querySelectorAll('[data-ed-cabecalho]');
+  if($('edChkCabecalho').checked){
+    if(!atuais.length && el.innerHTML.trim()!=='') el.insertAdjacentHTML('afterbegin', HTML_CABECALHO_ORGAO);
+  } else {
+    atuais.forEach(p=>p.parentNode.removeChild(p));
+  }
+}
+
 /* ============================== FLUXO ============================== */
 let dadosLidos=null;
 async function lerFormulario(){
@@ -683,6 +702,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('edBtnCopiar').addEventListener('click',copiarTudo);
   $('edBtnPDF').addEventListener('click',baixarPDF);
   $('edBtnEditar').addEventListener('click',alternarEdicao);
+  // guarda: se o edital.html não tiver sido atualizado junto, a ausência da
+  // caixa não pode interromper o registro dos listeners seguintes
+  const chkCab = $('edChkCabecalho');
+  if(chkCab) chkCab.addEventListener('change',alternarCabecalhoOrgao);
   // botões de formatação do modo de edição: mousedown com preventDefault para
   // não roubar o foco/seleção do quadro de texto antes de aplicar o comando
   document.querySelectorAll('#edToolbar button[data-cmd]').forEach(b=>{

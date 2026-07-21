@@ -45,6 +45,11 @@
     font-family:Calibri,"Carlito",Arial,sans-serif; font-size:11pt; line-height:1.35; color:#000;
   }
   #edSaida.ed-editando{ outline:2px solid var(--teal); background:#fffdf2; }
+  /* caixa opcional do nome do órgão no cabeçalho (passo 3) */
+  .ed-opcao-saida{ background:#eef8f7; border:1px solid #cbe7e4; border-left:3px solid var(--teal); padding:10px 14px; margin:0 0 14px; }
+  .ed-opcao-saida label{ display:flex; gap:8px; align-items:flex-start; font-family:'Barlow',system-ui,sans-serif; font-size:13px; color:var(--ink); cursor:pointer; }
+  .ed-opcao-saida input{ margin:2px 0 0; width:15px; height:15px; flex-shrink:0; }
+  .ed-opcao-saida small{ display:block; margin-top:3px; padding-left:23px; font-family:'Barlow',system-ui,sans-serif; font-size:11.5px; line-height:1.45; color:var(--ink-soft); }
   /* barra de formatação exibida apenas no modo de edição */
   .ed-toolbar{
     display:none;
@@ -120,6 +125,13 @@
   <div class="step" id="edEtapa3" style="display:none;">
     <div class="step-head"><span class="step-num">3</span><p class="step-title">Texto final do edital</p></div>
     <p class="step-desc">Confira o texto integralmente antes de utilizar. Você pode editar diretamente no quadro (botão "Editar texto"), copiar tudo com formatação ou salvar em PDF.</p>
+    <div class="ed-opcao-saida">
+      <label>
+        <input type="checkbox" id="edChkCabecalho">
+        <span>Incluir a linha "TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ" no cabeçalho</span>
+      </label>
+      <small>Normalmente dispensável — a plataforma onde o texto será colado já exibe o nome do órgão. Marque para impressão ou PDF avulso.</small>
+    </div>
     <div id="edToolbar" class="ed-toolbar">
       <button type="button" data-cmd="bold" title="Negrito (Ctrl+B)"><b>N</b></button>
       <button type="button" data-cmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
