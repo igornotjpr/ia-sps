@@ -22,12 +22,18 @@
   // nenhum aprovado é cotista e todos os nomes foram cruzados (ver processFiles)
   let activeCols = OUT_COLS;
 
+  // Cada código de reserva aceita vários rótulos possíveis, porque a Fábrica de
+  // Provas nem sempre grava o texto exatamente igual.
   const RESERVA_MAP = [
-    { match: 'PRETO OU PARDO', code: '2.1.1' },
-    { match: 'PESSOA COM DEFICIENCIA', code: '2.1.2' },
-    { match: 'INDIGENA', code: '2.1.3' },
-    { match: 'VULNERABILIDADE SOCIAL', code: '2.1.4' }
+    { code: '2.1.1', termos: ['PRETO OU PARDO','PRETA OU PARDA','PRETO','PARDO','PRETA','PARDA','NEGRO','NEGRA'] },
+    { code: '2.1.2', termos: ['PESSOA COM DEFICIENCIA','PESSOA COM DEFICIENCIA (PCD)','PCD','DEFICIENTE','DEFICIENCIA'] },
+    { code: '2.1.3', termos: ['INDIGENA'] },
+    { code: '2.1.4', termos: ['VULNERABILIDADE SOCIAL','HIPOSSUFICIENTE','HIPOSSUFICIENCIA'] }
   ];
+
+  // Valores que significam "não é cotista" — ausência de reserva, não erro.
+  const SEM_RESERVA = ['-','--','N/A','NA','NAO','NAO SE APLICA','NENHUMA','NENHUM',
+                       'AMPLA CONCORRENCIA','AMPLA CONCORRENCIA (AC)','AC'];
 
   let outputRows = [];
 
@@ -75,11 +81,30 @@
     }
     return null;
   }
+  // A célula "Reserva especial" pode trazer MAIS DE UM rótulo separado por
+  // vírgula (e às vezes o mesmo rótulo repetido, ex.: "Preto ou pardo, Preto ou
+  // pardo"). Por isso a célula é quebrada em partes, cada parte é normalizada e
+  // mapeada individualmente, com remoção de duplicatas. Valores que não batem
+  // com nenhum termo conhecido são devolvidos em `desconhecidos` para virarem
+  // aviso na tela — nunca são descartados em silêncio.
   function mapReserva(v){
-    const n = normHeader(v);
-    if(!n) return '';
-    const hit = RESERVA_MAP.find(r => r.match === n);
-    return hit ? hit.code : '';
+    const partes = String(v === undefined || v === null ? '' : v)
+      .split(/[,;\/|]+/)
+      .map(normHeader)
+      .filter(p => p !== '');
+    const codes = [];
+    const desconhecidos = [];
+    partes.forEach(p => {
+      if(SEM_RESERVA.indexOf(p) !== -1) return;
+      const hit = RESERVA_MAP.find(r => r.termos.indexOf(p) !== -1);
+      if(hit){
+        if(codes.indexOf(hit.code) === -1) codes.push(hit.code);
+      } else if(desconhecidos.indexOf(p) === -1){
+        desconhecidos.push(p);
+      }
+    });
+    codes.sort();
+    return { code: codes.join(', '), desconhecidos: desconhecidos };
   }
   function formatNota(v){
     if(v === null || v === undefined || String(v).trim()==='') return { ok:true, value:'' };
@@ -147,6 +172,9 @@
     const colInsc1 = findCol(t1[0], ['INSCRIÇÃO','INSCRICAO']);
     const colNome1 = findCol(t1[0], ['NOME']);
     const colFinal = findCol(t1[0], ['FINAL']);
+    // Opcional: o Relatório de Classificação Final também traz uma coluna
+    // RESERVA. Ela é usada como conferência cruzada / rede de segurança.
+    const colReserva1 = findCol(t1[0], ['RESERVA']);
 
     if(!colClass || !colInsc1 || !colNome1 || !colFinal){
       alert('Não foi possível identificar as colunas obrigatórias da Tabela 1 (CLASSIFICAÇÃO, INSCRIÇÃO, NOME, FINAL). Colunas encontradas no arquivo: ' + Object.keys(t1[0]).join(', '));
@@ -196,7 +224,8 @@
         ordem: classNum,
         insc: r[colInsc1],
         nome: r[colNome1],
-        final: r[colFinal]
+        final: r[colFinal],
+        reserva1: colReserva1 ? r[colReserva1] : ''
       });
     });
 
@@ -210,6 +239,9 @@
     const limited = filtered.slice(0, maxNum);
 
     let unmatched = [];
+    let reservaErrors = [];
+    let reservaDivergencias = [];
+
     outputRows = limited.map(r => {
       const inscKey = normInscricao(r.insc);
       let match = lookupByInsc[inscKey];
@@ -219,30 +251,50 @@
       const notaResult = formatNota(r.final);
       if(!notaResult.ok) notaErrors.push('Classificação ' + r.ordem + ' (' + r.nome + '): nota "' + notaResult.value + '" não numérica');
 
+      const rotulo = 'Classificação ' + r.ordem + ' (' + r.nome + ')';
+      const res2 = match ? mapReserva(match[colReserva2]) : { code:'', desconhecidos:[] };
+      const res1 = mapReserva(r.reserva1);
+
+      res2.desconhecidos.forEach(d => reservaErrors.push(rotulo + ': valor de reserva não reconhecido na Tabela 2 — "' + d + '"'));
+      res1.desconhecidos.forEach(d => reservaErrors.push(rotulo + ': valor de reserva não reconhecido na Tabela 1 — "' + d + '"'));
+
+      // Tabela 2 (Relatório de inscritos) é a fonte principal; a Tabela 1 serve
+      // de rede de segurança quando a inscrição não foi encontrada ou veio vazia.
+      const reserva = res2.code || res1.code;
+      if(match && res1.code !== res2.code){
+        reservaDivergencias.push(rotulo + ': Tabela 1 indica "' + (res1.code || '(nenhuma)') +
+          '" e Tabela 2 indica "' + (res2.code || '(nenhuma)') + '" — prevaleceu "' + (reserva || '(nenhuma)') + '"');
+      }
+
       return {
         "ORDEM": r.ordem,
         "INSCRIÇÃO": r.insc,
         "NOME": String(r.nome || '').toUpperCase(),
         "NOTA": notaResult.value,
-        "RESERVA": match ? mapReserva(match[colReserva2]) : '',
+        "RESERVA": reserva,
         "_unmatched": !match
       };
     });
 
-    // A coluna RESERVA só é suprimida quando está comprovadamente vazia:
-    // nenhum aprovado com código de reserva E todos os nomes cruzados com a
-    // Tabela 2 (se houver candidato sem correspondência, a reserva dele é
-    // desconhecida — a coluna permanece para evidenciar a lacuna).
+    // A coluna RESERVA só é suprimida quando está comprovadamente vazia: nenhum
+    // aprovado cotista, todos os nomes cruzados com a Tabela 2, nenhum rótulo de
+    // reserva não reconhecido e nenhuma divergência entre as duas tabelas. Em
+    // qualquer dúvida, a coluna PERMANECE — é melhor uma coluna em branco a ser
+    // conferida do que uma cota que desaparece do edital.
     const temReserva = outputRows.some(r => r["RESERVA"] !== '');
-    const reservaSuprimida = !temReserva && unmatched.length === 0;
+    const reservaSuprimida = !temReserva && unmatched.length === 0 &&
+                             reservaErrors.length === 0 && reservaDivergencias.length === 0;
     activeCols = reservaSuprimida ? OUT_COLS.filter(c => c !== 'RESERVA') : OUT_COLS;
 
-    renderResults({ reprovadosCount, classErrors, notaErrors, unmatched, totalDisponivel, maxNum, reservaSuprimida });
+    renderResults({ reprovadosCount, classErrors, notaErrors, unmatched, totalDisponivel, maxNum,
+                    reservaSuprimida, reservaErrors, reservaDivergencias });
   }
 
   function renderResults(info){
     stampWrap.classList.add('show');
-    const temAviso = info.unmatched.length > 0 || info.classErrors.length > 0 || info.notaErrors.length > 0 || info.totalDisponivel < info.maxNum;
+    const temAviso = info.unmatched.length > 0 || info.classErrors.length > 0 || info.notaErrors.length > 0 ||
+                     info.reservaErrors.length > 0 || info.reservaDivergencias.length > 0 ||
+                     info.totalDisponivel < info.maxNum;
 
     if(!temAviso){
       stampBadge.classList.remove('warn');
@@ -277,6 +329,14 @@
       if(info.notaErrors.length > 0){
         html += '<br><strong style="color:var(--stamp-red)">' + info.notaErrors.length + ' nota(s) não numérica(s)</strong> — conferir manualmente:';
         html += '<ul class="warn-list">' + info.notaErrors.slice(0,8).map(n => '<li>' + escapeHtml(n) + '</li>').join('') + (info.notaErrors.length>8 ? '<li>… e mais ' + (info.notaErrors.length-8) + '</li>' : '') + '</ul>';
+      }
+      if(info.reservaErrors.length > 0){
+        html += '<br><strong style="color:var(--stamp-red)">' + info.reservaErrors.length + ' rótulo(s) de reserva não reconhecido(s)</strong> — a coluna RESERVA ficou em branco nesses casos, conferir manualmente:';
+        html += '<ul class="warn-list">' + info.reservaErrors.slice(0,8).map(n => '<li>' + escapeHtml(n) + '</li>').join('') + (info.reservaErrors.length>8 ? '<li>… e mais ' + (info.reservaErrors.length-8) + '</li>' : '') + '</ul>';
+      }
+      if(info.reservaDivergencias.length > 0){
+        html += '<br><strong style="color:var(--stamp-red)">' + info.reservaDivergencias.length + ' divergência(s) de reserva entre a Tabela 1 e a Tabela 2</strong> — conferir manualmente:';
+        html += '<ul class="warn-list">' + info.reservaDivergencias.slice(0,8).map(n => '<li>' + escapeHtml(n) + '</li>').join('') + (info.reservaDivergencias.length>8 ? '<li>… e mais ' + (info.reservaDivergencias.length-8) + '</li>' : '') + '</ul>';
       }
       stampText.innerHTML = html;
     }
