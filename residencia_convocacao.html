@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Residência — Gerador do Edital de Convocação para Entrevista</title>
+<link rel="stylesheet" href="core.css">
+</head><body><div class="sheet">
+<div id="institutional-placeholder"></div>
+<div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
+<main>
+
+  <div class="step step-info">
+    <div class="step-head">
+      <span class="step-num">i</span>
+      <p class="step-title">Como funciona</p>
+    </div>
+    <p class="step-desc">A ferramenta lê a relação de convocados enviada pela unidade (PDF do SEI ou tabela colada), deixa você conferir e completar os dados, e gera o Edital de Convocação para Entrevista pronto para copiar no Athos ou salvar em PDF.</p>
+    <ul class="step-list">
+      <li><strong>Passo 1</strong> — trazer os dados: PDF, colagem ou digitação.</li>
+      <li><strong>Passo 2</strong> — conferir a tabela, marcar as cotas e ajustar a ordem.</li>
+      <li><strong>Passo 3</strong> — preencher os dados do edital e gerar o texto.</li>
+    </ul>
+    <p class="step-desc">Nada é corrigido automaticamente sem aviso: divergências de soma, empates e horários repetidos aparecem sinalizados, e o valor informado pela unidade é sempre mantido.</p>
+  </div>
+
+  <!-- ===================== PASSO 1 ===================== -->
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <p class="step-title">Trazer os dados da unidade</p>
+    </div>
+    <p class="step-desc">Escolha o PDF da Cota/Despacho/Informação, ou cole a tabela direto no quadro. Se o PDF trouxer a lista como imagem (print colado), a leitura automática não funciona — a ferramenta avisa e você cola ou digita.</p>
+
+    <div class="upload-panel">
+      <input type="file" id="cvArquivo" accept="application/pdf">
+      <button type="button" class="file-btn" id="cvBtnArquivo">Escolher PDF</button>
+      <span class="file-name" id="cvNomeArquivo">nenhum arquivo escolhido</span>
+    </div>
+
+    <div id="cvStatus" class="notice-banner" style="display:none;"></div>
+
+    <p class="step-desc" style="margin-top:16px;">Texto extraído / área de colagem — <strong>selecione com o mouse apenas o trecho da tabela de convocados</strong> antes de reconhecer (se não selecionar nada, a ferramenta usa o quadro inteiro).</p>
+    <div class="step-content">
+      <textarea id="cvTexto" style="min-height:230px;" placeholder="Cole aqui a tabela copiada do PDF, do Word ou do Excel — ou escolha um PDF acima."></textarea>
+      <div class="download-row">
+        <button type="button" class="run-btn" id="cvBtnReconhecer" style="width:auto;">Reconhecer tabela</button>
+        <button type="button" class="link-btn" id="cvBtnLimpar">Limpar quadro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PASSO 1B — mapeamento ===================== -->
+  <div class="step" id="cvPasso2" style="display:none;">
+    <div class="step-head">
+      <span class="step-num">1b</span>
+      <p class="step-title">Conferir o que é cada coluna</p>
+    </div>
+    <div id="cvMapa" class="step-content"></div>
+    <div class="download-row" style="margin-left:36px;">
+      <button type="button" class="run-btn" id="cvBtnImportar" style="width:auto;">Substituir a lista pelo reconhecido</button>
+      <button type="button" class="link-btn" id="cvBtnAcrescentar">Acrescentar à lista atual</button>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ===================== PASSO 2 — grade ===================== -->
+  <div class="step" id="cvPasso3">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <p class="step-title">Conferir, ordenar e marcar as cotas</p>
+    </div>
+    <p class="step-desc">Marque <strong>AC</strong> (ampla concorrência), <strong>PPP</strong> (pessoa preta ou parda) e <strong>PcD</strong>. O mesmo candidato pode estar em mais de uma — aparecerá em cada tabela, com numeração própria. Tabelas de cota sem ninguém marcado são suprimidas do edital.</p>
+
+    <div class="upload-panel" style="gap:14px 24px;">
+      <label style="font-size:13px;color:var(--ink-soft);">Colunas de nota
+        <select id="cvModo" style="margin-left:6px;padding:6px;border:1px solid var(--line);">
+          <option value="duas">Objetiva + Discursiva + Total</option>
+          <option value="unica">Nota única</option>
+        </select>
+      </label>
+      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvAcertos"> incluir coluna ACERTOS</label>
+      <label style="font-size:13px;color:var(--ink-soft);">Formato do horário
+        <select id="cvFmtHora" style="margin-left:6px;padding:6px;border:1px solid var(--line);">
+          <option value="H">13H30</option>
+          <option value="hmin">13h30min</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="step-content" style="margin-top:16px;">
+      <div id="cvGrade"></div>
+      <p class="count-note" id="cvResumo" style="margin-top:10px;"></p>
+      <div id="cvAvisos"></div>
+    </div>
+
+    <div class="upload-panel" style="margin-top:16px;gap:14px 20px;">
+      <button type="button" class="link-btn" id="cvBtnNova">+ Nova linha</button>
+      <button type="button" class="link-btn" id="cvBtnOrdenar">Reordenar por total</button>
+      <span style="border-left:1px solid var(--line);height:26px;"></span>
+      <label style="font-size:13px;color:var(--ink-soft);">A partir de
+        <input type="text" id="cvHoraInicial" value="13h30" style="width:70px;margin-left:6px;padding:6px;border:1px solid var(--line);text-align:center;">
+      </label>
+      <label style="font-size:13px;color:var(--ink-soft);">de
+        <input type="number" id="cvHoraIntervalo" value="15" min="0" max="240" style="width:64px;margin-left:6px;padding:6px;border:1px solid var(--line);text-align:center;"> em minutos
+      </label>
+      <button type="button" class="link-btn" id="cvBtnHorarios">Preencher horários</button>
+    </div>
+
+    <div class="upload-panel" style="margin-top:12px;">
+      <input type="file" id="cvRascunho" accept="application/json">
+      <button type="button" class="link-btn" id="cvBtnExportar">Salvar rascunho (.json)</button>
+      <button type="button" class="link-btn" id="cvBtnRascunho">Abrir rascunho</button>
+      <span class="file-name">para continuar o trabalho em outro dia ou em outra máquina</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ===================== PASSO 3 — edital ===================== -->
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <p class="step-title">Dados do edital</p>
+    </div>
+    <div class="step-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 18px;">
+      <label style="font-size:12.5px;color:var(--ink-soft);">Edital de convocação n°<br><input type="text" id="cvF_nConv" placeholder="3417/2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Edital de abertura n°<br><input type="text" id="cvF_nEdital" placeholder="4138/2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">SEI!TJPR n°<br><input type="text" id="cvF_sei" placeholder="0039497-37.2026.8.16.6000" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Data da entrevista<br><input type="text" id="cvF_data" placeholder="27/07/2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Horário geral (se não houver por candidato)<br><input type="text" id="cvF_horarioGeral" placeholder="às 13h30min" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Telefone (opcional)<br><input type="text" id="cvF_telefone" placeholder="(44) 3472-2386" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Local<br><textarea id="cvF_local" style="min-height:70px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Gabinete 704, prédio anexo ao TJPR."></textarea></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Outras informações (opcional)<br><textarea id="cvF_extra" style="min-height:60px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Ex.: os candidatos deverão apresentar currículo resumido."></textarea></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Cidade da assinatura<br><input type="text" id="cvF_cidade" value="Curitiba" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Data da assinatura<br><input type="text" id="cvF_dataAss" placeholder="20 de julho de 2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Quem assina<br><input type="text" id="cvF_assinante" placeholder="Alexandre Barbosa Fabiani" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Cargo<br><input type="text" id="cvF_cargo" placeholder="Desembargador" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Unidade na assinatura (opcional)<br><input type="text" id="cvF_unidade" placeholder="3ª Vara Criminal da Comarca de Foz do Iguaçu" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+    </div>
+    <div class="step-content" style="margin-top:18px;">
+      <button type="button" class="run-btn" id="cvBtnGerar">Gerar edital</button>
+    </div>
+  </div>
+
+  <div class="step" id="cvSaidaBox" style="display:none;">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <p class="step-title">Edital gerado</p>
+    </div>
+    <p class="step-desc" id="cvMsgSaida"></p>
+    <div class="step-content">
+      <div class="download-row" style="margin-bottom:14px;">
+        <button type="button" class="download-btn" id="cvBtnCopiar">Copiar edital</button>
+        <button type="button" class="link-btn" id="cvBtnPDF">Salvar em PDF</button>
+        <button type="button" class="link-btn" id="cvBtnEditar">Editar texto</button>
+      </div>
+      <div id="cvSaida" contenteditable="false" style="border:1px solid var(--line);background:#fff;padding:28px 30px;"></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+    <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+    É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+  </p>
+  <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+</footer>
+</div>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.worker.min.js"></script>
+<script src="core.js"></script>
+<script src="residencia_convocacao_logic.js"></script>
+<script src="ferramentas.js"></script>
+<script src="layout.js"></script>
+</body></html>

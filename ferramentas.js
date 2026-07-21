@@ -84,15 +84,15 @@ const FERRAMENTAS=[
 
   /* ---------- Divisão de Residência ---------- */
   {
-    arquivo:"residencia_ensalamento.html",
+    arquivo:"residencia_convocacao.html",
     secao:"residencia",
-    rotulo:"Ensalamento",
+    rotulo:"Convocação p/ Entrevista",
     ordem:0,
-    emoji:"🏫",
+    emoji:"📣",
     cor:"--teal",
-    eyebrow:"Aplicação de provas",
-    titulo:"Gerador do Edital de Ensalamento",
-    descricao:"Cruzará a relação de inscritos com os locais e salas de prova para gerar o Edital de Ensalamento pronto para copiar ou baixar. (Em desenvolvimento.)"
+    eyebrow:"Convocação para a entrevista",
+    titulo:"Gerador do Edital de Convocação para Entrevista",
+    descricao:"Lê a relação de convocados enviada pela unidade (PDF do SEI ou tabela colada), permite conferir os dados e marcar as cotas, e gera o Edital de Convocação para Entrevista pronto para copiar ou salvar em PDF."
   },
   {
     arquivo:"residencia_classificacao.html",
