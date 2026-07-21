@@ -128,11 +128,13 @@ body{
    não troca de painel via JS — cada arquivo .html é uma ferramenta própria. */
 .tab-nav{
   display:flex;
+  flex-wrap:wrap;
+  align-items:stretch;
   gap:4px;
   padding:0 40px;
   border-bottom:1px solid rgba(255,255,255,0.14);
-  overflow-x:auto;
-  overflow-y:hidden;
+  /* overflow visível: o menu suspenso precisa poder sair da barra sem ser cortado */
+  overflow:visible;
 }
 
 .tab-btn{
@@ -190,6 +192,117 @@ header{
 }
 .tab-btn:hover .tab-emoji,
 .tab-btn.active .tab-emoji{ filter:none; opacity:1; }
+
+/* ---- Menu suspenso por seção -------------------------------------------
+   Cada seção (Processo Seletivo, Residência) é um item principal do menu; as
+   ferramentas daquela seção aparecem como subitens ao passar o mouse. Em telas
+   de toque e via teclado, o clique/foco abre o mesmo painel (classe .open,
+   aplicada pelo layout.js). */
+.tab-group{ position:relative; display:flex; }
+
+.tab-parent{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  display:inline-flex;
+  align-items:center;
+}
+.tab-caret{
+  font-size:10px;
+  margin-left:7px;
+  opacity:0.7;
+  transition:transform .15s ease;
+}
+.tab-group:hover .tab-caret,
+.tab-group:focus-within .tab-caret,
+.tab-group.open .tab-caret{ transform:translateY(1px); opacity:1; }
+
+.tab-menu{
+  display:none;
+  position:absolute;
+  top:100%;
+  left:0;
+  z-index:80;
+  min-width:230px;
+  padding:6px 0;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-top:3px solid var(--mint);
+  box-shadow:0 14px 28px -12px rgba(0,42,58,0.55);
+}
+.tab-group:hover .tab-menu,
+.tab-group:focus-within .tab-menu,
+.tab-group.open .tab-menu{ display:block; }
+
+.tab-menu-item{
+  --accent: var(--teal);
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:10px 18px;
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:13.5px;
+  font-weight:500;
+  color:var(--ink);
+  text-decoration:none;
+  border-left:3px solid transparent;
+  white-space:nowrap;
+  transition:background .12s ease, border-color .12s ease, color .12s ease;
+}
+.tab-menu-item .tab-emoji{ font-size:15px; margin-right:10px; }
+.tab-menu-item:hover,
+.tab-menu-item:focus-visible{
+  background:#f3fafa;
+  border-left-color:var(--accent);
+  color:var(--navy);
+  outline:none;
+}
+.tab-menu-item.active{
+  border-left-color:var(--accent);
+  font-weight:600;
+  color:var(--navy);
+}
+/* emoji ganha cor plena ao passar o mouse (ou no item ativo) */
+.tab-menu-item:hover .tab-emoji,
+.tab-menu-item:focus-visible .tab-emoji,
+.tab-menu-item.active .tab-emoji{ filter:none; opacity:1; }
+
+/* ---- Blocos de seção do índice ----------------------------------------- */
+.tool-section{ margin-bottom:40px; }
+.tool-section:last-child{ margin-bottom:0; }
+
+.section-head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding-bottom:12px;
+  border-bottom:2px solid var(--accent, var(--teal));
+  margin-bottom:14px;
+}
+.section-emoji{
+  flex-shrink:0;
+  width:42px; height:42px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px;
+  line-height:1;
+  background:#fffdf7;
+  border:1px solid var(--line);
+  box-shadow:2px 2px 0 var(--accent, var(--teal));
+}
+.section-head-text{ min-width:0; }
+.section-title{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:22px;
+  font-weight:700;
+  color:var(--ink);
+  margin:0;
+  line-height:1.2;
+}
+.section-desc{
+  font-size:13px;
+  color:var(--ink-soft);
+  line-height:1.6;
+  margin:0 0 18px;
+  max-width:760px;
+}
 
 /* Bloco informativo ("i" — como usar) no topo das ferramentas: mesma família
    visual do notice-banner, com borda esquerda na cor de acento da página. */
@@ -766,6 +879,8 @@ tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
   flex:1;
   border-bottom:none;
   padding:0;
+  flex-wrap:nowrap;
+  overflow:visible;
 }
 .mini-header .tab-btn{ padding:12px 16px; }
 .top-btn{
@@ -795,6 +910,13 @@ footer{
 }
 
 @media (max-width:600px){
+  .tab-nav{ padding:0 20px 6px; }
+  .tab-btn{ padding:12px 14px; }
+  /* em telas estreitas o painel acompanha a largura disponível */
+  .tab-menu{ min-width:200px; }
+  .section-head{ gap:12px; }
+  .section-emoji{ width:36px; height:36px; font-size:19px; }
+  .section-title{ font-size:19px; }
   header{ padding:26px 20px 18px; }
   .page-header{ padding:24px 20px 18px; gap:14px; }
   .page-emoji{ width:46px; height:46px; font-size:23px; }
