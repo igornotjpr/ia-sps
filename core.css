@@ -440,6 +440,29 @@ textarea:focus, input:focus, button:focus, select:focus{
   margin-left:36px;
 }
 
+/* Texto de exemplo (placeholder) mais apagado que um valor real digitado —
+   usar em campos cujo placeholder é só um modelo de preenchimento, não um
+   valor sugerido a ser aceito como está. */
+.exemplo-input::placeholder{
+  color:var(--ink-soft);
+  opacity:0.55;
+  font-style:italic;
+}
+
+/* Botão compacto de calendário, ao lado de um campo de data com máscara
+   (ver ativarBotaoCalendario em residencia_convocacao_logic.js). */
+.date-pick-btn{
+  flex-shrink:0;
+  width:38px;
+  padding:0;
+  border:1px solid var(--line);
+  background:#fffdf7;
+  font-size:15px;
+  line-height:1;
+  cursor:pointer;
+}
+.date-pick-btn:hover{ background:var(--teal); border-color:var(--teal); }
+
 /* Tabela de formatação simples: bordas de 1pt em preto, texto puro, sem
    estilização decorativa (usada por ferramentas que exigem tabela "limpa"
    para colar em Word/Excel, ex: Ponto 20). */

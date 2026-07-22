@@ -55,10 +55,109 @@ function extrairHora(txt){
   if(h>23||mi>59) return null;
   return {h:h, m:mi};
 }
-function fmtHora(hora, formato){
+function fmtHora(hora){
   if(!hora) return '';
   const hh=String(hora.h).padStart(2,'0'), mm=String(hora.m).padStart(2,'0');
-  return formato==='hmin' ? (hh+'h'+mm+'min') : (hh+'H'+mm);
+  return hh+'h'+mm+'min';
+}
+
+// Interpretação tolerante do horário digitado/colado pelo usuário (grade e
+// "A partir de"): aceita "1330", "930", "13:30", "13h30", "13H30MIN" etc.
+// Fica separado de extrairHora/RE_HORA, que servem ao reconhecimento de PDF
+// e são mais sensíveis a falsos positivos em texto solto.
+function interpretarHoraDigitada(txt){
+  const s=String(txt||'').trim();
+  if(!s) return null;
+  let m=/^(\d{1,2})\s*[hH:]\s*(\d{1,2})\s*(?:m(?:in)?\.?)?$/i.exec(s);
+  if(m){
+    const h=Number(m[1]), mi=Number(m[2]);
+    return (h<=23 && mi<=59) ? {h:h, m:mi} : null;
+  }
+  m=/^(\d{3,4})$/.exec(s);
+  if(m){
+    const d=m[1], mi=Number(d.slice(-2)), h=Number(d.slice(0,-2));
+    if(h<=23 && mi<=59) return {h:h, m:mi};
+  }
+  return null;
+}
+
+/* ============== datas: máscara, calendário e formatação extenso ============== */
+
+const MESES_EXTENSO=['janeiro','fevereiro','março','abril','maio','junho',
+  'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function formatarDataExtenso(d){
+  return d.getDate()+' de '+MESES_EXTENSO[d.getMonth()]+' de '+d.getFullYear();
+}
+function formatarDataBarra(d){
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+// Lê de volta uma data já escrita no campo (para abrir o calendário nela).
+function lerDataDoTexto(txt, modo){
+  const s=String(txt||'').trim();
+  if(!s) return null;
+  if(modo==='slash'){
+    const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    if(!m) return null;
+    const d=new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+    return isNaN(d) ? null : d;
+  }
+  const m=/^(\d{1,2})\s+de\s+([a-zçãéô]+)\s+de\s+(\d{4})$/i.exec(semAcento(s).toLowerCase());
+  if(!m) return null;
+  const mi=MESES_EXTENSO.findIndex(mes=> semAcento(mes)===m[2]);
+  if(mi<0) return null;
+  return new Date(Number(m[3]), mi, Number(m[1]));
+}
+
+// Digitar ou colar só números no campo de data da entrevista: reconstrói a
+// partir dos dígitos "crus" a cada entrada, então nunca duplica barra —
+// funciona igual para "27072026" e "27/07/2026" colados.
+function ativarMascaraData(inputEl){
+  if(!inputEl) return;
+  inputEl.addEventListener('input',()=>{
+    const digitos=inputEl.value.replace(/\D/g,'').slice(0,8);
+    let out=digitos.slice(0,2);
+    if(digitos.length>2) out+='/'+digitos.slice(2,4);
+    if(digitos.length>4) out+='/'+digitos.slice(4,8);
+    inputEl.value=out;
+  });
+}
+
+// Botão de calendário (📅) ao lado de um campo de data em texto — abre um
+// <input type="date"> nativo oculto e escreve de volta no formato pedido.
+function ativarBotaoCalendario(inputEl, modo){
+  if(!inputEl) return;
+  const wrap=document.createElement('span');
+  wrap.style.cssText='display:flex;align-items:stretch;gap:6px;width:100%;';
+  inputEl.parentNode.insertBefore(wrap, inputEl);
+  inputEl.style.flex='1';
+  inputEl.style.width='auto';
+  wrap.appendChild(inputEl);
+
+  const btn=document.createElement('button');
+  btn.type='button';
+  btn.className='date-pick-btn';
+  btn.title='Abrir calendário';
+  btn.textContent='📅';
+  wrap.appendChild(btn);
+
+  const nativo=document.createElement('input');
+  nativo.type='date';
+  nativo.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+  wrap.appendChild(nativo);
+
+  btn.addEventListener('click',()=>{
+    const d=lerDataDoTexto(inputEl.value, modo);
+    nativo.value = d ? (d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')) : '';
+    if(nativo.showPicker) nativo.showPicker(); else nativo.click();
+  });
+  nativo.addEventListener('change',()=>{
+    if(!nativo.value) return;
+    const [y,mo,dd]=nativo.value.split('-').map(Number);
+    const d=new Date(y, mo-1, dd);
+    inputEl.value = modo==='extenso' ? formatarDataExtenso(d) : formatarDataBarra(d);
+    inputEl.dispatchEvent(new Event('change',{bubbles:true}));
+  });
 }
 
 /* ==================== B) reconhecimento de tabela ==================== */
@@ -248,12 +347,11 @@ const SLOTS=[
 ];
 
 const estado={
-  modo:'duas',           // 'duas' = objetiva+discursiva+total | 'unica' = nota
-  acertos:false,         // exibe coluna ACERTOS
-  fmtHorario:'H',        // 'H' = 13H30 | 'hmin' = 13h30min
+  // quais colunas aparecem na grade e no edital, nesta ordem fixa
+  cols:{ obj:true, dis:true, acertos:false, tot:true, hora:false },
   cands:[],              // {id,nome,obj,dis,tot,acertos,hora,ac,ppp,pcd}
   doc:{
-    nConv:'', nEdital:'', sei:'',
+    nConv:'EDITAL N° $$(numerar automaticamente)%%', nEdital:'', sei:'',
     data:'', horarioGeral:'', local:'', telefone:'', extra:'',
     cidade:'Curitiba', dataAss:'', assinante:'', cargo:'', unidade:''
   },
@@ -263,6 +361,19 @@ const estado={
 
 function novoCand(){
   return {id:estado.seq++, nome:'', obj:null, dis:null, tot:null, acertos:null, hora:null, ac:true, ppp:false, pcd:false};
+}
+
+// Uma linha "vazia" é o slot de preenchimento automático — sem nome nem
+// nenhum dado numérico/horário (as marcações de cota não contam, porque a
+// linha nova já nasce com a marcação padrão).
+function linhaEstaVazia(c){
+  return !c.nome.trim() && c.obj==null && c.dis==null && c.acertos==null && c.tot==null && !c.hora;
+}
+// Garante que sempre haja uma linha em branco ao final da grade, para o
+// usuário simplesmente começar a digitar sem precisar clicar em "nova linha".
+function garantirLinhaVazia(){
+  const ultima=estado.cands[estado.cands.length-1];
+  if(!ultima || !linhaEstaVazia(ultima)) estado.cands.push(novoCand());
 }
 
 /* ==================== D) passo 1 — origem dos dados ==================== */
@@ -518,7 +629,7 @@ function renderMapeamento(){
   if(p){
     h+='<div class="notice-banner ok" style="margin-left:0;">Primeira linha como ficará: <strong>'+esc(nomeDoRegistro(p,papeis)||'(sem nome)')+'</strong>'
       +' — números: '+esc(numerosDoRegistro(p,papeis).join(' | ')||'nenhum')
-      +' — horário: '+esc(horaDoRegistro(p,papeis)?fmtHora(horaDoRegistro(p,papeis),estado.fmtHorario):'nenhum')+'</div>';
+      +' — horário: '+esc(horaDoRegistro(p,papeis)?fmtHora(horaDoRegistro(p,papeis)):'nenhum')+'</div>';
   }
   if(g.ignoradas.length){
     h+='<div class="notice-banner warn" style="margin-left:0;"><strong>'+g.ignoradas.length+' linha(s) não foram aproveitadas</strong> (texto solto no trecho selecionado):<ul class="warn-list">'
@@ -574,13 +685,15 @@ function importarParaGrade(substituir){
     else fundidos++;
   });
 
-  if(usaNota && !usaObj) estado.modo='unica';
-  if(usaObj) estado.modo='duas';
-  if(usaAcertos) estado.acertos=true;
+  if(usaNota && !usaObj){ estado.cols.tot=true; }
+  if(usaObj){ estado.cols.obj=true; estado.cols.dis=true; estado.cols.tot=true; }
+  if(usaAcertos) estado.cols.acertos=true;
 
   // candidato sem nenhuma cota marcada entra na ampla concorrência
   estado.cands.forEach(c=>{ if(!c.ac && !c.ppp && !c.pcd) c.ac=true; });
 
+  garantirLinhaVazia();
+  sincronizarControles();
   renderGrade();
   rolarAte($('cvPasso3'));
   const msg=novos+' candidato(s) importado(s)'+(fundidos?' e '+fundidos+' já existente(s) atualizado(s) — cotas foram somadas ao mesmo candidato':'')+'.';
@@ -590,7 +703,6 @@ function importarParaGrade(substituir){
 /* ==================== F) passo 3 — grade de candidatos ==================== */
 
 function totalCalculado(c){
-  if(estado.modo!=='duas') return null;
   if(c.obj==null && c.dis==null) return null;
   return (c.obj||0)+(c.dis||0);
 }
@@ -599,7 +711,8 @@ function avisosGrade(){
   const av=[];
   estado.cands.forEach((c,i)=>{
     const n=i+1;
-    if(!c.nome.trim()) av.push({id:c.id, txt:'Linha '+n+': nome em branco.'});
+    // linha totalmente vazia é o slot de preenchimento automático — não é erro
+    if(!c.nome.trim() && !linhaEstaVazia(c)) av.push({id:c.id, txt:'Linha '+n+': nome em branco.'});
     const calc=totalCalculado(c);
     if(calc!=null && c.tot!=null && Math.abs(calc-c.tot)>0.005){
       av.push({id:c.id, txt:'Linha '+n+' ('+c.nome+'): a soma das notas dá '+fmtNota(calc)+', mas o total informado é '+fmtNota(c.tot)+'. O valor informado foi mantido.'});
@@ -621,79 +734,122 @@ function avisosGrade(){
   const porHora={};
   estado.cands.forEach(c=>{ if(!c.hora) return; const k=c.hora.h+':'+c.hora.m; (porHora[k]=porHora[k]||[]).push(c); });
   Object.keys(porHora).forEach(k=>{
-    if(porHora[k].length>1) av.push({txt:'Horário '+fmtHora(porHora[k][0].hora,estado.fmtHorario)+' repetido em '+porHora[k].length+' candidatos.'});
+    if(porHora[k].length>1) av.push({txt:'Horário '+fmtHora(porHora[k][0].hora)+' repetido em '+porHora[k].length+' candidatos.'});
   });
   return av;
 }
 
+// Colunas "de dados" na ordem fixa Objetiva → Discursiva → Acertos → Total
+// → Horário, conforme as checkboxes marcadas no Passo 2. Usado tanto para
+// montar as colunas do edital final quanto as colunas editáveis da grade.
+const GRID_LABELS={obj:'Objetiva', dis:'Discursiva', acertos:'Acertos', tot:'Total', hora:'Horário'};
+
 function colunasAtivas(){
   const cols=[{k:'ordem', t:'ORDEM'}, {k:'nome', t:'NOME'}];
-  if(estado.acertos) cols.push({k:'acertos', t:'ACERTOS'});
-  if(estado.modo==='duas'){
-    cols.push({k:'obj', t:'NOTA PROVA OBJETIVA'});
-    cols.push({k:'dis', t:'NOTA PROVA DISCURSIVA'});
-    cols.push({k:'tot', t:'TOTAL'});
-  } else {
-    cols.push({k:'tot', t:'NOTA'});
-  }
-  if(estado.cands.some(c=>c.hora)) cols.push({k:'hora', t:'HORÁRIO DA ENTREVISTA'});
+  if(estado.cols.obj) cols.push({k:'obj', t:'NOTA PROVA OBJETIVA', tHtml:'NOTA PROVA<br>OBJETIVA'});
+  if(estado.cols.dis) cols.push({k:'dis', t:'NOTA PROVA DISCURSIVA', tHtml:'NOTA PROVA<br>DISCURSIVA'});
+  if(estado.cols.acertos) cols.push({k:'acertos', t:'ACERTOS'});
+  if(estado.cols.tot) cols.push({k:'tot', t:'TOTAL'});
+  if(estado.cols.hora) cols.push({k:'hora', t:'HORÁRIO DA ENTREVISTA', tHtml:'HORÁRIO DA<br>ENTREVISTA'});
   return cols;
+}
+function colunasDados(){
+  return colunasAtivas().filter(c=> c.k!=='ordem' && c.k!=='nome');
+}
+
+// Grava no estado o valor digitado num campo da grade (nome/notas/acertos/
+// hora) — usado tanto pelo listener de 'change' quanto pelo Tab customizado.
+function commitCampo(inp){
+  const id=Number(inp.closest('tr').dataset.id);
+  const c=estado.cands.find(x=>x.id===id);
+  if(!c) return;
+  const f=inp.dataset.f;
+  if(f==='nome') c.nome=inp.value;
+  else if(f==='hora') c.hora=interpretarHoraDigitada(inp.value);
+  else if(f==='acertos') c.acertos=paraNumero(inp.value);
+  else c[f]=paraNumero(inp.value);
+  garantirLinhaVazia();
+}
+
+// Enquanto true, o listener de 'change' da grade não reage — evita um loop:
+// quando o campo tem valor digitado, renderGrade() troca o <input> focado
+// por um novo (innerHTML), e o navegador dispara 'blur'/'change' nesse
+// input antigo sendo removido; sem essa trava, isso reentra em
+// commitCampo+renderGrade no meio da própria renderização do Tab e o foco
+// que tentamos dar ao próximo campo se perde.
+let navegandoPorTab=false;
+
+// Tab (sem Shift) num campo de texto da grade pula para o próximo campo
+// ativo da mesma linha, à direita, ou para o nome da próxima linha quando é
+// o último. Interceptado manualmente porque renderGrade() recria a tabela
+// inteira a cada edição — o Tab nativo perderia o alvo nesse meio-tempo.
+function tratarTabGrade(e){
+  if(e.key!=='Tab' || e.shiftKey) return;
+  const inp=e.target;
+  if(!inp.classList || !inp.classList.contains('cvIn')) return;
+  e.preventDefault();
+  navegandoPorTab=true;
+  const tr=inp.closest('tr');
+  const id=Number(tr.dataset.id);
+  commitCampo(inp);
+  const ordemCampos=['nome'].concat(colunasDados().map(c=>c.k));
+  const proximoCampo=ordemCampos[ordemCampos.indexOf(inp.dataset.f)+1];
+  const i=estado.cands.findIndex(x=>x.id===id);
+  const proximaLinha=estado.cands[i+1];
+  renderGrade();
+  navegandoPorTab=false;
+  let alvo=null;
+  if(proximoCampo) alvo=document.querySelector('#cvGrade tr[data-id="'+id+'"] [data-f="'+proximoCampo+'"]');
+  else if(proximaLinha) alvo=document.querySelector('#cvGrade tr[data-id="'+proximaLinha.id+'"] [data-f="nome"]');
+  if(alvo){ alvo.focus(); if(alvo.select) alvo.select(); }
 }
 
 function renderGrade(){
   const av=avisosGrade();
   const comAviso={};
   av.forEach(a=>{ if(a.id) comAviso[a.id]=true; });
+  const dcols=colunasDados();
 
   let h='<div class="table-scroll" style="max-height:none;"><table style="white-space:normal;font-family:\'Barlow\',system-ui,sans-serif;font-size:12.5px;">';
   h+='<thead><tr><th style="width:34px;">#</th><th>Nome</th>';
-  if(estado.acertos) h+='<th style="width:70px;">Acertos</th>';
-  if(estado.modo==='duas'){ h+='<th style="width:70px;">Objetiva</th><th style="width:70px;">Discursiva</th><th style="width:70px;">Total</th>'; }
-  else h+='<th style="width:70px;">Nota</th>';
-  h+='<th style="width:78px;">Horário</th><th style="width:38px;">AC</th><th style="width:44px;">PPP</th><th style="width:44px;">PcD</th><th style="width:86px;">Ações</th></tr></thead><tbody>';
+  dcols.forEach(c=>{ h+='<th style="width:'+(c.k==='hora'?'78':'70')+'px;">'+GRID_LABELS[c.k]+'</th>'; });
+  h+='<th style="width:38px;">AC</th><th style="width:44px;">PPP</th><th style="width:44px;">PcD</th><th style="width:86px;">Ações</th></tr></thead><tbody>';
 
   estado.cands.forEach((c,i)=>{
     const cl=comAviso[c.id]?' class="unmatched"':'';
     h+='<tr'+cl+' data-id="'+c.id+'">';
     h+='<td style="text-align:center;color:var(--ink-soft);">'+(i+1)+'</td>';
     h+='<td><input class="cvIn" data-f="nome" value="'+esc(c.nome)+'" style="width:100%;min-width:180px;padding:5px;border:1px solid var(--line);font-size:12.5px;"></td>';
-    if(estado.acertos) h+='<td><input class="cvIn" data-f="acertos" value="'+esc(fmtInt(c.acertos))+'" style="width:100%;padding:5px;border:1px solid var(--line);text-align:right;font-size:12.5px;"></td>';
-    const campos = (estado.modo==='duas')?['obj','dis','tot']:['tot'];
-    campos.forEach(f=>{
-      h+='<td><input class="cvIn" data-f="'+f+'" value="'+esc(fmtNota(c[f]))+'" style="width:100%;padding:5px;border:1px solid var(--line);text-align:right;font-size:12.5px;"></td>';
+    dcols.forEach(col=>{
+      const f=col.k;
+      const val = f==='hora' ? (c.hora?fmtHora(c.hora):'') : f==='acertos' ? fmtInt(c.acertos) : fmtNota(c[f]);
+      const ph = f==='hora' ? ' placeholder="—"' : '';
+      h+='<td><input class="cvIn" data-f="'+f+'" value="'+esc(val)+'"'+ph+' style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
     });
-    h+='<td><input class="cvIn" data-f="hora" value="'+esc(c.hora?fmtHora(c.hora,estado.fmtHorario):'')+'" placeholder="—" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
     ['ac','ppp','pcd'].forEach(k=>{
-      h+='<td style="text-align:center;"><input type="checkbox" class="cvChk" data-f="'+k+'"'+(c[k]?' checked':'')+'></td>';
+      h+='<td style="text-align:center;"><input type="checkbox" class="cvChk" tabindex="-1" data-f="'+k+'"'+(c[k]?' checked':'')+'></td>';
     });
     h+='<td style="text-align:center;white-space:nowrap;">'
-      +'<button type="button" class="cvAct" data-a="sobe" title="Subir">↑</button> '
-      +'<button type="button" class="cvAct" data-a="desce" title="Descer">↓</button> '
-      +'<button type="button" class="cvAct" data-a="apaga" title="Excluir">✕</button></td>';
+      +'<button type="button" class="cvAct" tabindex="-1" data-a="sobe" title="Subir">↑</button> '
+      +'<button type="button" class="cvAct" tabindex="-1" data-a="desce" title="Descer">↓</button> '
+      +'<button type="button" class="cvAct" tabindex="-1" data-a="apaga" title="Excluir">✕</button></td>';
     h+='</tr>';
   });
   h+='</tbody></table></div>';
-  if(!estado.cands.length) h='<p class="empty-hint">Nenhum candidato ainda. Importe do passo 1 ou clique em “Nova linha”.</p>';
+  if(!estado.cands.length) h='<p class="empty-hint">Nenhum candidato ainda. Importe do passo 1 ou comece a digitar.</p>';
   $('cvGrade').innerHTML=h;
 
   document.querySelectorAll('#cvGrade .cvIn').forEach(inp=>{
     inp.addEventListener('change',()=>{
-      const id=Number(inp.closest('tr').dataset.id);
-      const c=estado.cands.find(x=>x.id===id);
-      if(!c) return;
-      const f=inp.dataset.f;
-      if(f==='nome') c.nome=inp.value;
-      else if(f==='hora') c.hora=extrairHora(inp.value);
-      else if(f==='acertos') c.acertos=paraNumero(inp.value);
-      else c[f]=paraNumero(inp.value);
-      renderGrade();
+      if(navegandoPorTab) return;
+      commitCampo(inp); renderGrade();
     });
   });
   document.querySelectorAll('#cvGrade .cvChk').forEach(chk=>{
     chk.addEventListener('change',()=>{
       const id=Number(chk.closest('tr').dataset.id);
       const c=estado.cands.find(x=>x.id===id);
-      if(c){ c[chk.dataset.f]=chk.checked; renderGrade(); }
+      if(c){ c[chk.dataset.f]=chk.checked; garantirLinhaVazia(); renderGrade(); }
     });
   });
   document.querySelectorAll('#cvGrade .cvAct').forEach(b=>{
@@ -705,22 +861,24 @@ function renderGrade(){
       if(a==='apaga') estado.cands.splice(i,1);
       else if(a==='sobe' && i>0){ const t=estado.cands[i-1]; estado.cands[i-1]=estado.cands[i]; estado.cands[i]=t; }
       else if(a==='desce' && i<estado.cands.length-1){ const t=estado.cands[i+1]; estado.cands[i+1]=estado.cands[i]; estado.cands[i]=t; }
+      garantirLinhaVazia();
       renderGrade();
     });
   });
 
+  const reais=estado.cands.filter(c=>c.nome.trim());
   let ah='';
   if(av.length){
     ah='<div class="notice-banner warn" style="margin-left:0;"><strong>'+av.length+' ponto(s) para conferir — nada foi alterado automaticamente:</strong><ul class="warn-list" style="color:var(--ink-soft);">'
       +av.map(a=>'<li>'+esc(a.txt)+'</li>').join('')+'</ul></div>';
-  } else if(estado.cands.length){
-    ah='<div class="notice-banner ok" style="margin-left:0;">Nenhuma inconsistência encontrada nos '+estado.cands.length+' candidatos.</div>';
+  } else if(reais.length){
+    ah='<div class="notice-banner ok" style="margin-left:0;">Nenhuma inconsistência encontrada nos '+reais.length+' candidatos.</div>';
   }
   $('cvAvisos').innerHTML=ah;
-  $('cvResumo').textContent = estado.cands.length
-    ? (estado.cands.length+' candidato(s) · ampla '+estado.cands.filter(c=>c.ac).length
-       +' · PPP '+estado.cands.filter(c=>c.ppp).length
-       +' · PcD '+estado.cands.filter(c=>c.pcd).length)
+  $('cvResumo').textContent = reais.length
+    ? (reais.length+' candidato(s) · ampla '+reais.filter(c=>c.ac).length
+       +' · PPP '+reais.filter(c=>c.ppp).length
+       +' · PcD '+reais.filter(c=>c.pcd).length)
     : '';
 }
 
@@ -733,11 +891,12 @@ function ordenarPorTotal(){
 }
 
 function preencherHorarios(){
-  const ini=extrairHora($('cvHoraInicial').value);
+  const ini=interpretarHoraDigitada($('cvHoraInicial').value);
   const passo=Number($('cvHoraIntervalo').value)||0;
   if(!ini){ alert('Informe o horário inicial no formato 13h30 ou 13:30.'); return; }
   let min=ini.h*60+ini.m;
   estado.cands.forEach(c=>{
+    if(!c.nome.trim()) return;
     c.hora={h:Math.floor(min/60)%24, m:min%60};
     min+=passo;
   });
@@ -770,22 +929,38 @@ const GRUPOS=[
 function celulaTxt(c, col){
   if(col.k==='nome') return (c.nome||'').toUpperCase();
   if(col.k==='acertos') return fmtInt(c.acertos);
-  if(col.k==='hora') return c.hora?fmtHora(c.hora,estado.fmtHorario):'';
+  if(col.k==='hora') return c.hora?fmtHora(c.hora):'';
   return fmtNota(c[col.k]);
 }
 
+// Larguras fixas para as colunas estreitas (número/hora) — com
+// table-layout:fixed elas ficariam do mesmo tamanho que NOME sem isso.
+// NOME não entra aqui: absorve o espaço restante.
+const LARGURA_COL={ordem:'7%', obj:'12%', dis:'12%', acertos:'10%', tot:'10%', hora:'13%'};
+
 function tabelaHtml(grupo, cols){
-  const lista=estado.cands.filter(c=>c[grupo.k]);
+  // linha em branco (slot de preenchimento automático) nunca entra no edital
+  const lista=estado.cands.filter(c=> c[grupo.k] && c.nome && c.nome.trim());
   if(!lista.length) return '';
   const bordas='border:1pt solid #000;border-collapse:collapse;';
-  const td='style="border:1pt solid #000;padding:3pt 5pt;vertical-align:top;"';
-  let h='<table style="'+bordas+'width:100%;margin:0 0 12pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;">';
-  h+='<tr><td colspan="'+cols.length+'" style="border:1pt solid #000;padding:3pt 5pt;font-weight:bold;">'+esc(grupo.rot)+'</td></tr>';
-  h+='<tr>'+cols.map(c=>'<td '+td.replace('vertical-align:top;','vertical-align:top;font-weight:bold;')+'>'+esc(c.t)+'</td>').join('')+'</tr>';
+  // white-space:normal sobrescreve a regra global de tabelas do site
+  // (table{white-space:nowrap} em core.css, pensada para as grades de dados,
+  // não para o texto corrido do edital) — sem isso, nomes longos vazam por
+  // cima das colunas vizinhas em vez de quebrar linha.
+  const td=(col, cabecalho)=>{
+    let s='border:1pt solid #000;padding:3pt 5pt;vertical-align:top;white-space:normal;word-break:break-word;';
+    if(LARGURA_COL[col.k]) s+='width:'+LARGURA_COL[col.k]+';';
+    if(cabecalho) s+='font-weight:bold;text-align:center;';
+    else if(col.k!=='nome') s+='text-align:center;';
+    return 'style="'+s+'"';
+  };
+  let h='<table style="'+bordas+'width:100%;max-width:100%;table-layout:fixed;margin:0 0 12pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;">';
+  h+='<tr><td colspan="'+cols.length+'" style="border:1pt solid #000;padding:3pt 5pt;font-weight:bold;text-align:center;">'+esc(grupo.rot)+'</td></tr>';
+  h+='<tr>'+cols.map(c=>'<td '+td(c,true)+'>'+(c.tHtml||esc(c.t))+'</td>').join('')+'</tr>';
   lista.forEach((c,i)=>{
     h+='<tr>'+cols.map(col=>{
       const v = (col.k==='ordem') ? String(i+1) : celulaTxt(c,col);
-      return '<td '+td+'>'+esc(v)+'</td>';
+      return '<td '+td(col,false)+'>'+esc(v)+'</td>';
     }).join('')+'</tr>';
   });
   h+='</table>';
@@ -800,9 +975,12 @@ function gerarEdital(){
   const C=P+'text-align:center;font-weight:bold;';
   let h='<div style="font-family:\'Times New Roman\',Times,serif;font-size:11pt;color:#000;">';
   h+='<p style="'+C+'">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
+  // "d.nConv" fica de fora do uppercase: pode conter o token de
+  // autonumeração do Athos ($$(numerar automaticamente)%%), que deve ser
+  // preservado exatamente como digitado.
   h+='<p style="'+C+'margin-top:24pt;">EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(d.nConv||'____/____')+'</p>';
   h+='<p style="'+C+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
-  h+='<p style="'+C+'margin-top:20pt;">EDITAL N° '+esc(d.nEdital||'____/____')+'<br>SEI!TJPR N° '+esc(d.sei||'____________')+'</p>';
+  h+='<p style="'+C+'margin-top:20pt;">EDITAL N° '+esc((d.nEdital||'____/____').toUpperCase())+'<br>SEI!TJPR N° '+esc((d.sei||'____________').toUpperCase())+'</p>';
   h+='<div style="margin-top:20pt;">';
   GRUPOS.forEach(g=>{ h+=tabelaHtml(g,cols); });
   h+='</div>';
@@ -878,8 +1056,8 @@ function alternarEdicao(){
 function exportarRascunho(){
   lerCamposDoc();
   const dados={
-    versao:1, gerado:new Date().toISOString(),
-    modo:estado.modo, acertos:estado.acertos, fmtHorario:estado.fmtHorario,
+    versao:2, gerado:new Date().toISOString(),
+    cols:estado.cols,
     doc:estado.doc, cands:estado.cands
   };
   const blob=new Blob([JSON.stringify(dados,null,2)],{type:'application/json'});
@@ -896,11 +1074,17 @@ function importarRascunho(file){
     try{
       const d=JSON.parse(fr.result);
       if(!d || !Array.isArray(d.cands)) throw new Error('arquivo sem lista de candidatos');
-      estado.modo=d.modo||'duas';
-      estado.acertos=!!d.acertos;
-      estado.fmtHorario=d.fmtHorario||'H';
+      if(d.cols){
+        estado.cols=Object.assign({obj:false,dis:false,acertos:false,tot:false,hora:false}, d.cols);
+      } else {
+        // rascunho de versão anterior (modo/acertos/fmtHorario) — traduz para estado.cols
+        estado.cols = d.modo==='unica'
+          ? {obj:false, dis:false, acertos:!!d.acertos, tot:true, hora:false}
+          : {obj:true, dis:true, acertos:!!d.acertos, tot:true, hora:false};
+      }
       estado.doc=Object.assign(estado.doc, d.doc||{});
       estado.cands=d.cands.map(c=>Object.assign(novoCand(), c, {id:estado.seq++}));
+      garantirLinhaVazia();
       escreverCamposDoc();
       sincronizarControles();
       renderGrade();
@@ -913,9 +1097,15 @@ function importarRascunho(file){
 }
 
 function sincronizarControles(){
-  $('cvModo').value=estado.modo;
-  $('cvAcertos').checked=estado.acertos;
-  $('cvFmtHora').value=estado.fmtHorario;
+  $('cvColObj').checked=!!estado.cols.obj;
+  $('cvColDis').checked=!!estado.cols.dis;
+  $('cvColAcertos').checked=!!estado.cols.acertos;
+  $('cvColTot').checked=!!estado.cols.tot;
+  $('cvColHora').checked=!!estado.cols.hora;
+  // "Preencher horários" só faz sentido com horário por candidato; sem ele,
+  // o campo "Horário geral" do Passo 3 é quem deve ser usado.
+  $('cvPainelHorarios').style.display = estado.cols.hora ? 'flex' : 'none';
+  $('cvF_horarioGeral').disabled = !!estado.cols.hora;
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -941,15 +1131,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('cvBtnAcrescentar').addEventListener('click',()=>importarParaGrade(false));
 
   // passo 3
-  $('cvModo').addEventListener('change',e=>{ estado.modo=e.target.value; renderGrade(); });
-  $('cvAcertos').addEventListener('change',e=>{ estado.acertos=e.target.checked; renderGrade(); });
-  $('cvFmtHora').addEventListener('change',e=>{ estado.fmtHorario=e.target.value; renderGrade(); });
-  $('cvBtnNova').addEventListener('click',()=>{ estado.cands.push(novoCand()); renderGrade(); });
+  [['cvColObj','obj'],['cvColDis','dis'],['cvColAcertos','acertos'],['cvColTot','tot'],['cvColHora','hora']].forEach(([id,k])=>{
+    $(id).addEventListener('change',e=>{ estado.cols[k]=e.target.checked; sincronizarControles(); renderGrade(); });
+  });
   $('cvBtnOrdenar').addEventListener('click',ordenarPorTotal);
   $('cvBtnHorarios').addEventListener('click',preencherHorarios);
   $('cvBtnExportar').addEventListener('click',exportarRascunho);
   $('cvBtnRascunho').addEventListener('click',()=> $('cvRascunho').click());
   $('cvRascunho').addEventListener('change',e=>{ const f=e.target.files[0]; if(f) importarRascunho(f); e.target.value=''; });
+  $('cvGrade').addEventListener('keydown', tratarTabGrade);
 
   // passos 4 e 5
   $('cvBtnGerar').addEventListener('click',gerarEdital);
@@ -957,6 +1147,14 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('cvBtnPDF').addEventListener('click',imprimirPdf);
   $('cvBtnEditar').addEventListener('click',alternarEdicao);
 
+  // data da entrevista: máscara numérica + calendário; assinatura: só calendário
+  ativarMascaraData($('cvF_data'));
+  ativarBotaoCalendario($('cvF_data'),'slash');
+  estado.doc.dataAss=formatarDataExtenso(new Date());
+  $('cvF_dataAss').value=estado.doc.dataAss;
+  ativarBotaoCalendario($('cvF_dataAss'),'extenso');
+
   sincronizarControles();
+  garantirLinhaVazia();
   renderGrade();
 });
