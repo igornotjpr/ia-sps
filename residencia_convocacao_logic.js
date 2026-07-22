@@ -1027,9 +1027,9 @@ function tabelaHtml(grupo, cols){
   return h;
 }
 
-// Os 5 blocos vivem em containers HTML fixos (cvBloco1..cvBloco5) — cada um
-// pensado para colar num campo diferente do Athos (numeração, conteúdo,
-// assinatura etc.), por isso não há mais um único texto corrido.
+// Os 6 blocos vivem em containers HTML fixos (cvBloco1..cvBloco6) — cada um
+// pensado para colar num campo diferente do Athos (título, numeração,
+// conteúdo, assinatura etc.), por isso não há mais um único texto corrido.
 function gerarEdital(){
   lerCamposDoc();
   const d=estado.doc;
@@ -1038,38 +1038,42 @@ function gerarEdital(){
   const C=P+'text-align:center;font-weight:bold;';
   const incluirTribunal=$('cvIncluirTribunal').checked;
 
-  // Bloco 1 — Preâmbulo
-  let b1='';
-  if(incluirTribunal) b1+='<p style="'+C+'">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
-  b1+='<p style="'+C+(incluirTribunal?'margin-top:24pt;':'')+'">EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(d.nConv||'____/____')+'</p>';
-  b1+='<p style="'+C+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
+  // Bloco 1 — Título do Edital (referência curta, não faz parte do texto
+  // legal em si — por isso não entra em maiúsculas como o restante)
+  const bTitulo='<p style="'+C+'">Edital de Convocação para Entrevista N° '+esc(d.nConv||'____/____')+' - SEI!'+esc((d.sei||'____________').toUpperCase())+'</p>';
 
-  // Bloco 2 — Numeração. d.nEdital entra CRU (sem prefixo somado aqui): o
+  // Bloco 2 — Preâmbulo
+  let b2='';
+  if(incluirTribunal) b2+='<p style="'+C+'">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
+  b2+='<p style="'+C+(incluirTribunal?'margin-top:24pt;':'')+'">EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(d.nConv||'____/____')+'</p>';
+  b2+='<p style="'+C+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
+
+  // Bloco 3 — Numeração. d.nEdital entra CRU (sem prefixo somado aqui): o
   // valor padrão do campo já é o texto completo "EDITAL N° $$(numerar
   // automaticamente)%%" que o Athos reconhece; se o usuário substituir por
   // um número já definido, o que ele digitar é exatamente o que sai aqui.
-  let b2='<p style="'+C+'">'+esc(d.nEdital||'____/____')+'</p>';
-  b2+='<p style="'+C+'">SEI!TJPR N° '+esc((d.sei||'____________').toUpperCase())+'</p>';
+  let b3='<p style="'+C+'">'+esc(d.nEdital||'____/____')+'</p>';
+  b3+='<p style="'+C+'">SEI!TJPR N° '+esc((d.sei||'____________').toUpperCase())+'</p>';
 
-  // Bloco 3 — Conteúdo (tabelas + data/local/telefone/outras informações)
-  let b3='';
-  GRUPOS.forEach(g=>{ b3+=tabelaHtml(g,cols); });
+  // Bloco 4 — Conteúdo (tabelas + data/local/telefone/outras informações)
+  let b4='';
+  GRUPOS.forEach(g=>{ b4+=tabelaHtml(g,cols); });
   let dataLinha=(d.data||'').trim();
   if(d.horarioGeral) dataLinha += (dataLinha?', ':'')+d.horarioGeral.trim();
-  if(dataLinha) b3+='<p style="'+P+'"><strong>Data:</strong> '+esc(comPontoFinal(dataLinha))+'</p>';
-  if(d.local) b3+='<p style="'+P+'"><strong>Local:</strong> '+esc(comPontoFinal(d.local)).replace(/\n/g,'<br>')+'</p>';
-  if(d.telefone) b3+='<p style="'+P+'"><strong>Telefone:</strong> '+esc(d.telefone)+'</p>';
-  if(d.extra) b3+='<p style="'+P+'"><strong>Outras informações:</strong> '+esc(comPontoFinal(d.extra)).replace(/\n/g,'<br>')+'</p>';
+  if(dataLinha) b4+='<p style="'+P+'"><strong>Data:</strong> '+esc(comPontoFinal(dataLinha))+'</p>';
+  if(d.local) b4+='<p style="'+P+'"><strong>Local:</strong> '+esc(comPontoFinal(d.local)).replace(/\n/g,'<br>')+'</p>';
+  if(d.telefone) b4+='<p style="'+P+'"><strong>Telefone:</strong> '+esc(d.telefone)+'</p>';
+  if(d.extra) b4+='<p style="'+P+'"><strong>Outras informações:</strong> '+esc(comPontoFinal(d.extra)).replace(/\n/g,'<br>')+'</p>';
 
-  // Bloco 4 — Data da assinatura
-  const b4='<p style="'+P+'text-align:center;">'+esc(d.cidade||'Curitiba')+', '+esc(d.dataAss||'____ de __________ de ____')+'.</p>';
+  // Bloco 5 — Data da assinatura
+  const b5='<p style="'+P+'text-align:center;">'+esc(d.cidade||'Curitiba')+', '+esc(d.dataAss||'____ de __________ de ____')+'.</p>';
 
-  // Bloco 5 — Quem assina
-  let b5='<p style="'+C+'">'+esc((d.assinante||'').toUpperCase())+'</p>';
-  if(d.cargo) b5+='<p style="'+P+'text-align:center;">'+esc(d.cargo)+'</p>';
-  if(d.unidade) b5+='<p style="'+P+'text-align:center;">'+esc(d.unidade)+'</p>';
+  // Bloco 6 — Quem assina
+  let b6='<p style="'+C+'">'+esc((d.assinante||'').toUpperCase())+'</p>';
+  if(d.cargo) b6+='<p style="'+P+'text-align:center;">'+esc(d.cargo)+'</p>';
+  if(d.unidade) b6+='<p style="'+P+'text-align:center;">'+esc(d.unidade)+'</p>';
 
-  [b1,b2,b3,b4,b5].forEach((b,i)=>{
+  [bTitulo,b2,b3,b4,b5,b6].forEach((b,i)=>{
     $('cvBloco'+(i+1)).innerHTML='<div style="font-family:\'Times New Roman\',Times,serif;font-size:11pt;color:#000;">'+b+'</div>';
   });
 
@@ -1109,7 +1113,7 @@ function copiarBloco(n){
 
 async function copiarTudo(){
   let html='';
-  for(let i=1;i<=5;i++) html+=$('cvBloco'+i).innerHTML;
+  for(let i=1;i<=6;i++) html+=$('cvBloco'+i).innerHTML;
   const tmp=document.createElement('div');
   tmp.innerHTML=html;
   tmp.style.cssText='position:absolute;left:-9999px;top:-9999px;';
@@ -1122,7 +1126,7 @@ function imprimirPdf(){
   const w=window.open('','_blank');
   if(!w){ $('cvMsgSaida').innerHTML='<span style="color:var(--coral);">O navegador bloqueou a janela de impressão — permita pop-ups para esta página.</span>'; return; }
   let html='';
-  for(let i=1;i<=5;i++) html+=$('cvBloco'+i).innerHTML;
+  for(let i=1;i<=6;i++) html+=$('cvBloco'+i).innerHTML;
   w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Edital de Convocação para Entrevista</title>'
     +'<style>@page{size:A4;margin:2.5cm 2cm;} body{font-family:"Times New Roman",Times,serif;font-size:11pt;color:#000;margin:0;}'
     +'table{border-collapse:collapse;width:100%;} td{border:1pt solid #000;padding:3pt 5pt;}</style></head><body>'
@@ -1132,7 +1136,7 @@ function imprimirPdf(){
 }
 
 function alternarEdicao(){
-  const blocos=[1,2,3,4,5].map(i=>$('cvBloco'+i));
+  const blocos=[1,2,3,4,5,6].map(i=>$('cvBloco'+i));
   const lig=blocos[0].getAttribute('contenteditable')==='true';
   blocos.forEach(el=>{
     el.setAttribute('contenteditable', lig?'false':'true');
