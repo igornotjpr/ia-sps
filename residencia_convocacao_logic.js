@@ -348,10 +348,10 @@ const SLOTS=[
 
 const estado={
   // quais colunas aparecem na grade e no edital, nesta ordem fixa
-  cols:{ obj:true, dis:true, acertos:false, tot:true, hora:false },
+  cols:{ obj:false, dis:false, acertos:false, tot:true, hora:false },
   cands:[],              // {id,nome,obj,dis,tot,acertos,hora,ac,ppp,pcd}
   doc:{
-    nConv:'EDITAL N° $$(numerar automaticamente)%%', nEdital:'', sei:'',
+    nConv:'', nEdital:'EDITAL N° $$(numerar automaticamente)%%', sei:'',
     data:'', horarioGeral:'', local:'', telefone:'', extra:'',
     cidade:'Curitiba', dataAss:'', assinante:'', cargo:'', unidade:''
   },
@@ -479,7 +479,56 @@ function itensDoTrecho(){
   return itensDeTexto(selecionou ? texto.slice(ini,fim) : texto);
 }
 
+// Texto puro (sem tokenização por coordenada) do mesmo trecho selecionado —
+// usado só pelo atalho de reconhecimento "uma linha por candidato" abaixo.
+function textoDoTrecho(){
+  const ta=$('cvTexto');
+  const texto=ta.value;
+  const ini=ta.selectionStart, fim=ta.selectionEnd;
+  return (fim-ini)>3 ? texto.slice(ini,fim) : texto;
+}
+
+// Reconhecimento "uma linha por candidato", no mesmo espírito do Ponto 26
+// (ROW_RE em ponto26_logic.js): âncora numérica no início (Ordem), ".+?"
+// não guloso para o Nome — aceita qualquer quantidade de palavras separadas
+// por espaço, sem confundir com a Nota — e um número decimal no fim.
+// Só é aceito quando reconhece a grande maioria das linhas; do contrário
+// cai no reconhecimento genérico por coordenadas (montarGrade), sem mudar
+// o comportamento já existente para outros formatos.
+const ROW_RE_SIMPLES=/^(\d{1,4})\s+(.+?)\s+(\d{1,3}(?:[.,]\d{1,3})?)\s*$/;
+
+function tentarLinhasSimples(texto){
+  const linhas=String(texto||'').replace(/\r\n?/g,'\n').split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!linhas.length) return null;
+  let inicio=0;
+  if(/ORDEM/i.test(linhas[0]) && /NOME/i.test(linhas[0])) inicio=1;
+  const registros=[]; let falhas=0;
+  for(let i=inicio;i<linhas.length;i++){
+    const m=linhas[i].match(ROW_RE_SIMPLES);
+    if(m) registros.push({ordem:m[1], nome:m[2].trim(), nota:m[3].replace(',','.')});
+    else falhas++;
+  }
+  if(!registros.length || falhas>registros.length*0.2) return null;
+  return registros;
+}
+
 function reconhecer(){
+  const simples=tentarLinhasSimples(textoDoTrecho());
+  if(simples){
+    // formato fixo e sem ambiguidade — pula a conferência de colunas
+    // (Passo 1b) e importa direto para a grade do Passo 2
+    estado.bruto={
+      colunas:3,
+      registros: simples.map(r=>({cels:[r.ordem, r.nome, r.nota]})),
+      ignoradas:[],
+      cabecalho:'ORDEM NOME NOTA'
+    };
+    estado.papeis=['ordem','nome','numeros'];
+    estado.slots=['nota'];
+    importarParaGrade(true);
+    return;
+  }
+
   const itens=itensDoTrecho();
   if(!itens.length){ status('cvStatus','Não há texto para reconhecer. Cole a tabela ou escolha um PDF.','warn'); return; }
   const g=montarGrade(itens);
@@ -739,17 +788,17 @@ function avisosGrade(){
   return av;
 }
 
-// Colunas "de dados" na ordem fixa Objetiva → Discursiva → Acertos → Total
+// Colunas "de dados" na ordem fixa Objetiva → Discursiva → Acertos → Nota
 // → Horário, conforme as checkboxes marcadas no Passo 2. Usado tanto para
 // montar as colunas do edital final quanto as colunas editáveis da grade.
-const GRID_LABELS={obj:'Objetiva', dis:'Discursiva', acertos:'Acertos', tot:'Total', hora:'Horário'};
+const GRID_LABELS={obj:'Objetiva', dis:'Discursiva', acertos:'Acertos', tot:'Nota', hora:'Horário'};
 
 function colunasAtivas(){
   const cols=[{k:'ordem', t:'ORDEM'}, {k:'nome', t:'NOME'}];
   if(estado.cols.obj) cols.push({k:'obj', t:'NOTA PROVA OBJETIVA', tHtml:'NOTA PROVA<br>OBJETIVA'});
   if(estado.cols.dis) cols.push({k:'dis', t:'NOTA PROVA DISCURSIVA', tHtml:'NOTA PROVA<br>DISCURSIVA'});
   if(estado.cols.acertos) cols.push({k:'acertos', t:'ACERTOS'});
-  if(estado.cols.tot) cols.push({k:'tot', t:'TOTAL'});
+  if(estado.cols.tot) cols.push({k:'tot', t:'NOTA'});
   if(estado.cols.hora) cols.push({k:'hora', t:'HORÁRIO DA ENTREVISTA', tHtml:'HORÁRIO DA<br>ENTREVISTA'});
   return cols;
 }
@@ -810,7 +859,7 @@ function renderGrade(){
   av.forEach(a=>{ if(a.id) comAviso[a.id]=true; });
   const dcols=colunasDados();
 
-  let h='<div class="table-scroll" style="max-height:none;"><table style="white-space:normal;font-family:\'Barlow\',system-ui,sans-serif;font-size:12.5px;">';
+  let h='<div class="table-scroll" style="max-height:none;"><table class="cv-grade-table" style="white-space:normal;font-family:\'Barlow\',system-ui,sans-serif;font-size:12.5px;">';
   h+='<thead><tr><th style="width:34px;">#</th><th>Nome</th>';
   dcols.forEach(c=>{ h+='<th style="width:'+(c.k==='hora'?'78':'70')+'px;">'+GRID_LABELS[c.k]+'</th>'; });
   h+='<th style="width:38px;">AC</th><th style="width:44px;">PPP</th><th style="width:44px;">PcD</th><th style="width:86px;">Ações</th></tr></thead><tbody>';
@@ -933,10 +982,11 @@ function celulaTxt(c, col){
   return fmtNota(c[col.k]);
 }
 
-// Larguras fixas para as colunas estreitas (número/hora) — com
-// table-layout:fixed elas ficariam do mesmo tamanho que NOME sem isso.
-// NOME não entra aqui: absorve o espaço restante.
-const LARGURA_COL={ordem:'7%', obj:'12%', dis:'12%', acertos:'10%', tot:'10%', hora:'13%'};
+// Larguras fixas (em pt, não em %) para as colunas estreitas — com
+// table-layout:fixed, largura percentual ainda deixa ORDEM larga demais
+// quando há poucas colunas ativas. NOME não entra aqui: absorve o espaço
+// restante, com prioridade sobre as demais.
+const LARGURA_COL={ordem:'26pt', obj:'60pt', dis:'60pt', acertos:'50pt', tot:'50pt', hora:'65pt'};
 
 function tabelaHtml(grupo, cols){
   // linha em branco (slot de preenchimento automático) nunca entra no edital
@@ -967,59 +1017,71 @@ function tabelaHtml(grupo, cols){
   return h;
 }
 
+// Os 5 blocos vivem em containers HTML fixos (cvBloco1..cvBloco5) — cada um
+// pensado para colar num campo diferente do Athos (numeração, conteúdo,
+// assinatura etc.), por isso não há mais um único texto corrido.
 function gerarEdital(){
   lerCamposDoc();
   const d=estado.doc;
   const cols=colunasAtivas();
   const P='margin:0 0 10pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;';
   const C=P+'text-align:center;font-weight:bold;';
-  let h='<div style="font-family:\'Times New Roman\',Times,serif;font-size:11pt;color:#000;">';
-  h+='<p style="'+C+'">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
-  // "d.nConv" fica de fora do uppercase: pode conter o token de
-  // autonumeração do Athos ($$(numerar automaticamente)%%), que deve ser
-  // preservado exatamente como digitado.
-  h+='<p style="'+C+'margin-top:24pt;">EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(d.nConv||'____/____')+'</p>';
-  h+='<p style="'+C+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
-  h+='<p style="'+C+'margin-top:20pt;">EDITAL N° '+esc((d.nEdital||'____/____').toUpperCase())+'<br>SEI!TJPR N° '+esc((d.sei||'____________').toUpperCase())+'</p>';
-  h+='<div style="margin-top:20pt;">';
-  GRUPOS.forEach(g=>{ h+=tabelaHtml(g,cols); });
-  h+='</div>';
+  const incluirTribunal=$('cvIncluirTribunal').checked;
 
+  // Bloco 1 — Preâmbulo
+  let b1='';
+  if(incluirTribunal) b1+='<p style="'+C+'">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
+  b1+='<p style="'+C+(incluirTribunal?'margin-top:24pt;':'')+'">EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(d.nConv||'____/____')+'</p>';
+  b1+='<p style="'+C+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
+
+  // Bloco 2 — Numeração. d.nEdital entra CRU (sem prefixo somado aqui): o
+  // valor padrão do campo já é o texto completo "EDITAL N° $$(numerar
+  // automaticamente)%%" que o Athos reconhece; se o usuário substituir por
+  // um número já definido, o que ele digitar é exatamente o que sai aqui.
+  let b2='<p style="'+C+'">'+esc(d.nEdital||'____/____')+'</p>';
+  b2+='<p style="'+C+'">SEI!TJPR N° '+esc((d.sei||'____________').toUpperCase())+'</p>';
+
+  // Bloco 3 — Conteúdo (tabelas + data/local/telefone/outras informações)
+  let b3='';
+  GRUPOS.forEach(g=>{ b3+=tabelaHtml(g,cols); });
   let dataLinha=esc(d.data||'');
   if(d.horarioGeral) dataLinha += (dataLinha?', ':'')+esc(d.horarioGeral);
-  if(dataLinha) h+='<p style="'+P+'"><strong>Data:</strong> '+dataLinha+'</p>';
-  if(d.local) h+='<p style="'+P+'"><strong>Local:</strong> '+esc(d.local).replace(/\n/g,'<br>')+'</p>';
-  if(d.telefone) h+='<p style="'+P+'"><strong>Telefone:</strong> '+esc(d.telefone)+'</p>';
-  if(d.extra) h+='<p style="'+P+'">'+esc(d.extra).replace(/\n/g,'<br>')+'</p>';
+  if(dataLinha) b3+='<p style="'+P+'"><strong>Data:</strong> '+dataLinha+'</p>';
+  if(d.local) b3+='<p style="'+P+'"><strong>Local:</strong> '+esc(d.local).replace(/\n/g,'<br>')+'</p>';
+  if(d.telefone) b3+='<p style="'+P+'"><strong>Telefone:</strong> '+esc(d.telefone)+'</p>';
+  if(d.extra) b3+='<p style="'+P+'">'+esc(d.extra).replace(/\n/g,'<br>')+'</p>';
 
-  h+='<p style="'+P+'text-align:center;margin-top:26pt;">'+esc(d.cidade||'Curitiba')+', '+esc(d.dataAss||'____ de __________ de ____')+'.</p>';
-  h+='<p style="'+C+'margin-top:26pt;">'+esc((d.assinante||'').toUpperCase())+'</p>';
-  if(d.cargo) h+='<p style="'+P+'text-align:center;">'+esc(d.cargo)+'</p>';
-  if(d.unidade) h+='<p style="'+P+'text-align:center;">'+esc(d.unidade)+'</p>';
-  h+='</div>';
+  // Bloco 4 — Data da assinatura
+  const b4='<p style="'+P+'text-align:center;">'+esc(d.cidade||'Curitiba')+', '+esc(d.dataAss||'____ de __________ de ____')+'.</p>';
 
-  $('cvSaida').innerHTML=h;
+  // Bloco 5 — Quem assina
+  let b5='<p style="'+C+'">'+esc((d.assinante||'').toUpperCase())+'</p>';
+  if(d.cargo) b5+='<p style="'+P+'text-align:center;">'+esc(d.cargo)+'</p>';
+  if(d.unidade) b5+='<p style="'+P+'text-align:center;">'+esc(d.unidade)+'</p>';
+
+  [b1,b2,b3,b4,b5].forEach((b,i)=>{
+    $('cvBloco'+(i+1)).innerHTML='<div style="font-family:\'Times New Roman\',Times,serif;font-size:11pt;color:#000;">'+b+'</div>';
+  });
+
   $('cvSaidaBox').style.display='block';
   const faltando=[];
   if(!d.nConv) faltando.push('nº do edital de convocação');
-  if(!d.nEdital) faltando.push('nº do edital de abertura');
   if(!d.sei) faltando.push('nº SEI');
   if(!d.assinante) faltando.push('nome de quem assina');
   if(!estado.cands.length) faltando.push('candidatos');
   $('cvMsgSaida').innerHTML = faltando.length
     ? '<span style="color:var(--coral);">Faltou preencher: '+esc(faltando.join(', '))+'.</span>'
-    : 'Edital gerado. Confira o texto antes de publicar.';
+    : 'Edital gerado. Confira o texto de cada bloco antes de copiar.';
 }
 
-async function copiarEdital(){
-  const el=$('cvSaida');
+async function copiarConteudo(el, msgOk){
   try{
     if(navigator.clipboard && window.ClipboardItem){
       await navigator.clipboard.write([new ClipboardItem({
         'text/html': new Blob([el.innerHTML],{type:'text/html'}),
         'text/plain': new Blob([el.innerText||el.textContent],{type:'text/plain'})
       })]);
-      $('cvMsgSaida').textContent='Edital copiado — cole no Athos ou no Word.';
+      $('cvMsgSaida').textContent=msgOk;
       return;
     }
   }catch(e){ /* cai no método antigo abaixo */ }
@@ -1028,27 +1090,46 @@ async function copiarEdital(){
   let ok=false;
   try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
   sel.removeAllRanges();
-  $('cvMsgSaida').textContent= ok?'Edital copiado — cole no Athos ou no Word.':'Não foi possível copiar automaticamente; selecione o texto e use Ctrl+C.';
+  $('cvMsgSaida').textContent= ok?msgOk:'Não foi possível copiar automaticamente; selecione o texto e use Ctrl+C.';
+}
+
+function copiarBloco(n){
+  copiarConteudo($('cvBloco'+n), 'Bloco copiado — cole no Athos ou no Word.');
+}
+
+async function copiarTudo(){
+  let html='';
+  for(let i=1;i<=5;i++) html+=$('cvBloco'+i).innerHTML;
+  const tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  tmp.style.cssText='position:absolute;left:-9999px;top:-9999px;';
+  document.body.appendChild(tmp);
+  try{ await copiarConteudo(tmp,'Edital copiado — cole no Athos ou no Word.'); }
+  finally{ tmp.remove(); }
 }
 
 function imprimirPdf(){
   const w=window.open('','_blank');
   if(!w){ $('cvMsgSaida').innerHTML='<span style="color:var(--coral);">O navegador bloqueou a janela de impressão — permita pop-ups para esta página.</span>'; return; }
+  let html='';
+  for(let i=1;i<=5;i++) html+=$('cvBloco'+i).innerHTML;
   w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Edital de Convocação para Entrevista</title>'
     +'<style>@page{size:A4;margin:2.5cm 2cm;} body{font-family:"Times New Roman",Times,serif;font-size:11pt;color:#000;margin:0;}'
     +'table{border-collapse:collapse;width:100%;} td{border:1pt solid #000;padding:3pt 5pt;}</style></head><body>'
-    +$('cvSaida').innerHTML+'</body></html>');
+    +html+'</body></html>');
   w.document.close(); w.focus();
   setTimeout(()=>{ w.print(); },350);
 }
 
 function alternarEdicao(){
-  const el=$('cvSaida');
-  const lig=el.getAttribute('contenteditable')==='true';
-  el.setAttribute('contenteditable', lig?'false':'true');
-  el.style.outline = lig?'none':'2px dashed var(--teal)';
+  const blocos=[1,2,3,4,5].map(i=>$('cvBloco'+i));
+  const lig=blocos[0].getAttribute('contenteditable')==='true';
+  blocos.forEach(el=>{
+    el.setAttribute('contenteditable', lig?'false':'true');
+    el.style.outline = lig?'none':'2px dashed var(--teal)';
+  });
   $('cvBtnEditar').textContent = lig?'Editar texto':'Concluir edição';
-  if(!lig) el.focus();
+  if(!lig) blocos[0].focus();
 }
 
 /* ============== I) rascunho (exportar/importar) e início ============== */
@@ -1143,9 +1224,12 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   // passos 4 e 5
   $('cvBtnGerar').addEventListener('click',gerarEdital);
-  $('cvBtnCopiar').addEventListener('click',copiarEdital);
+  $('cvBtnCopiarTudo').addEventListener('click',copiarTudo);
   $('cvBtnPDF').addEventListener('click',imprimirPdf);
   $('cvBtnEditar').addEventListener('click',alternarEdicao);
+  document.querySelectorAll('.cv-bloco-copiar').forEach(btn=>{
+    btn.addEventListener('click',()=>copiarBloco(btn.dataset.bloco));
+  });
 
   // data da entrevista: máscara numérica + calendário; assinatura: só calendário
   ativarMascaraData($('cvF_data'));

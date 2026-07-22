@@ -715,6 +715,30 @@ tbody tr:nth-child(even){ background:#fbfaf4; }
 tbody tr.unmatched{ background:#f7e9e4; }
 tbody tr.unmatched td:first-child{ box-shadow: inset 3px 0 0 var(--stamp-red); }
 
+/* Grade de candidatos do Gerador de Convocação (Residência): sem cor por
+   linha — o aviso já fica na lista de pontos a conferir abaixo da tabela. */
+table.cv-grade-table tbody tr:nth-child(even),
+table.cv-grade-table tbody tr.unmatched{ background:none; }
+table.cv-grade-table tbody tr.unmatched td:first-child{ box-shadow:none; }
+
+/* Blocos separados do edital gerado (Gerador de Convocação): cada bloco tem
+   rótulo + botão de copiar próprios, pensados para colar em campos
+   diferentes do Athos (numeração, conteúdo, assinatura etc.). */
+.cv-bloco{ margin-bottom:24px; }
+.cv-bloco-head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:8px;
+}
+.cv-bloco-tit{
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-weight:700; font-size:13.5px; letter-spacing:0.03em;
+  text-transform:uppercase; color:var(--ink-soft); margin:0;
+}
+.cv-bloco-conteudo{
+  border:1px solid var(--line); background:#fff;
+  padding:22px 26px; overflow-x:auto; max-width:100%;
+}
+
 .download-row{
   margin-top:22px;
   display:flex;

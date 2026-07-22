@@ -74,10 +74,10 @@
 
     <div class="upload-panel" style="gap:14px 22px;">
       <span style="font-size:13px;color:var(--ink-soft);">Colunas do edital:</span>
-      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColObj" checked> Objetiva</label>
-      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColDis" checked> Discursiva</label>
+      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColObj"> Objetiva</label>
+      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColDis"> Discursiva</label>
       <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColAcertos"> Acertos</label>
-      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColTot" checked> Total</label>
+      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColTot" checked> Nota</label>
       <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvColHora"> Horário</label>
     </div>
 
@@ -87,7 +87,7 @@
     </div>
 
     <div class="upload-panel" style="margin-top:16px;">
-      <button type="button" class="link-btn" id="cvBtnOrdenar">Reordenar por total</button>
+      <button type="button" class="link-btn" id="cvBtnOrdenar">Reordenar por nota</button>
     </div>
 
     <div class="upload-panel" id="cvPainelHorarios" style="margin-top:12px;gap:14px 20px;display:none;">
@@ -118,9 +118,12 @@
       <span class="step-num">3</span>
       <p class="step-title">Dados do edital</p>
     </div>
+    <div class="step-content" style="margin-bottom:16px;">
+      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="cvIncluirTribunal"> Cabeçalho "TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ" — Sim, incluir</label>
+    </div>
     <div class="step-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 18px;">
-      <label style="font-size:12.5px;color:var(--ink-soft);">Edital de convocação n°<br><input type="text" id="cvF_nConv" value="EDITAL N° $$(numerar automaticamente)%%" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
-      <label style="font-size:12.5px;color:var(--ink-soft);">Edital de abertura n°<br><input type="text" class="exemplo-input" id="cvF_nEdital" placeholder="Ex.: 4138/2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Edital de convocação n°<br><input type="text" class="exemplo-input" id="cvF_nConv" placeholder="Ex.: 3417/2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Edital de abertura n°<br><input type="text" id="cvF_nEdital" value="EDITAL N° $$(numerar automaticamente)%%" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);">SEI!TJPR n°<br><input type="text" class="exemplo-input" id="cvF_sei" placeholder="Ex.: 0039497-37.2026.8.16.6000" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);">Data da entrevista<br><input type="text" class="exemplo-input" id="cvF_data" data-date-mask="slash" data-date-picker="slash" placeholder="Ex.: 27/07/2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);">Horário geral (se não houver por candidato)<br><input type="text" class="exemplo-input" id="cvF_horarioGeral" placeholder="Ex.: às 13h30min" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
@@ -146,11 +149,31 @@
     <p class="step-desc" id="cvMsgSaida"></p>
     <div class="step-content">
       <div class="download-row" style="margin-bottom:14px;">
-        <button type="button" class="download-btn" id="cvBtnCopiar">Copiar edital</button>
+        <button type="button" class="download-btn" id="cvBtnCopiarTudo">Copiar tudo</button>
         <button type="button" class="download-btn" id="cvBtnPDF" style="background:var(--ink);">Salvar em PDF</button>
         <button type="button" class="download-btn" id="cvBtnEditar" style="background:var(--teal);">Editar texto</button>
       </div>
-      <div id="cvSaida" contenteditable="false" style="border:1px solid var(--line);background:#fff;padding:28px 30px;overflow-x:auto;max-width:100%;"></div>
+
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 1 — Preâmbulo</p><button type="button" class="link-btn cv-bloco-copiar" data-bloco="1">Copiar</button></div>
+        <div id="cvBloco1" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 2 — Numeração</p><button type="button" class="link-btn cv-bloco-copiar" data-bloco="2">Copiar</button></div>
+        <div id="cvBloco2" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 3 — Conteúdo</p><button type="button" class="link-btn cv-bloco-copiar" data-bloco="3">Copiar</button></div>
+        <div id="cvBloco3" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 4 — Data</p><button type="button" class="link-btn cv-bloco-copiar" data-bloco="4">Copiar</button></div>
+        <div id="cvBloco4" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 5 — Quem assina</p><button type="button" class="link-btn cv-bloco-copiar" data-bloco="5">Copiar</button></div>
+        <div id="cvBloco5" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
     </div>
   </div>
 
