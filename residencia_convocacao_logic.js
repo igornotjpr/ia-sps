@@ -17,6 +17,12 @@
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Garante ponto final ao imprimir (Data da entrevista, Local da entrevista,
+// Outras informações) — se o usuário já tiver colocado, não duplica.
+function comPontoFinal(s){
+  s=String(s==null?'':s).trim();
+  return (!s || /\.$/.test(s)) ? s : s+'.';
+}
 function semAcento(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function chaveNome(s){ return semAcento(s).toUpperCase().replace(/[^A-Z ]/g,' ').replace(/\s+/g,' ').trim(); }
 
@@ -342,7 +348,7 @@ const SLOTS=[
   {v:'acertos', t:'Acertos'},
   {v:'obj',     t:'Nota da prova objetiva'},
   {v:'dis',     t:'Nota da prova discursiva'},
-  {v:'tot',     t:'Total'},
+  {v:'tot',     t:'Nota'},
   {v:'nota',    t:'Nota (coluna única)'}
 ];
 
@@ -982,11 +988,14 @@ function celulaTxt(c, col){
   return fmtNota(c[col.k]);
 }
 
-// Larguras fixas (em pt, não em %) para as colunas estreitas — com
-// table-layout:fixed, largura percentual ainda deixa ORDEM larga demais
-// quando há poucas colunas ativas. NOME não entra aqui: absorve o espaço
-// restante, com prioridade sobre as demais.
-const LARGURA_COL={ordem:'26pt', obj:'60pt', dis:'60pt', acertos:'50pt', tot:'50pt', hora:'65pt'};
+// Larguras fixas (em pt, não em %), calibradas para caber o título e o
+// conteúdo de cada coluna sem sobrar — com table-layout:fixed, largura
+// percentual ainda deixa ORDEM larga demais quando há poucas colunas
+// ativas. NOME não entra aqui: absorve todo o espaço restante, com
+// prioridade sobre as demais. Vai também num <colgroup> (não só no estilo
+// de cada célula) porque é o jeito que o Word/Athos respeita de forma mais
+// confiável ao colar a tabela.
+const LARGURA_COL={ordem:'60pt', obj:'85pt', dis:'85pt', acertos:'60pt', tot:'48pt', hora:'85pt'};
 
 function tabelaHtml(grupo, cols){
   // linha em branco (slot de preenchimento automático) nunca entra no edital
@@ -1005,6 +1014,7 @@ function tabelaHtml(grupo, cols){
     return 'style="'+s+'"';
   };
   let h='<table style="'+bordas+'width:100%;max-width:100%;table-layout:fixed;margin:0 0 12pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;">';
+  h+='<colgroup>'+cols.map(c=>'<col'+(LARGURA_COL[c.k]?(' style="width:'+LARGURA_COL[c.k]+';"'):'')+'>').join('')+'</colgroup>';
   h+='<tr><td colspan="'+cols.length+'" style="border:1pt solid #000;padding:3pt 5pt;font-weight:bold;text-align:center;">'+esc(grupo.rot)+'</td></tr>';
   h+='<tr>'+cols.map(c=>'<td '+td(c,true)+'>'+(c.tHtml||esc(c.t))+'</td>').join('')+'</tr>';
   lista.forEach((c,i)=>{
@@ -1044,12 +1054,12 @@ function gerarEdital(){
   // Bloco 3 — Conteúdo (tabelas + data/local/telefone/outras informações)
   let b3='';
   GRUPOS.forEach(g=>{ b3+=tabelaHtml(g,cols); });
-  let dataLinha=esc(d.data||'');
-  if(d.horarioGeral) dataLinha += (dataLinha?', ':'')+esc(d.horarioGeral);
-  if(dataLinha) b3+='<p style="'+P+'"><strong>Data:</strong> '+dataLinha+'</p>';
-  if(d.local) b3+='<p style="'+P+'"><strong>Local:</strong> '+esc(d.local).replace(/\n/g,'<br>')+'</p>';
+  let dataLinha=(d.data||'').trim();
+  if(d.horarioGeral) dataLinha += (dataLinha?', ':'')+d.horarioGeral.trim();
+  if(dataLinha) b3+='<p style="'+P+'"><strong>Data:</strong> '+esc(comPontoFinal(dataLinha))+'</p>';
+  if(d.local) b3+='<p style="'+P+'"><strong>Local:</strong> '+esc(comPontoFinal(d.local)).replace(/\n/g,'<br>')+'</p>';
   if(d.telefone) b3+='<p style="'+P+'"><strong>Telefone:</strong> '+esc(d.telefone)+'</p>';
-  if(d.extra) b3+='<p style="'+P+'">'+esc(d.extra).replace(/\n/g,'<br>')+'</p>';
+  if(d.extra) b3+='<p style="'+P+'"><strong>Outras informações:</strong> '+esc(comPontoFinal(d.extra)).replace(/\n/g,'<br>')+'</p>';
 
   // Bloco 4 — Data da assinatura
   const b4='<p style="'+P+'text-align:center;">'+esc(d.cidade||'Curitiba')+', '+esc(d.dataAss||'____ de __________ de ____')+'.</p>';
