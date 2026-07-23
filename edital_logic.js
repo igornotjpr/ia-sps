@@ -23,8 +23,10 @@ const LIMITES_61 = ["a todos os candidatos que atingirem a nota mínima","a todo
 /* def: valor inicial | grupo: agrupamento visual | show(): visibilidade conforme eixos */
 const FIELDS = {
   UNIDADE:            {grupo:'ident', full:true, req:true, label:'Unidade solicitante (nome por extenso, para o título do edital)', type:'text', def:'', hint:'Ex.: VARA DE EXECUÇÕES PENAIS E CORREGEDORIA DOS PRESÍDIOS DE FRANCISCO BELTRÃO'},
-  NUM_EDITAL:         {grupo:'ident', req:true, label:'Número do edital (Nº/ano)', type:'text', def:'', hint:'Ex.: 2870/2026', hintHtml:'<details class="ed-hint-details"><summary>Como obter a numeração no sistema Athos</summary>'
-    +'<span style="display:block;margin-top:6px;">1. Abra o sistema Athos do TJPR: <a href="https://portal.tjpr.jus.br/tjpr-athos/index.do" target="_blank" rel="noopener">portal.tjpr.jus.br/tjpr-athos</a>;</span>'
+  NUM_EDITAL:         {grupo:'ident', req:true, label:'Número do edital (Nº/ano)', type:'text', def:'EDITAL N° $$(numerar automaticamente)%%', hint:'Ex.: 2870/2026', hintHtml:'<details class="ed-hint-details"><summary>Como obter a numeração no sistema Athos</summary>'
+    +'<span style="display:block;margin-top:6px;"><strong>O campo já vem preenchido com o código <code>EDITAL N° $$(numerar automaticamente)%%</code>, que o Athos substitui pela numeração no momento em que o documento é salvo.</strong> Só substitua o conteúdo se a numeração já estiver definida (nesse caso digite, por exemplo, <code>2870/2026</code>).</span>'
+    +'<span style="display:block;margin-top:8px;">Para obter a numeração já definida:</span>'
+    +'<span style="display:block;margin-top:4px;">1. Abra o sistema Athos do TJPR: <a href="https://portal.tjpr.jus.br/tjpr-athos/index.do" target="_blank" rel="noopener">portal.tjpr.jus.br/tjpr-athos</a>;</span>'
     +'<span style="display:block;margin-top:4px;">2. No menu "Documento", selecione a opção "Novo";</span>'
     +'<span style="display:block;margin-top:4px;">3. Na nova tela, escolha "DIVISÃO DE ESTÁGIO - DIRETORIA - DEPARTAMENTO DE GESTÃO DE RECURSOS HUMANOS - Edital de Processo Seletivo de Estagiários";</span>'
     +'<span style="display:block;margin-top:4px;">4. Salve o documento — a numeração é gerada automaticamente e deve ser informada no campo acima.</span>'
@@ -483,17 +485,69 @@ function subTokens(h){
   });
   return linkify(h);
 }
+// bloco que está com o foco no modo de edição (usado pela barra de formatação)
+let blocoAtivo=null;
+// linha "TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ": opcional, desmarcada por padrão
+function incluirTribunal(){ const c=$('edIncluirTribunal'); return !!(c && c.checked); }
+
+// O número do edital sai CRU, como o usuário deixou no campo: o valor padrão já
+// é o texto completo "EDITAL N° $$(numerar automaticamente)%%" que o Athos
+// reconhece. Se o usuário apagar e digitar só o número (ex.: "2870/2026"), o
+// rótulo "EDITAL N° " é acrescentado automaticamente.
+function textoNumEdital(){
+  const v=String(values.NUM_EDITAL||'').trim();
+  if(!v) return 'EDITAL N° ____/____';
+  return /edital/i.test(v) ? v : 'EDITAL N° '+v;
+}
+function textoNumSei(){
+  return String(values.NUM_SEI||'').trim() || '____________';
+}
+
+/* Gera os 6 blocos do edital, separados para colagem em campos distintos do
+   Athos (título, preâmbulo, numeração, conteúdo, data e assinatura). */
+function gerarBlocos(){
+  const blocos={};
+
+  // Bloco 1 — Título do edital (referência curta usada na abertura do documento)
+  blocos[1]='<p class="ed-c ed-b">EDITAL DE ABERTURA SEI!TJPR N° '+esc(textoNumSei())+'</p>';
+
+  // Bloco 2 — Preâmbulo (linha do Tribunal é opcional; ver caixa de opção da etapa 3)
+  let b2='';
+  if(incluirTribunal()) b2+='<p class="ed-c ed-b">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
+  b2+='<p class="ed-c ed-b">EDITAL DE ABERTURA</p>';
+  b2+='<p class="ed-c ed-b">PROCESSO SELETIVO DE ESTAGIÁRIOS</p>';
+  if(values.UNIDADE) b2+='<p class="ed-c ed-b">'+esc(values.UNIDADE.toUpperCase())+'</p>';
+  blocos[2]=b2;
+
+  // Bloco 3 — Numeração
+  blocos[3]='<p class="ed-c ed-b">'+esc(textoNumEdital())+'</p>'
+          + '<p class="ed-c ed-b">SEI!TJPR N° '+esc(textoNumSei())+'</p>';
+
+  // Bloco 4 — Conteúdo (do "A Secretaria de Gestão de Pessoas..." ao fim do ANEXO I)
+  blocos[4]=corpoEditalHTML();
+
+  // Bloco 5 — Data da assinatura
+  blocos[5]='<p class="ed-c">'+esc(values.DATA_ASSINATURA||hojeExtenso())+'.</p>';
+
+  // Bloco 6 — Quem assina
+  let b6='';
+  if(values.ASSINANTE_NOME) b6+='<p class="ed-c ed-b">'+esc(values.ASSINANTE_NOME.toUpperCase())+'</p>';
+  (values.ASSINANTE_CARGO||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
+    b6+='<p class="ed-c ed-b">'+esc(l)+'</p>';
+  });
+  blocos[6]=b6;
+
+  return blocos;
+}
+
+// Compatibilidade: texto completo do edital (os 6 blocos em sequência).
 function gerarEditalHTML(){
+  const b=gerarBlocos();
+  return [b[1],b[2],b[3],b[4],b[5],b[6]].filter(Boolean).join('\n<p class="ed-c">&nbsp;</p>\n');
+}
+
+function corpoEditalHTML(){
   const partes=[];
-  // bloco de título
-  partes.push('<p class="ed-c ed-b">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>');
-  partes.push('<p class="ed-c ed-b">EDITAL DE ABERTURA</p>');
-  partes.push('<p class="ed-c ed-b">PROCESSO SELETIVO DE ESTAGIÁRIOS</p>');
-  if(values.UNIDADE) partes.push('<p class="ed-c ed-b">'+esc(values.UNIDADE.toUpperCase())+'</p>');
-  partes.push('<p class="ed-c">&nbsp;</p>');
-  if(values.NUM_EDITAL) partes.push('<p class="ed-c ed-b">EDITAL N° '+esc(values.NUM_EDITAL)+'</p>');
-  if(values.NUM_SEI) partes.push('<p class="ed-c ed-b">SEI!TJPR N° '+esc(values.NUM_SEI)+'</p>');
-  partes.push('<p class="ed-c">&nbsp;</p>');
   // corpo numerado
   let n1=0,n2=0,n3=0,letra=0;
   const SANITARIOS=['Ao adentrar nas dependências','o uso adequado de máscara','a higienização das mãos','evitar aglomerações'];
@@ -551,14 +605,6 @@ function gerarEditalHTML(){
   itensAnexo.forEach(l=>{
     partes.push('<p class="ed-j">'+esc(l)+'</p>');
   });
-  // assinatura
-  partes.push('<p class="ed-c">&nbsp;</p>');
-  if(values.DATA_ASSINATURA) partes.push('<p class="ed-c">'+esc(values.DATA_ASSINATURA)+'.</p>');
-  partes.push('<p class="ed-c">&nbsp;</p>');
-  if(values.ASSINANTE_NOME) partes.push('<p class="ed-c ed-b">'+esc(values.ASSINANTE_NOME.toUpperCase())+'</p>');
-  (values.ASSINANTE_CARGO||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
-    partes.push('<p class="ed-c ed-b">'+esc(l)+'</p>');
-  });
   return partes.join('\n');
 }
 
@@ -566,8 +612,8 @@ function gerarEditalHTML(){
 // Converte as classes internas (ed-c/ed-b/ed-j) em estilos inline, para que a
 // formatação (centralizado, negrito, justificado) sobreviva ao colar no Word/SEI,
 // onde as classes CSS desta página não existem.
-function htmlComEstilosInline(){
-  const clone = $('edSaida').cloneNode(true);
+function htmlComEstilosInline(el){
+  const clone = el.cloneNode(true);
   clone.querySelectorAll('p').forEach(pEl=>{
     const est=[];
     // Além do estilo inline, usa a marcação HTML "clássica" (atributo align e
@@ -588,8 +634,7 @@ function htmlComEstilosInline(){
 // computados (alinhamento, negrito) no HTML da área de transferência — é por
 // isso que a cópia manual sempre preservou a formatação. O botão agora usa
 // exatamente esse caminho.
-function copiarSelecaoViva(){
-  const el=$('edSaida');
+function copiarSelecaoViva(el){
   const r=document.createRange(); r.selectNodeContents(el);
   const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
   let ok=false;
@@ -597,23 +642,40 @@ function copiarSelecaoViva(){
   sel.removeAllRanges();
   return ok;
 }
-async function copiarTudo(){
-  if(copiarSelecaoViva()){
-    avisoCopiado('Texto copiado com formatação — cole no Word ou no editor do SEI.');
-    return;
-  }
+// Copia um ou vários blocos. Um bloco só é copiado direto da seleção viva; para
+// vários, os blocos são reunidos num elemento temporário fora da tela (com os
+// estilos já embutidos), de onde a seleção viva é feita do mesmo jeito.
+async function copiarElementos(els, msgOk){
+  if(els.length===1 && copiarSelecaoViva(els[0])){ avisoCopiado(msgOk); return; }
+  const html = els.map(htmlComEstilosInline).join('');
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;';
+  document.body.appendChild(tmp);
+  let ok=false;
+  try{ ok=copiarSelecaoViva(tmp); }catch(e){ ok=false; }
+  const plain = tmp.innerText || tmp.textContent || '';
+  tmp.remove();
+  if(ok){ avisoCopiado(msgOk); return; }
   // fallback: API assíncrona com HTML de estilos inline + marcação legada
   try{
     if(navigator.clipboard && window.ClipboardItem){
       await navigator.clipboard.write([new ClipboardItem({
-        'text/html': new Blob([htmlComEstilosInline()],{type:'text/html'}),
-        'text/plain': new Blob([$('edSaida').innerText],{type:'text/plain'})
+        'text/html': new Blob([html],{type:'text/html'}),
+        'text/plain': new Blob([plain],{type:'text/plain'})
       })]);
-      avisoCopiado('Texto copiado com formatação — cole no Word ou no editor do SEI.');
+      avisoCopiado(msgOk);
       return;
     }
   }catch(e){}
   avisoCopiado('Não foi possível copiar automaticamente. Selecione o texto e use Ctrl+C.');
+}
+function blocosEls(){ return [1,2,3,4,5,6].map(i=>$('edBloco'+i)); }
+function copiarBloco(n){
+  copiarElementos([$('edBloco'+n)], 'Bloco '+n+' copiado com formatação — cole no Athos, no Word ou no editor do SEI.');
+}
+function copiarTudo(){
+  copiarElementos(blocosEls(), 'Edital completo copiado com formatação — cole no Word ou no editor do SEI.');
 }
 function avisoCopiado(msg){ const n=$('edMsgAcao'); n.textContent=msg; setTimeout(()=>{ if(n.textContent===msg) n.textContent=''; },6000); }
 
@@ -623,22 +685,27 @@ function baixarPDF(){
   w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Edital de Abertura</title><style>'
     +'@page{margin:2.5cm 2cm;} body{font-family:Calibri,"Carlito",Arial,sans-serif;font-size:11pt;line-height:1.35;color:#000;}'
     +'a{color:#000;text-decoration:underline;}'
-    +'</style></head><body>'+htmlComEstilosInline()+'</body></html>');
+    +'.ed-espaco{height:14pt;}'
+    +'</style></head><body>'
+    +blocosEls().map(htmlComEstilosInline).join('<div class="ed-espaco"></div>')
+    +'</body></html>');
   w.document.close();
   w.focus();
   setTimeout(()=>{ w.print(); },300);
 }
 
 function alternarEdicao(){
-  const el=$('edSaida'), btn=$('edBtnEditar');
-  const ligado = el.getAttribute('contenteditable')==='true';
-  el.setAttribute('contenteditable', ligado?'false':'true');
+  const els=blocosEls(), btn=$('edBtnEditar');
+  const ligado = els[0].getAttribute('contenteditable')==='true';
+  els.forEach(el=>{
+    el.setAttribute('contenteditable', ligado?'false':'true');
+    el.classList.toggle('ed-editando', !ligado);
+  });
   btn.textContent = ligado?'Editar texto':'Concluir edição';
-  el.classList.toggle('ed-editando', !ligado);
   // barra de formatação acompanha o modo de edição
   const tb=$('edToolbar');
   if(tb) tb.classList.toggle('show', !ligado);
-  if(!ligado) el.focus();
+  if(!ligado) els[0].focus();
 }
 
 /* ============================== FLUXO ============================== */
@@ -668,9 +735,17 @@ async function lerFormulario(){
 }
 
 function gerar(){
-  $('edSaida').innerHTML=gerarEditalHTML();
+  const b=gerarBlocos();
+  for(let i=1;i<=6;i++) $('edBloco'+i).innerHTML=b[i];
   $('edEtapa3').style.display='block';
   $('edEtapa3').scrollIntoView({behavior:'smooth'});
+}
+// A opção do cabeçalho institucional só reescreve o Bloco 2, para não descartar
+// ajustes que o usuário já tenha feito à mão nos demais blocos.
+function atualizarTribunal(){
+  const el=$('edBloco2');
+  if(!el || $('edEtapa3').style.display==='none') return;
+  el.innerHTML=gerarBlocos()[2];
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -689,9 +764,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     b.addEventListener('mousedown',e=>e.preventDefault());
     b.addEventListener('click',()=>{
       document.execCommand(b.dataset.cmd,false,null);
-      $('edSaida').focus();
+      // devolve o foco ao bloco em que o usuário estava editando
+      (blocoAtivo || blocosEls()[0]).focus();
     });
   });
+  // botão "Copiar" de cada bloco
+  document.querySelectorAll('.ed-bloco-copiar').forEach(btn=>{
+    btn.addEventListener('click',()=>copiarBloco(btn.dataset.bloco));
+  });
+  // guarda qual bloco está em edição, para a barra de formatação devolver o foco
+  blocosEls().forEach(el=>el.addEventListener('focus',()=>{ blocoAtivo=el; }));
+  $('edIncluirTribunal').addEventListener('change',atualizarTribunal);
   $('edBtnColar').addEventListener('click',()=>{
     const area=$('edColarWrap');
     area.style.display = area.style.display==='none' ? 'block' : 'none';
@@ -700,5 +783,5 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 /* hook para testes/depuração */
-if (typeof window!=='undefined') window.__ED_TEST__={parseFormulario, aplicarDados, gerarEditalHTML, sugestaoComposicao, axes, values};
+if (typeof window!=='undefined') window.__ED_TEST__={parseFormulario, aplicarDados, gerarEditalHTML, gerarBlocos, sugestaoComposicao, axes, values};
 })();
