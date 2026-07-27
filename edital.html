@@ -52,9 +52,14 @@
     font-weight:700; font-size:13.5px; letter-spacing:0.03em;
     text-transform:uppercase; color:var(--ink-soft); margin:0;
   }
+  /* Entrelinha SIMPLES, igual à que vai para o Athos: a pré-visualização tem de
+     mostrar exatamente o que a cópia entrega. Os parágrafos ainda recebem a
+     mesma medida em estilo inline (ver aplicarEstilosInline), que é o que
+     viaja na área de transferência — aqui é só para o que for digitado no
+     modo de edição nascer com o mesmo espaçamento. */
   .ed-bloco-conteudo{
     border:1px solid var(--line); background:#fff; padding:26px 34px; max-height:560px; overflow-y:auto;
-    font-family:Calibri,"Carlito",Arial,sans-serif; font-size:11pt; line-height:1.35; color:#000;
+    font-family:Calibri,"Carlito",Arial,sans-serif; font-size:11pt; line-height:1; color:#000;
   }
   .ed-bloco-conteudo.ed-editando{ outline:2px solid var(--teal); background:#fffdf2; }
   /* opção do cabeçalho institucional */

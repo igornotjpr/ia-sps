@@ -609,24 +609,46 @@ function corpoEditalHTML(){
 }
 
 /* ============================== AÇÕES DA ETAPA 3 ============================== */
-// Converte as classes internas (ed-c/ed-b/ed-j) em estilos inline, para que a
-// formatação (centralizado, negrito, justificado) sobreviva ao colar no Word/SEI,
-// onde as classes CSS desta página não existem.
-function htmlComEstilosInline(el){
-  const clone = el.cloneNode(true);
-  clone.querySelectorAll('p').forEach(pEl=>{
-    const est=[];
-    // Além do estilo inline, usa a marcação HTML "clássica" (atributo align e
-    // tag <b>) — editores com filtro de colagem (SEI/CKEditor, Word) podem
+
+const ED_FONTE = "Calibri,'Carlito',Arial,sans-serif";
+const ED_ENTRELINHA = '1';        // entrelinha simples — é como o Athos publica
+const ED_ENTRELINHA_PDF = '1.35'; // o PDF assinado mantém a medida já calibrada
+const ED_ESPACO_P = '8pt';        // espaço ENTRE parágrafos; não é entrelinha
+
+// Converte as classes internas (ed-c/ed-b/ed-j) em estilo inline + marcação
+// clássica, DIRETO no elemento vivo da página — e não só numa cópia na hora de
+// copiar. É o que faz a formatação sobreviver aos DOIS caminhos: o botão
+// "Copiar" e o Ctrl+C manual. Nos dois o que viaja é o HTML do elemento, e as
+// classes desta folha de estilo não existem no destino: sem isto o Athos
+// descartava o negrito e aplicava a entrelinha padrão dele (1,5).
+function aplicarEstilosInline(el){
+  if(!el) return;
+  el.querySelectorAll('p').forEach(pEl=>{
+    // Propriedade a propriedade, e não sobrescrevendo o atributo style inteiro:
+    // no modo "Editar texto" a barra de formatação escreve estilo inline nos
+    // parágrafos, e trocar o atributo apagaria o que o usuário acabou de aplicar.
+    // Além do estilo inline, a marcação HTML "clássica" (atributo align e tag
+    // <b>): editores com filtro de colagem (Athos, SEI/CKEditor, Word) podem
     // descartar o atributo style, mas preservam align e <b>.
-    if(pEl.classList.contains('ed-c')){ est.push('text-align:center'); pEl.setAttribute('align','center'); }
-    if(pEl.classList.contains('ed-j')){ est.push('text-align:justify'); pEl.setAttribute('align','justify'); }
-    if(pEl.classList.contains('ed-b')){ est.push('font-weight:bold'); pEl.innerHTML='<b>'+pEl.innerHTML+'</b>'; }
-    est.push('margin:0 0 8pt');
-    pEl.setAttribute('style', est.join(';'));
-    pEl.removeAttribute('class');
+    if(pEl.classList.contains('ed-c')){ pEl.style.textAlign='center';  pEl.setAttribute('align','center'); }
+    if(pEl.classList.contains('ed-j')){ pEl.style.textAlign='justify'; pEl.setAttribute('align','justify'); }
+    // A remoção da classe no fim é o que impede o <b> de ser aninhado de novo
+    // se esta função rodar duas vezes sobre o mesmo bloco.
+    if(pEl.classList.contains('ed-b')){ pEl.style.fontWeight='bold'; pEl.innerHTML='<b>'+pEl.innerHTML+'</b>'; }
+    if(!pEl.style.marginBottom) pEl.style.margin='0 0 '+ED_ESPACO_P;
+    pEl.style.lineHeight=ED_ENTRELINHA;
+    pEl.classList.remove('ed-c','ed-j','ed-b');
+    if(!pEl.className) pEl.removeAttribute('class');
   });
-  return '<div style="font-family:Calibri,\'Carlito\',Arial,sans-serif;font-size:11pt;line-height:1.35;">'
+}
+
+// Empacota um bloco já normalizado por aplicarEstilosInline. `entrelinha`
+// permite ao PDF manter 1,35 sem alterar o que a página mostra e copia.
+function htmlComEstilosInline(el, entrelinha){
+  const lh = entrelinha || ED_ENTRELINHA;
+  const clone = el.cloneNode(true);
+  clone.querySelectorAll('p').forEach(pEl=>{ pEl.style.lineHeight=lh; });
+  return '<div style="font-family:'+ED_FONTE+';font-size:11pt;line-height:'+lh+';">'
     + clone.innerHTML + '</div>';
 }
 // Reproduz programaticamente a cópia manual (selecionar o quadro + Ctrl+C):
@@ -647,7 +669,8 @@ function copiarSelecaoViva(el){
 // estilos já embutidos), de onde a seleção viva é feita do mesmo jeito.
 async function copiarElementos(els, msgOk){
   if(els.length===1 && copiarSelecaoViva(els[0])){ avisoCopiado(msgOk); return; }
-  const html = els.map(htmlComEstilosInline).join('');
+  // arrow explícita: map passa o índice no 2º argumento, que aqui é a entrelinha
+  const html = els.map(el=>htmlComEstilosInline(el)).join('');
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
   tmp.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;';
@@ -687,7 +710,7 @@ function baixarPDF(){
     +'a{color:#000;text-decoration:underline;}'
     +'.ed-espaco{height:14pt;}'
     +'</style></head><body>'
-    +blocosEls().map(htmlComEstilosInline).join('<div class="ed-espaco"></div>')
+    +blocosEls().map(el=>htmlComEstilosInline(el, ED_ENTRELINHA_PDF)).join('<div class="ed-espaco"></div>')
     +'</body></html>');
   w.document.close();
   w.focus();
@@ -700,6 +723,9 @@ function alternarEdicao(){
   els.forEach(el=>{
     el.setAttribute('contenteditable', ligado?'false':'true');
     el.classList.toggle('ed-editando', !ligado);
+    // ao concluir a edição, os parágrafos criados pelo editor (que nascem sem
+    // estilo inline) recebem a mesma entrelinha e o mesmo negrito dos demais
+    if(ligado) aplicarEstilosInline(el);
   });
   btn.textContent = ligado?'Editar texto':'Concluir edição';
   // barra de formatação acompanha o modo de edição
@@ -736,7 +762,10 @@ async function lerFormulario(){
 
 function gerar(){
   const b=gerarBlocos();
-  for(let i=1;i<=6;i++) $('edBloco'+i).innerHTML=b[i];
+  for(let i=1;i<=6;i++){
+    $('edBloco'+i).innerHTML=b[i];
+    aplicarEstilosInline($('edBloco'+i));
+  }
   $('edEtapa3').style.display='block';
   $('edEtapa3').scrollIntoView({behavior:'smooth'});
 }
@@ -746,6 +775,7 @@ function atualizarTribunal(){
   const el=$('edBloco2');
   if(!el || $('edEtapa3').style.display==='none') return;
   el.innerHTML=gerarBlocos()[2];
+  aplicarEstilosInline(el);
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
