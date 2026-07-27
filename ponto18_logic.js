@@ -1084,8 +1084,11 @@ function ligarCaixaRascunho(){
    na tela, a área de transferência (colar no Word mantendo a formatação) e a
    janela de impressão em PDF. Medidas em pt, calibradas sobre as convocações
    já expedidas pela unidade. */
+// Uma única fonte no documento inteiro, a 11pt. O bloco de título já saiu em
+// Arial: como a altura-x da Arial é maior que a da Calibri, aquelas duas linhas
+// engordavam no mesmo corpo de 11pt e o bloco lia como um cabeçalho à parte —
+// além de divergir dos blocos do Athos, que sempre usaram a fonte do corpo.
 var FONTE="Calibri, Carlito, 'Segoe UI', system-ui, sans-serif";
-var FONTE_TITULO="Arial, Helvetica, sans-serif";
 
 // Entrelinha: o documento do passo 4 é calibrado nos PDFs já expedidos (1,4);
 // os blocos do Athos vão em entrelinha SIMPLES, que é como o sistema publica.
@@ -1235,8 +1238,8 @@ function gerarDocumento(){
 
   // 2) identificação e bloco de título
   h+='<p style="'+P_CENTRO+'margin-bottom:24pt;">'+neg('TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ')+'</p>';
-  h+='<p style="'+P_CENTRO+'font-family:'+FONTE_TITULO+';">'+neg('PROCESSO SELETIVO DE ESTUDANTES '+esc(d.ano||'____'))+'</p>';
-  h+='<p style="'+P_CENTRO+'font-family:'+FONTE_TITULO+';">'+neg('PROTOCOLO SEI N° '+esc(d.sei||'____________'))+'</p>';
+  h+='<p style="'+P_CENTRO+'">'+neg('PROCESSO SELETIVO DE ESTUDANTES '+esc(d.ano||'____'))+'</p>';
+  h+='<p style="'+P_CENTRO+'">'+neg('PROTOCOLO SEI N° '+esc(d.sei||'____________'))+'</p>';
   h+='<p style="'+P_CENTRO+'">'+neg('CONVOCAÇÃO PARA ENTREVISTA')+'</p>';
   h+='<p style="'+P_CENTRO+'margin-bottom:46pt;">'+neg(esc(String(d.unidade||'').toUpperCase().replace(/\s+/g,' ').trim()))+'</p>';
 
