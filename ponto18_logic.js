@@ -268,7 +268,7 @@ var estado={
     modalidade:'Presencial', local:'', endereco:'',
     observacoes:'O candidato que não comparecer à entrevista será desclassificado do processo seletivo.',
     // exclusivos da publicação no Athos (passo 5)
-    cidadeAthos:'Curitiba', dataAthos:'',
+    dataAthos:'',
     assinanteNome:'João Pedro de Paula Soares Valente',
     assinanteCargo:ASSINANTE_CARGO_PADRAO
   },
@@ -1441,10 +1441,10 @@ function montarBlocosAthos(){
   b[5]='<p style="margin:0 0 14pt;text-align:justify;font-weight:normal;'+CORPO_A+'">'+esc(FRASE_ABERTURA)+'</p>'
      + conteudoHtml(LH_SIMPLES, LH_SIMPLES);
 
-  // 6 — Data
+  // 6 — Data: só a data por extenso. A cidade e o ponto final são postos pelo
+  // próprio Athos no campo dele, e vinham duplicados na publicação.
   b[6]='<p style="'+P_C_A_N+'">'
-     + esc(String(d.cidadeAthos||'Curitiba').trim())+', '
-     + esc(String(d.dataAthos||'').trim()||'____ de __________ de ____')+'.</p>';
+     + esc(String(d.dataAthos||'').trim()||'____ de __________ de ____')+'</p>';
 
   // 7 — Quem assina (nome em maiúsculas e negrito; cargo, uma linha por linha)
   var b7='';
