@@ -268,7 +268,7 @@ var estado={
     modalidade:'Presencial', local:'', endereco:'',
     observacoes:'O candidato que não comparecer à entrevista será desclassificado do processo seletivo.',
     // exclusivos da publicação no Athos (passo 5)
-    nEditalAbertura:'', cidadeAthos:'Curitiba', dataAthos:'',
+    cidadeAthos:'Curitiba', dataAthos:'',
     assinanteNome:'João Pedro de Paula Soares Valente',
     assinanteCargo:ASSINANTE_CARGO_PADRAO
   },
@@ -1044,6 +1044,7 @@ function escreverCamposDoc(){
     var el=$('p18F_'+k);
     if(el) el.value=estado.doc[k]||'';
   });
+  atualizarAssuntoEmail();   // o assunto do passo 6 acompanha o protocolo SEI
 }
 function sincronizarControles(){
   $('p18ColReserva').checked=!!estado.cols.reserva;
@@ -1115,7 +1116,13 @@ function neg(html){ return '<b>'+html+'</b>'; }
 // Larguras medidas nos PDFs-modelo. NOME absorve o restante quando a soma
 // ultrapassa a área útil da folha A4 (por exemplo com HORÁRIO e LINK juntos).
 var LARGURA_COL={ inscricao:70.5, nome:240.5, nota:48.5, reserva:62.5, data:70, hora:63.5, link:110 };
-var LARGURA_UTIL_PT=523;   // A4 (595.5pt) menos 1,27cm de margem de cada lado
+// Área realmente disponível para a tabela na folha impressa:
+//   A4 595,28pt − margem esquerda 1,27cm (36pt) − margem direita 1,5cm (42,5pt)
+//   − 5pt do recuo da própria tabela = 511,7pt.
+// O valor antigo (523pt) supunha 1,27cm dos DOIS lados e ignorava o recuo, então
+// com todas as colunas ligadas a tabela passava da margem direita da folha.
+var LARGURA_UTIL_PT=511;
+var RECUO_TABELA_PT=5;
 
 function celulaTexto(c, col){
   if(col.k==='inscricao') return String(c.inscricao||'');
@@ -1153,12 +1160,18 @@ function tabelaHtml(lh){
   }
   var larguraTabela = (soma<=LARGURA_UTIL_PT) ? (soma+'pt') : '100%';
 
-  var base='border:0.5pt solid #000;padding:0.5pt 4pt;vertical-align:middle;'
+  // Borda de 1pt: a de 0,5pt equivale a menos de um pixel e o arredondamento da
+  // impressão simplesmente a apagava, deixando a tabela sem contorno no PDF.
+  var base='border:1pt solid #000000;padding:0.5pt 4pt;vertical-align:middle;'
     +'text-align:center;white-space:normal;word-break:break-word;'+corpoCss(lhCel);
 
   // 32pt acima e 28pt abaixo reproduzem as duas linhas em branco que separam a
   // tabela do bloco ENDEREÇO e da linha OBSERVAÇÕES nos modelos.
-  var h='<table style="border-collapse:collapse;table-layout:fixed;width:'+larguraTabela+';margin:32pt 0 28pt 5pt;">';
+  // max-width:100% é a trava final: se ainda assim a soma das colunas passar da
+  // área útil (nomes longos, link e horário juntos), a tabela encolhe para caber
+  // na folha em vez de vazar a margem.
+  var h='<table style="border-collapse:collapse;table-layout:fixed;max-width:100%;'
+       +'width:'+larguraTabela+';margin:32pt 0 28pt '+RECUO_TABELA_PT+'pt;">';
   h+='<colgroup>'+cols.map(function(c){
         return '<col style="width:'+(c.k==='nome' && larguraTabela==='100%' ? 'auto' : largura[c.k]+'pt')+';">';
       }).join('')+'</colgroup>';
@@ -1313,6 +1326,27 @@ function copiarConteudo(el, msgOk){
   return copiarConteudoEm(el, $('p18MsgSaida'), msgOk);
 }
 
+// Cópia de texto puro: nada de text/html, para o destino não herdar fonte,
+// negrito nem alinhamento daqui. Serve aos campos de formulário do Athos.
+async function copiarTextoEm(texto, elMsg, msgOk){
+  function avisa(t){ if(elMsg) elMsg.textContent=t; }
+  if(!texto){ avisa('Não havia nada para copiar neste bloco.'); return; }
+  try{
+    await navigator.clipboard.writeText(texto);
+    avisa(msgOk);
+    return;
+  }catch(e){ /* cai no método antigo abaixo */ }
+  var ta=document.createElement('textarea');
+  ta.value=texto;
+  ta.style.cssText='position:absolute;left:-9999px;top:-9999px;';
+  document.body.appendChild(ta);
+  ta.select();
+  var ok=false;
+  try{ ok=document.execCommand('copy'); }catch(e2){ ok=false; }
+  ta.remove();
+  avisa(ok ? msgOk : 'Não foi possível copiar automaticamente; selecione o texto e use Ctrl+C.');
+}
+
 function imprimirPdf(){
   var w=window.open('','_blank');
   if(!w){
@@ -1320,10 +1354,16 @@ function imprimirPdf(){
     return;
   }
   var titulo='Convocação para Entrevista'+(estado.doc.sei?(' — SEI '+estado.doc.sei):'');
+  // print-color-adjust: sem isto o navegador pode "economizar tinta" e descartar
+  // as bordas e os fundos na impressão — era parte do sumiço da tabela no PDF.
+  // As margens ficam no @page (e não em padding do body) porque padding não se
+  // repete: da segunda folha em diante o texto começaria colado na borda.
   w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>'+esc(titulo)+'</title>'
     +'<style>@page{size:A4;margin:2cm 1.5cm 2cm 1.27cm;}'
+    +'*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
     +'body{margin:0;'+CORPO+'}'
-    +'table{border-collapse:collapse;} tr{page-break-inside:avoid;}'
+    +'table{border-collapse:collapse;max-width:100%;} tr{page-break-inside:avoid;}'
+    +'td{border:1pt solid #000000;}'
     +'img{max-width:100%;}</style></head><body>'
     +$('p18Doc').innerHTML+'</body></html>');
   w.document.close();
@@ -1358,6 +1398,11 @@ function proximoDiaUtil(base){
   return d;
 }
 
+var TOTAL_BLOCOS_ATHOS=7;
+// Blocos que alimentam campos de formulário do Athos, e não o corpo do edital:
+// são copiados como TEXTO PURO, para que o sistema aplique a formatação dele.
+var BLOCOS_TEXTO_PURO={ '2':true, '3':true, '4':true };
+
 var FRASE_ABERTURA='A Secretaria de Gestão de Pessoas, no uso de suas atribuições, torna público '
   +'o edital de convocação para entrevista de processo seletivo de estudantes, mediante as '
   +'disposições do Decreto Judiciário nº 345/2019.';
@@ -1383,35 +1428,33 @@ function montarBlocosAthos(){
   // 1 — Nome do documento (é o rótulo do documento no Athos, não texto legal)
   b[1]='<p style="'+P_E_A_N+'">Edital de convocação para Entrevista SEI!TJPR n° '+esc(sei)+'</p>';
 
-  // 2 — Preâmbulo
-  b[2]='<p style="'+P_C_A+'">'+neg('EDITAL DE CONVOCAÇÃO PARA ENTREVISTA')+'</p>'
-     + '<p style="'+P_C_A+'">'+neg('PROCESSO SELETIVO DE ESTAGIÁRIOS')+'</p>'
-     + (unidade ? '<p style="'+P_C_A+'">'+neg(esc(unidade))+'</p>' : '');
+  // 2, 3 e 4 vão para campos de formulário do Athos, que aplica a formatação
+  // dele. São texto puro: sem negrito, sem centralização — e o botão Copiar
+  // desses blocos manda só text/plain (ver BLOCOS_TEXTO_PURO).
+  b[2]='<p style="'+P_E_A_N+'">CONVOCAÇÃO PARA ENTREVISTA</p>';
+  b[3]='<p style="'+P_E_A_N+'">'+esc(unidade||'—')+'</p>';
+  b[4]='<p style="'+P_E_A_N+'">'+esc(sei)+'</p>';
 
-  // 3 — Numeração
-  b[3]='<p style="'+P_C_A+'">'+neg('EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(String(d.nEditalAbertura||'').trim()||'____/____'))+'</p>'
-     + '<p style="'+P_C_A+'">'+neg('PROTOCOLO SEI '+esc(sei))+'</p>';
-
-  // 4 — Conteúdo: frase de abertura da SGP + o mesmo miolo do PDF, em entrelinha
+  // 5 — Conteúdo: frase de abertura da SGP + o mesmo miolo do PDF, em entrelinha
   // simples. Aqui as margens estruturais ficam (a folga antes e depois da
   // tabela vem dos modelos e separa as partes do edital).
-  b[4]='<p style="margin:0 0 14pt;text-align:justify;font-weight:normal;'+CORPO_A+'">'+esc(FRASE_ABERTURA)+'</p>'
+  b[5]='<p style="margin:0 0 14pt;text-align:justify;font-weight:normal;'+CORPO_A+'">'+esc(FRASE_ABERTURA)+'</p>'
      + conteudoHtml(LH_SIMPLES, LH_SIMPLES);
 
-  // 5 — Data
-  b[5]='<p style="'+P_C_A_N+'">'
+  // 6 — Data
+  b[6]='<p style="'+P_C_A_N+'">'
      + esc(String(d.cidadeAthos||'Curitiba').trim())+', '
      + esc(String(d.dataAthos||'').trim()||'____ de __________ de ____')+'.</p>';
 
-  // 6 — Quem assina (nome em maiúsculas e negrito; cargo, uma linha por linha)
-  var b6='';
+  // 7 — Quem assina (nome em maiúsculas e negrito; cargo, uma linha por linha)
+  var b7='';
   if(String(d.assinanteNome||'').trim())
-    b6+='<p style="'+P_C_A+'">'+neg(esc(d.assinanteNome.toUpperCase()))+'</p>';
+    b7+='<p style="'+P_C_A+'">'+neg(esc(d.assinanteNome.toUpperCase()))+'</p>';
   String(d.assinanteCargo||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean)
-    .forEach(function(l){ b6+='<p style="'+P_C_A_N+'">'+esc(l)+'</p>'; });
-  b[6]=b6;
+    .forEach(function(l){ b7+='<p style="'+P_C_A_N+'">'+esc(l)+'</p>'; });
+  b[7]=b7;
 
-  for(var i=1;i<=6;i++){
+  for(var i=1;i<=TOTAL_BLOCOS_ATHOS;i++){
     $('p18Bloco'+i).innerHTML='<div style="'+CORPO_A+'">'+b[i]+'</div>';
   }
   $('p18AthosBox').style.display='block';
@@ -1419,7 +1462,6 @@ function montarBlocosAthos(){
   var faltando=[];
   if(!String(d.sei).trim())              faltando.push('protocolo SEI (passo 3)');
   if(!unidade)                           faltando.push('nome da unidade (passo 3)');
-  if(!String(d.nEditalAbertura).trim())  faltando.push('n° do edital de abertura');
   if(!String(d.assinanteNome).trim())    faltando.push('nome de quem assina');
   if(!estado.cands.filter(function(c){ return c.nome.trim(); }).length) faltando.push('convocados na tabela');
   $('p18MsgAthos').innerHTML = faltando.length
@@ -1429,12 +1471,18 @@ function montarBlocosAthos(){
 }
 
 function copiarBlocoAthos(n){
-  copiarConteudoEm($('p18Bloco'+n), $('p18MsgAthos'), 'Bloco '+n+' copiado — cole no campo do Athos.');
+  var el=$('p18Bloco'+n);
+  var msg='Bloco '+n+' copiado — cole no campo do Athos.';
+  if(BLOCOS_TEXTO_PURO[String(n)]){
+    return copiarTextoEm(String(el.innerText||el.textContent||'').trim(),
+                         $('p18MsgAthos'), msg+' (texto puro, sem formatação)');
+  }
+  copiarConteudoEm(el, $('p18MsgAthos'), msg);
 }
 async function copiarTudoAthos(){
   var tmp=document.createElement('div');
   var html='';
-  for(var i=1;i<=6;i++) html+=$('p18Bloco'+i).innerHTML;
+  for(var i=1;i<=TOTAL_BLOCOS_ATHOS;i++) html+=$('p18Bloco'+i).innerHTML;
   tmp.innerHTML=html;
   tmp.style.cssText='position:absolute;left:-9999px;top:-9999px;';
   document.body.appendChild(tmp);
@@ -1481,6 +1529,25 @@ function processarColagem(){
     ? '<div class="notice-banner '+(invalidos.length?'warn':'ok')+'" style="margin-left:0;"><strong>'+valores.length+'</strong> valor(es) processado(s).'
       +(invalidos.length?(' <strong>'+invalidos.length+'</strong> não parecem e-mail: '+esc(invalidos.slice(0,8).join(', '))+'.'):'')+'</div>'
     : '<div class="notice-banner warn" style="margin-left:0;">Não havia nada para processar no quadro de colagem.</div>';
+}
+
+// Assunto do e-mail de convocação: texto fixo + protocolo SEI do passo 3.
+// Refeito a cada digitação no campo, para nunca ficar defasado do que está lá.
+function assuntoEmail(){
+  var sei=String($('p18F_sei') ? $('p18F_sei').value : estado.doc.sei || '').trim();
+  return 'Convocação para entrevista '+(sei || '____________');
+}
+function atualizarAssuntoEmail(){
+  var el=$('p18AssuntoTexto');
+  if(el) el.textContent=assuntoEmail();
+}
+function copiarAssuntoEmail(){
+  var btn=$('p18BtnCopiarAssunto');
+  copiarTextoEm(assuntoEmail(), null, '').then(function(){
+    if(!btn) return;
+    btn.textContent='Copiado!';
+    setTimeout(function(){ btn.textContent='Copiar assunto'; }, 1800);
+  });
 }
 
 async function copiarEmails(){
@@ -1625,6 +1692,7 @@ function iniciar(){
 
   // ---- passo 3
   ativarMascaraSei($('p18F_sei'));
+  $('p18F_sei').addEventListener('input', atualizarAssuntoEmail);
   $('p18BtnGerar').addEventListener('click', function(){ atualizarResumoAlocacao(); gerarDocumento(); });
 
   // ---- passo 4
@@ -1646,6 +1714,7 @@ function iniciar(){
   $('p18BtnGerarEmails').addEventListener('click', gerarEmailsDaTabela);
   $('p18BtnProcessarColagem').addEventListener('click', processarColagem);
   $('p18BtnCopiarEmails').addEventListener('click', copiarEmails);
+  $('p18BtnCopiarAssunto').addEventListener('click', copiarAssuntoEmail);
 
   escreverCamposDoc();
   ligarCaixaRascunho();
