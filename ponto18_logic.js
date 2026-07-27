@@ -110,14 +110,20 @@ function lerDataBarra(txt){
 // Botão 📅 ao lado do campo de data: abre um <input type="date"> nativo oculto.
 function ativarBotaoCalendario(el){
   if(!el) return;
+  if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
   var wrap=document.createElement('span');
+  wrap.className='campo-data-wrap';
   wrap.style.cssText='display:flex;align-items:stretch;gap:6px;width:100%;';
   el.parentNode.insertBefore(wrap, el);
-  el.style.flex='1'; el.style.width='auto';
+  // min-width:0 é o que permite ao campo encolher dentro do rótulo; sem ele o
+  // input mantém a largura intrínseca e empurra o botão 📅 para fora da caixa.
+  el.style.flex='1 1 auto'; el.style.width='auto'; el.style.minWidth='0';
   wrap.appendChild(el);
 
   var btn=document.createElement('button');
-  btn.type='button'; btn.className='date-pick-btn'; btn.title='Abrir calendário'; btn.textContent='📅';
+  btn.type='button'; btn.className='date-pick-btn'; btn.title='Abrir calendário';
+  btn.setAttribute('aria-label','Abrir calendário');
+  btn.textContent='📅';
   wrap.appendChild(btn);
 
   var nativo=document.createElement('input');
@@ -1080,12 +1086,30 @@ function ligarCaixaRascunho(){
    já expedidas pela unidade. */
 var FONTE="Calibri, Carlito, 'Segoe UI', system-ui, sans-serif";
 var FONTE_TITULO="Arial, Helvetica, sans-serif";
-var CORPO="font-family:"+FONTE+";font-size:11pt;color:#000;line-height:1.4;";
+
+// Entrelinha: o documento do passo 4 é calibrado nos PDFs já expedidos (1,4);
+// os blocos do Athos vão em entrelinha SIMPLES, que é como o sistema publica.
+var LH_DOC='1.4';
+var LH_CELULA='1.15';   // dentro das células da tabela
+var LH_SIMPLES='1';
+
+function corpoCss(lh){
+  return "font-family:"+FONTE+";font-size:11pt;color:#000;line-height:"+(lh||LH_DOC)+";";
+}
 // Espaçamentos medidos linha a linha nos PDFs-modelo (distância entre as
 // bases de duas linhas seguidas, em pt): bloco de título arejado, bloco
 // DATA/HORÁRIO/LOCAL/ENDEREÇO compacto.
-var P_CENTRO="margin:0 0 10pt;text-align:center;font-weight:bold;"+CORPO;
-var P_ESQ="margin:0;text-align:left;font-weight:bold;"+CORPO;
+function pCentroCss(lh){ return "margin:0 0 10pt;text-align:center;font-weight:bold;"+corpoCss(lh); }
+function pEsqCss(lh){ return "margin:0;text-align:left;font-weight:bold;"+corpoCss(lh); }
+
+var CORPO=corpoCss(LH_DOC);
+var P_CENTRO=pCentroCss(LH_DOC);
+var P_ESQ=pEsqCss(LH_DOC);
+
+// Negrito marcado TAMBÉM com <b>: o editor do Athos (como o do Word e o de
+// outros sistemas) higieniza o atributo style ao colar e descarta o
+// font-weight, mas preserva a tag. Sem isto, o negrito se perde na cópia.
+function neg(html){ return '<b>'+html+'</b>'; }
 
 // Larguras medidas nos PDFs-modelo. NOME absorve o restante quando a soma
 // ultrapassa a área útil da folha A4 (por exemplo com HORÁRIO e LINK juntos).
@@ -1106,7 +1130,8 @@ function celulaTexto(c, col){
   return '';
 }
 
-function tabelaHtml(){
+function tabelaHtml(lh){
+  var lhCel=lh||LH_CELULA;
   var cols=colunasAtivas();
   // só os alocados entram no documento; quem ficou em "A atribuir" é apontado
   // como pendência nos avisos do passo 2, nunca impresso em silêncio
@@ -1127,8 +1152,8 @@ function tabelaHtml(){
   }
   var larguraTabela = (soma<=LARGURA_UTIL_PT) ? (soma+'pt') : '100%';
 
-  var base='border:0.5pt solid #000;padding:0.5pt 4pt;vertical-align:middle;line-height:1.15;'
-    +'text-align:center;white-space:normal;word-break:break-word;'+CORPO;
+  var base='border:0.5pt solid #000;padding:0.5pt 4pt;vertical-align:middle;'
+    +'text-align:center;white-space:normal;word-break:break-word;'+corpoCss(lhCel);
 
   // 32pt acima e 28pt abaixo reproduzem as duas linhas em branco que separam a
   // tabela do bloco ENDEREÇO e da linha OBSERVAÇÕES nos modelos.
@@ -1137,7 +1162,7 @@ function tabelaHtml(){
         return '<col style="width:'+(c.k==='nome' && larguraTabela==='100%' ? 'auto' : largura[c.k]+'pt')+';">';
       }).join('')+'</colgroup>';
   h+='<tr>'+cols.map(function(c){
-        return '<td style="'+base+'font-weight:bold;">'+esc(c.t)+'</td>';
+        return '<td style="'+base+'font-weight:bold;">'+neg(esc(c.t))+'</td>';
       }).join('')+'</tr>';
 
   lista.forEach(function(c){
@@ -1156,39 +1181,42 @@ function tabelaHtml(){
 /* Miolo do documento: das linhas DATA/HORÁRIO/LOCAL/ENDEREÇO até OBSERVAÇÕES,
    passando pela tabela. Sai idêntico no PDF (passo 4) e no Bloco 4 do Athos
    (passo 5) — no Athos, precedido da frase de abertura da SGP.  */
-function conteudoHtml(){
+// `lh` é a entrelinha dos parágrafos e `lhCel` a das células da tabela: o
+// documento do passo 4 usa as medidas dos modelos; o Bloco 4 do Athos, simples.
+function conteudoHtml(lh, lhCel){
   var d=estado.doc, h='';
+  var P=pEsqCss(lh||LH_DOC);
 
   // Havendo um único dia, data e horário vão para as linhas acima da tabela —
   // formato das convocações já expedidas. Com mais de um dia, ou horário por
   // candidato, a informação está nas colunas e estas linhas somem.
   var dias=diasComCandidatos();
   if(dias.length===1){
-    h+='<p style="'+P_ESQ+'">DATA: '+esc(dias[0].data||'__/__/____')+'</p>';
+    h+='<p style="'+P+'">'+neg('DATA: '+esc(dias[0].data||'__/__/____'))+'</p>';
     if(dias[0].horarioModo==='geral' && String(dias[0].horarioGeral||'').trim())
-      h+='<p style="'+P_ESQ+'">HORÁRIO: '+esc(dias[0].horarioGeral.trim())+'</p>';
+      h+='<p style="'+P+'">'+neg('HORÁRIO: '+esc(dias[0].horarioGeral.trim()))+'</p>';
   }
   if(String(d.local||'').trim())
-    h+='<p style="'+P_ESQ+'">LOCAL: '+esc(d.modalidade)+' | '+esc(comPontoFinal(d.local))+'</p>';
+    h+='<p style="'+P+'">'+neg('LOCAL: '+esc(d.modalidade)+' | '+esc(comPontoFinal(d.local)))+'</p>';
   if(String(d.endereco||'').trim()){
     var end=String(d.endereco).trim();
     var valor = ehUrl(end)
       ? '<a href="'+esc(comHttp(end))+'" style="color:#0563c1;text-decoration:underline;">'+esc(end)+'</a>'
       : esc(comPontoFinal(end));
-    h+='<p style="'+P_ESQ+'">ENDEREÇO: '+valor+'</p>';
+    h+='<p style="'+P+'">'+neg('ENDEREÇO: '+valor)+'</p>';
   }
 
   // tabela dos convocados (sem convocados, mantém o respiro entre os blocos)
-  h += tabelaHtml() || '<p style="margin:0 0 28pt;line-height:1.4;">&nbsp;</p>';
+  h += tabelaHtml(lhCel) || '<p style="margin:0 0 28pt;line-height:'+(lh||LH_DOC)+';">&nbsp;</p>';
 
   // observações (cada linha digitada vira um parágrafo)
   var obs=String(d.observacoes||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
   if(obs.length){
     if(obs.length===1){
-      h+='<p style="'+P_ESQ+'">OBSERVAÇÕES: '+esc(obs[0])+'</p>';
+      h+='<p style="'+P+'">'+neg('OBSERVAÇÕES: '+esc(obs[0]))+'</p>';
     } else {
-      h+='<p style="'+P_ESQ+'">OBSERVAÇÕES:</p>';
-      obs.forEach(function(l){ h+='<p style="'+P_ESQ+'">'+esc(l)+'</p>'; });
+      h+='<p style="'+P+'">'+neg('OBSERVAÇÕES:')+'</p>';
+      obs.forEach(function(l){ h+='<p style="'+P+'">'+neg(esc(l))+'</p>'; });
     }
   }
   return h;
@@ -1206,11 +1234,11 @@ function gerarDocumento(){
     +'</p>';
 
   // 2) identificação e bloco de título
-  h+='<p style="'+P_CENTRO+'margin-bottom:24pt;">TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ</p>';
-  h+='<p style="'+P_CENTRO+'font-family:'+FONTE_TITULO+';">PROCESSO SELETIVO DE ESTUDANTES '+esc(d.ano||'____')+'</p>';
-  h+='<p style="'+P_CENTRO+'font-family:'+FONTE_TITULO+';">PROTOCOLO SEI N° '+esc(d.sei||'____________')+'</p>';
-  h+='<p style="'+P_CENTRO+'">CONVOCAÇÃO PARA ENTREVISTA</p>';
-  h+='<p style="'+P_CENTRO+'margin-bottom:46pt;">'+esc(String(d.unidade||'').toUpperCase().replace(/\s+/g,' ').trim())+'</p>';
+  h+='<p style="'+P_CENTRO+'margin-bottom:24pt;">'+neg('TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ')+'</p>';
+  h+='<p style="'+P_CENTRO+'font-family:'+FONTE_TITULO+';">'+neg('PROCESSO SELETIVO DE ESTUDANTES '+esc(d.ano||'____'))+'</p>';
+  h+='<p style="'+P_CENTRO+'font-family:'+FONTE_TITULO+';">'+neg('PROTOCOLO SEI N° '+esc(d.sei||'____________'))+'</p>';
+  h+='<p style="'+P_CENTRO+'">'+neg('CONVOCAÇÃO PARA ENTREVISTA')+'</p>';
+  h+='<p style="'+P_CENTRO+'margin-bottom:46pt;">'+neg(esc(String(d.unidade||'').toUpperCase().replace(/\s+/g,' ').trim()))+'</p>';
 
   // 3 a 5) miolo: DATA/HORÁRIO/LOCAL/ENDEREÇO + tabela + OBSERVAÇÕES.
   // É o mesmo trecho reaproveitado no Bloco 4 do Athos (passo 5).
@@ -1249,10 +1277,15 @@ function comPontoFinal(s){
 // serve ao documento do passo 4 e aos blocos do Athos do passo 5.
 async function copiarConteudoEm(el, elMsg, msgOk){
   function avisa(t){ if(elMsg) elMsg.textContent=t; }
+  // Documento HTML completo, e não só o trecho: com <meta charset> e <body>, o
+  // destino (Athos, Word) lê os acentos certos e aplica os estilos de linha —
+  // entrelinha, negrito e alinhamento — em vez de reformatar por conta própria.
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'
+          + el.innerHTML + '</body></html>';
   try{
     if(navigator.clipboard && window.ClipboardItem){
       await navigator.clipboard.write([new ClipboardItem({
-        'text/html':  new Blob([el.innerHTML],{type:'text/html'}),
+        'text/html':  new Blob([html],{type:'text/html'}),
         'text/plain': new Blob([el.innerText||el.textContent],{type:'text/plain'})
       })]);
       avisa(msgOk);
@@ -1326,37 +1359,50 @@ function montarBlocosAthos(){
   var unidade=String(d.unidade||'').toUpperCase().replace(/\s+/g,' ').trim();
   var b={};
 
+  // Todo o passo 5 sai em entrelinha SIMPLES. Nos blocos de título/assinatura,
+  // cujas linhas formam um único conjunto, também some o espaço entre
+  // parágrafos (margin:0) — é assim que o Athos publica. Cada parágrafo leva o
+  // estilo inteiro, sem declaração repetida: sobreposições do tipo
+  // "font-weight:bold; … font-weight:normal" costumam confundir os
+  // higienizadores de colagem.
+  var CORPO_A  = corpoCss(LH_SIMPLES);
+  var P_C_A    = 'margin:0;text-align:center;font-weight:bold;'+CORPO_A;
+  var P_C_A_N  = 'margin:0;text-align:center;font-weight:normal;'+CORPO_A;
+  var P_E_A_N  = 'margin:0;text-align:left;font-weight:normal;'+CORPO_A;
+
   // 1 — Nome do documento (é o rótulo do documento no Athos, não texto legal)
-  b[1]='<p style="'+P_ESQ+'font-weight:normal;">Edital de convocação para Entrevista SEI!TJPR n° '+esc(sei)+'</p>';
+  b[1]='<p style="'+P_E_A_N+'">Edital de convocação para Entrevista SEI!TJPR n° '+esc(sei)+'</p>';
 
   // 2 — Preâmbulo
-  b[2]='<p style="'+P_CENTRO+'">EDITAL DE CONVOCAÇÃO PARA ENTREVISTA</p>'
-     + '<p style="'+P_CENTRO+'">PROCESSO SELETIVO DE ESTAGIÁRIOS</p>'
-     + (unidade ? '<p style="'+P_CENTRO+'">'+esc(unidade)+'</p>' : '');
+  b[2]='<p style="'+P_C_A+'">'+neg('EDITAL DE CONVOCAÇÃO PARA ENTREVISTA')+'</p>'
+     + '<p style="'+P_C_A+'">'+neg('PROCESSO SELETIVO DE ESTAGIÁRIOS')+'</p>'
+     + (unidade ? '<p style="'+P_C_A+'">'+neg(esc(unidade))+'</p>' : '');
 
   // 3 — Numeração
-  b[3]='<p style="'+P_CENTRO+'">EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(String(d.nEditalAbertura||'').trim()||'____/____')+'</p>'
-     + '<p style="'+P_CENTRO+'">PROTOCOLO SEI '+esc(sei)+'</p>';
+  b[3]='<p style="'+P_C_A+'">'+neg('EDITAL DE CONVOCAÇÃO PARA ENTREVISTA N° '+esc(String(d.nEditalAbertura||'').trim()||'____/____'))+'</p>'
+     + '<p style="'+P_C_A+'">'+neg('PROTOCOLO SEI '+esc(sei))+'</p>';
 
-  // 4 — Conteúdo: frase de abertura da SGP + o mesmo miolo do PDF
-  b[4]='<p style="'+P_ESQ+'font-weight:normal;text-align:justify;margin-bottom:14pt;">'+esc(FRASE_ABERTURA)+'</p>'
-     + conteudoHtml();
+  // 4 — Conteúdo: frase de abertura da SGP + o mesmo miolo do PDF, em entrelinha
+  // simples. Aqui as margens estruturais ficam (a folga antes e depois da
+  // tabela vem dos modelos e separa as partes do edital).
+  b[4]='<p style="margin:0 0 14pt;text-align:justify;font-weight:normal;'+CORPO_A+'">'+esc(FRASE_ABERTURA)+'</p>'
+     + conteudoHtml(LH_SIMPLES, LH_SIMPLES);
 
   // 5 — Data
-  b[5]='<p style="'+P_ESQ+'font-weight:normal;text-align:center;">'
+  b[5]='<p style="'+P_C_A_N+'">'
      + esc(String(d.cidadeAthos||'Curitiba').trim())+', '
      + esc(String(d.dataAthos||'').trim()||'____ de __________ de ____')+'.</p>';
 
   // 6 — Quem assina (nome em maiúsculas e negrito; cargo, uma linha por linha)
   var b6='';
   if(String(d.assinanteNome||'').trim())
-    b6+='<p style="'+P_CENTRO+'margin-bottom:0;">'+esc(d.assinanteNome.toUpperCase())+'</p>';
+    b6+='<p style="'+P_C_A+'">'+neg(esc(d.assinanteNome.toUpperCase()))+'</p>';
   String(d.assinanteCargo||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean)
-    .forEach(function(l){ b6+='<p style="'+P_CENTRO+'font-weight:normal;margin-bottom:0;">'+esc(l)+'</p>'; });
+    .forEach(function(l){ b6+='<p style="'+P_C_A_N+'">'+esc(l)+'</p>'; });
   b[6]=b6;
 
   for(var i=1;i<=6;i++){
-    $('p18Bloco'+i).innerHTML='<div style="'+CORPO+'">'+b[i]+'</div>';
+    $('p18Bloco'+i).innerHTML='<div style="'+CORPO_A+'">'+b[i]+'</div>';
   }
   $('p18AthosBox').style.display='block';
 

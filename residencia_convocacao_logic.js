@@ -134,16 +134,21 @@ function ativarMascaraData(inputEl){
 function ativarBotaoCalendario(inputEl, modo){
   if(!inputEl) return;
   const wrap=document.createElement('span');
+  wrap.className='campo-data-wrap';
   wrap.style.cssText='display:flex;align-items:stretch;gap:6px;width:100%;';
   inputEl.parentNode.insertBefore(wrap, inputEl);
-  inputEl.style.flex='1';
+  // min-width:0 é o que permite ao campo encolher ao lado do botão; sem ele o
+  // input mantém a largura intrínseca e empurra o 📅 para fora da caixa.
+  inputEl.style.flex='1 1 auto';
   inputEl.style.width='auto';
+  inputEl.style.minWidth='0';
   wrap.appendChild(inputEl);
 
   const btn=document.createElement('button');
   btn.type='button';
   btn.className='date-pick-btn';
   btn.title='Abrir calendário';
+  btn.setAttribute('aria-label','Abrir calendário');
   btn.textContent='📅';
   wrap.appendChild(btn);
 
