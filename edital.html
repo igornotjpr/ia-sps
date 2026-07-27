@@ -103,9 +103,9 @@
     font-size:11px;
     color:var(--ink-soft);
   }
-  /* sem espaço entre parágrafos, igual ao que vai para o Athos (o PDF assinado
-     recebe os 8pt de volta em htmlComEstilosInline) */
-  .ed-bloco-conteudo p{ margin:0; }
+  /* espaço padrão entre parágrafos; o Preâmbulo e a Numeração saem compactos
+     por estilo inline (ver espacoDoBloco em edital_logic.js) */
+  .ed-bloco-conteudo p{ margin:0 0 8pt; }
   .ed-j{ text-align:justify; } .ed-c{ text-align:center; } .ed-b{ font-weight:bold; }
   @media (max-width:640px){ .ed-grid{ grid-template-columns:1fr; } .ed-bloco-conteudo{ padding:18px 20px; } }
 </style>
