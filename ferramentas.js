@@ -55,11 +55,11 @@ const FERRAMENTAS=[
     arquivo:"ponto_18.html",
     secao:"sps",
     ponto:"18",
-    emoji:"📧",
+    emoji:"📣",
     cor:"--teal",
-    eyebrow:"Ferramenta de apoio",
-    titulo:"Agrupador de E-mails",
-    descricao:"Converte uma coluna de e-mails em uma lista separada por ponto e vírgula."
+    eyebrow:"Divulgação do edital de entrevista",
+    titulo:"Convocação para Entrevista",
+    descricao:"Lê o Relatório de convocação para entrevistas da Fábrica de Provas, monta a tabela dos convocados (com reserva, datas, horários e links), gera a convocação pronta para salvar em PDF, os blocos para publicar no Athos e a lista de e-mails para envio pelo SEI."
   },
   {
     arquivo:"ponto_20.html",
