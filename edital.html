@@ -103,7 +103,9 @@
     font-size:11px;
     color:var(--ink-soft);
   }
-  .ed-bloco-conteudo p{ margin:0 0 8pt; }
+  /* sem espaço entre parágrafos, igual ao que vai para o Athos (o PDF assinado
+     recebe os 8pt de volta em htmlComEstilosInline) */
+  .ed-bloco-conteudo p{ margin:0; }
   .ed-j{ text-align:justify; } .ed-c{ text-align:center; } .ed-b{ font-weight:bold; }
   @media (max-width:640px){ .ed-grid{ grid-template-columns:1fr; } .ed-bloco-conteudo{ padding:18px 20px; } }
 </style>
@@ -115,7 +117,7 @@
   <div class="step step-info">
     <div class="step-head"><span class="step-num">i</span><p class="step-title">Como funciona</p></div>
     <p class="step-desc">Envie o <strong>formulário de Abertura de Processo Seletivo</strong> respondido pela unidade (PDF do SEI). A ferramenta lê as respostas, identifica qual dos 40 modelos oficiais de edital se aplica e monta o texto completo, preenchendo os campos destacados. Antes de gerar, você confere e ajusta cada campo.</p>
-    <p class="step-desc">Todo o processamento acontece no seu navegador — nenhum dado sai do computador.</p>
+    <p class="step-desc">Todo o processamento acontece no seu navegador — nenhum dado sai do computador. O trabalho pode ser salvo e retomado a qualquer momento pela caixa <strong>Rascunho</strong>, no canto inferior direito da tela: ela guarda os eixos do modelo e os campos preenchidos, não os ajustes feitos à mão em “Editar texto”.</p>
   </div>
 
   <div class="step">
@@ -203,6 +205,20 @@
   <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
 </footer>
 </div>
+
+<!-- Rascunho: caixa fixa, ao alcance em qualquer ponto da página -->
+<aside class="float-draft" id="edDraft">
+  <div class="float-draft-head">
+    <p class="float-draft-tit">Rascunho</p>
+    <button type="button" class="float-draft-toggle" id="edDraftToggle" title="Recolher" aria-expanded="true">–</button>
+  </div>
+  <div class="float-draft-body">
+    <input type="file" id="edRascunho" accept="application/json">
+    <button type="button" class="link-btn" id="edBtnExportar">Salvar (.json)</button>
+    <button type="button" class="link-btn" id="edBtnAbrirRascunho">Abrir rascunho</button>
+    <p class="float-draft-nota" id="edDraftNota">nada preenchido ainda</p>
+  </div>
+</aside>
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="edital_modelos.js"></script>

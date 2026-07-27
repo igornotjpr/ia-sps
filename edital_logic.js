@@ -436,6 +436,7 @@ function renderConfirma(avisos){
   box.querySelectorAll('[data-campo]').forEach(el=>el.addEventListener('input',()=>{
     const k=el.dataset.campo; values[k]=el.value;
     if(FIELDS[k] && FIELDS[k].req){ const has=!!el.value.trim(); el.classList.toggle('ed-empty', !has); el.closest('.ed-campo').classList.toggle('ed-req-filled', has); renderAvisos(); }
+    atualizarDraftNota();
   }));
   box.querySelectorAll('[data-check]').forEach(el=>el.addEventListener('change',()=>{ values[el.dataset.check]=el.checked; }));
   box.querySelectorAll('[data-preset]').forEach(el=>el.addEventListener('change',()=>{
@@ -454,6 +455,7 @@ function renderConfirma(avisos){
   if(axes.modal==='ON'&&axes.consulta==='N') nome.push(axes.webcam==='S'?'Com webcam':'Sem webcam');
   $('edModeloNome').innerHTML='<span class="ed-modelo-tag">Modelo identificado</span><span class="ed-modelo-val">'+esc(nome.join(' · '))+'</span>';
   renderAvisos();
+  atualizarDraftNota();
   $('edEtapa2').style.display='block';
 }
 
@@ -613,7 +615,10 @@ function corpoEditalHTML(){
 const ED_FONTE = "Calibri,'Carlito',Arial,sans-serif";
 const ED_ENTRELINHA = '1';        // entrelinha simples — é como o Athos publica
 const ED_ENTRELINHA_PDF = '1.35'; // o PDF assinado mantém a medida já calibrada
-const ED_ESPACO_P = '8pt';        // espaço ENTRE parágrafos; não é entrelinha
+// Espaço ENTRE parágrafos (é outra medida, não a entrelinha): zero no que vai
+// para o Athos, para os blocos saírem compactos; o PDF assinado mantém os 8pt.
+const ED_ESPACO_P = '0';
+const ED_ESPACO_P_PDF = '8pt';
 
 // Converte as classes internas (ed-c/ed-b/ed-j) em estilo inline + marcação
 // clássica, DIRETO no elemento vivo da página — e não só numa cópia na hora de
@@ -635,19 +640,24 @@ function aplicarEstilosInline(el){
     // A remoção da classe no fim é o que impede o <b> de ser aninhado de novo
     // se esta função rodar duas vezes sobre o mesmo bloco.
     if(pEl.classList.contains('ed-b')){ pEl.style.fontWeight='bold'; pEl.innerHTML='<b>'+pEl.innerHTML+'</b>'; }
-    if(!pEl.style.marginBottom) pEl.style.margin='0 0 '+ED_ESPACO_P;
+    pEl.style.margin='0 0 '+ED_ESPACO_P;
     pEl.style.lineHeight=ED_ENTRELINHA;
     pEl.classList.remove('ed-c','ed-j','ed-b');
     if(!pEl.className) pEl.removeAttribute('class');
   });
 }
 
-// Empacota um bloco já normalizado por aplicarEstilosInline. `entrelinha`
-// permite ao PDF manter 1,35 sem alterar o que a página mostra e copia.
-function htmlComEstilosInline(el, entrelinha){
+// Empacota um bloco já normalizado por aplicarEstilosInline. Os dois parâmetros
+// permitem ao PDF manter a entrelinha de 1,35 e os 8pt entre parágrafos sem
+// alterar o que a página mostra e copia para o Athos.
+function htmlComEstilosInline(el, entrelinha, espacoP){
   const lh = entrelinha || ED_ENTRELINHA;
+  const mb = espacoP || ED_ESPACO_P;
   const clone = el.cloneNode(true);
-  clone.querySelectorAll('p').forEach(pEl=>{ pEl.style.lineHeight=lh; });
+  clone.querySelectorAll('p').forEach(pEl=>{
+    pEl.style.lineHeight=lh;
+    pEl.style.margin='0 0 '+mb;
+  });
   return '<div style="font-family:'+ED_FONTE+';font-size:11pt;line-height:'+lh+';">'
     + clone.innerHTML + '</div>';
 }
@@ -710,7 +720,7 @@ function baixarPDF(){
     +'a{color:#000;text-decoration:underline;}'
     +'.ed-espaco{height:14pt;}'
     +'</style></head><body>'
-    +blocosEls().map(el=>htmlComEstilosInline(el, ED_ENTRELINHA_PDF)).join('<div class="ed-espaco"></div>')
+    +blocosEls().map(el=>htmlComEstilosInline(el, ED_ENTRELINHA_PDF, ED_ESPACO_P_PDF)).join('<div class="ed-espaco"></div>')
     +'</body></html>');
   w.document.close();
   w.focus();
@@ -769,6 +779,94 @@ function gerar(){
   $('edEtapa3').style.display='block';
   $('edEtapa3').scrollIntoView({behavior:'smooth'});
 }
+/* ============================== RASCUNHO (.json) ==============================
+   Guarda o que foi PREENCHIDO — eixos, campos e a opção do cabeçalho —, não os
+   blocos já montados. Reabrir refaz o formulário a partir daí; ajustes feitos à
+   mão no modo "Editar texto" não entram no arquivo, do mesmo modo que na
+   Convocação para Entrevista. */
+const RASCUNHO_VERSAO = 1;
+
+function nomeArquivoRascunho(){
+  const base = String(values.NUM_SEI || values.UNIDADE || 'sem_protocolo')
+    .trim().replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60);
+  return 'rascunho_edital_' + (base || 'sem_protocolo') + '.json';
+}
+
+function exportarRascunho(){
+  const dados = {
+    ferramenta:'edital_abertura',
+    versao:RASCUNHO_VERSAO,
+    gerado:new Date().toISOString(),
+    axes:Object.assign({}, axes),
+    values:Object.assign({}, values),
+    incluirTribunal:incluirTribunal()
+  };
+  const blob=new Blob([JSON.stringify(dados,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=nomeArquivoRascunho();
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  notaRascunho('salvo em ' + a.download);
+}
+
+function importarRascunho(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const d=JSON.parse(fr.result);
+      if(!d || !d.values) throw new Error('arquivo sem os campos do edital');
+      // só as chaves conhecidas entram, para um arquivo antigo não injetar
+      // campo que não existe mais nem apagar um que foi criado depois
+      Object.keys(axes).forEach(k=>{ if(d.axes && d.axes[k]!==undefined) axes[k]=d.axes[k]; });
+      Object.keys(values).forEach(k=>{ if(d.values[k]!==undefined) values[k]=d.values[k]; });
+      const cx=$('edIncluirTribunal');
+      if(cx) cx.checked = !!d.incluirTribunal;
+      renderConfirma([]);
+      $('edEtapa2').style.display='block';
+      $('edEtapa2').scrollIntoView({behavior:'smooth'});
+      // se os blocos já estavam na tela, remonta com o que veio do rascunho
+      if($('edEtapa3').style.display!=='none') gerar();
+      notaRascunho('rascunho aberto — confira os campos');
+    }catch(e){
+      alert('Não consegui ler este rascunho ('+(e.message||e)+'). Verifique se é o arquivo .json gerado por esta ferramenta.');
+    }
+  };
+  fr.onerror=()=>alert('Falha ao abrir o arquivo de rascunho.');
+  fr.readAsText(file);
+}
+
+// Recado curto na própria caixa de rascunho: o aviso da etapa 3 não serve aqui,
+// porque a caixa pode ser usada com as etapas seguintes ainda escondidas.
+function notaRascunho(msg){
+  const el=$('edDraftNota');
+  if(!el) return;
+  el.textContent=msg;
+  setTimeout(()=>{ if(el.textContent===msg) atualizarDraftNota(); }, 5000);
+}
+
+function atualizarDraftNota(){
+  const el=$('edDraftNota');
+  if(!el) return;
+  const obrig=Object.keys(FIELDS).filter(k=>FIELDS[k].req);
+  const feitos=obrig.filter(k=>String(values[k]||'').trim()).length;
+  const unidade=String(values.UNIDADE||'').trim();
+  el.textContent = (feitos || unidade)
+    ? (feitos+'/'+obrig.length+' obrigatório(s)'+(unidade?(' · '+unidade.slice(0,28)):''))
+    : 'nada preenchido ainda';
+}
+
+function ligarCaixaRascunho(){
+  const caixa=$('edDraft'), botao=$('edDraftToggle');
+  if(!caixa || !botao) return;
+  botao.addEventListener('click',()=>{
+    const recolhida=caixa.classList.toggle('collapsed');
+    botao.textContent = recolhida ? '+' : '–';
+    botao.title = recolhida ? 'Abrir' : 'Recolher';
+    botao.setAttribute('aria-expanded', recolhida ? 'false' : 'true');
+  });
+}
+
 // A opção do cabeçalho institucional só reescreve o Bloco 2, para não descartar
 // ajustes que o usuário já tenha feito à mão nos demais blocos.
 function atualizarTribunal(){
@@ -809,6 +907,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     const area=$('edColarWrap');
     area.style.display = area.style.display==='none' ? 'block' : 'none';
   });
+  // caixa de rascunho
+  $('edBtnExportar').addEventListener('click',exportarRascunho);
+  $('edBtnAbrirRascunho').addEventListener('click',()=>$('edRascunho').click());
+  $('edRascunho').addEventListener('change',e=>{
+    const f=e.target.files[0];
+    if(f) importarRascunho(f);
+    e.target.value='';
+  });
+  ligarCaixaRascunho();
+  atualizarDraftNota();
   if(!values.DATA_ASSINATURA) values.DATA_ASSINATURA=hojeExtenso();
 });
 
