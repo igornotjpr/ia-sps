@@ -1103,11 +1103,9 @@ function corpoCss(lh){
 // bases de duas linhas seguidas, em pt): bloco de título arejado, bloco
 // DATA/HORÁRIO/LOCAL/ENDEREÇO compacto.
 function pCentroCss(lh){ return "margin:0 0 10pt;text-align:center;font-weight:bold;"+corpoCss(lh); }
-function pEsqCss(lh){ return "margin:0;text-align:left;font-weight:bold;"+corpoCss(lh); }
 
 var CORPO=corpoCss(LH_DOC);
 var P_CENTRO=pCentroCss(LH_DOC);
-var P_ESQ=pEsqCss(LH_DOC);
 
 // Negrito marcado TAMBÉM com <b>: o editor do Athos (como o do Word e o de
 // outros sistemas) higieniza o atributo style ao colar e descarta o
@@ -1168,13 +1166,17 @@ function tabelaHtml(lh){
         return '<td style="'+base+'font-weight:bold;">'+neg(esc(c.t))+'</td>';
       }).join('')+'</tr>';
 
+  // O nome é o único campo de texto corrido da tabela: alinhado à esquerda, os
+  // sobrenomes ficam alinhados entre si e a leitura em coluna fica mais fácil.
+  // As demais colunas são números curtos e seguem centralizadas.
   lista.forEach(function(c){
     h+='<tr>'+cols.map(function(col){
+      var estilo=base+(col.k==='nome' ? 'text-align:left;' : '');
       if(col.k==='link' && String(c.linkUrl||'').trim()){
         var rot=String(c.linkTexto||c.linkUrl).toUpperCase();
-        return '<td style="'+base+'"><a href="'+esc(comHttp(c.linkUrl))+'" style="color:#0563c1;text-decoration:underline;">'+esc(rot)+'</a></td>';
+        return '<td style="'+estilo+'"><a href="'+esc(comHttp(c.linkUrl))+'" style="color:#0563c1;text-decoration:underline;">'+esc(rot)+'</a></td>';
       }
-      return '<td style="'+base+'">'+esc(celulaTexto(c,col))+'</td>';
+      return '<td style="'+estilo+'">'+esc(celulaTexto(c,col))+'</td>';
     }).join('')+'</tr>';
   });
   h+='</table>';
@@ -1188,38 +1190,43 @@ function tabelaHtml(lh){
 // documento do passo 4 usa as medidas dos modelos; o Bloco 4 do Athos, simples.
 function conteudoHtml(lh, lhCel){
   var d=estado.doc, h='';
-  var P=pEsqCss(lh||LH_DOC);
+  // O parágrafo é de texto normal: o negrito fica SÓ na etiqueta (DATA:,
+  // HORÁRIO:, LOCAL:, ENDEREÇO:, OBSERVAÇÕES:), nunca no que foi digitado.
+  var P='margin:0;text-align:left;font-weight:normal;'+corpoCss(lh||LH_DOC);
+  function linha(rotulo, valorHtml){
+    return '<p style="'+P+'">'+neg(esc(rotulo))+(valorHtml ? ' '+valorHtml : '')+'</p>';
+  }
 
   // Havendo um único dia, data e horário vão para as linhas acima da tabela —
   // formato das convocações já expedidas. Com mais de um dia, ou horário por
   // candidato, a informação está nas colunas e estas linhas somem.
   var dias=diasComCandidatos();
   if(dias.length===1){
-    h+='<p style="'+P+'">'+neg('DATA: '+esc(dias[0].data||'__/__/____'))+'</p>';
+    h+=linha('DATA:', esc(dias[0].data||'__/__/____'));
     if(dias[0].horarioModo==='geral' && String(dias[0].horarioGeral||'').trim())
-      h+='<p style="'+P+'">'+neg('HORÁRIO: '+esc(dias[0].horarioGeral.trim()))+'</p>';
+      h+=linha('HORÁRIO:', esc(dias[0].horarioGeral.trim()));
   }
   if(String(d.local||'').trim())
-    h+='<p style="'+P+'">'+neg('LOCAL: '+esc(d.modalidade)+' | '+esc(comPontoFinal(d.local)))+'</p>';
+    h+=linha('LOCAL:', esc(d.modalidade)+' | '+esc(comPontoFinal(d.local)));
   if(String(d.endereco||'').trim()){
     var end=String(d.endereco).trim();
     var valor = ehUrl(end)
       ? '<a href="'+esc(comHttp(end))+'" style="color:#0563c1;text-decoration:underline;">'+esc(end)+'</a>'
       : esc(comPontoFinal(end));
-    h+='<p style="'+P+'">'+neg('ENDEREÇO: '+valor)+'</p>';
+    h+=linha('ENDEREÇO:', valor);
   }
 
   // tabela dos convocados (sem convocados, mantém o respiro entre os blocos)
   h += tabelaHtml(lhCel) || '<p style="margin:0 0 28pt;line-height:'+(lh||LH_DOC)+';">&nbsp;</p>';
 
-  // observações (cada linha digitada vira um parágrafo)
+  // observações (cada linha digitada vira um parágrafo; só a etiqueta é negrito)
   var obs=String(d.observacoes||'').split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
   if(obs.length){
     if(obs.length===1){
-      h+='<p style="'+P+'">'+neg('OBSERVAÇÕES: '+esc(obs[0]))+'</p>';
+      h+=linha('OBSERVAÇÕES:', esc(obs[0]));
     } else {
-      h+='<p style="'+P+'">'+neg('OBSERVAÇÕES:')+'</p>';
-      obs.forEach(function(l){ h+='<p style="'+P+'">'+neg(esc(l))+'</p>'; });
+      h+=linha('OBSERVAÇÕES:');
+      obs.forEach(function(l){ h+='<p style="'+P+'">'+esc(l)+'</p>'; });
     }
   }
   return h;
