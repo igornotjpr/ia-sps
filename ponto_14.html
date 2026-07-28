@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ponto 14 — Gerador do Edital de Ensalamento (TJPR)</title>
+<link rel="stylesheet" href="core.css">
+<style>
+  /* ---- campos de conferência (mesmo padrão do Gerador do Edital de Abertura) ---- */
+  .ed-grupo{ border:1px solid var(--line); background:#fdfefe; padding:16px 18px; margin-bottom:18px; }
+  .ed-grupo-tit{ font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-weight:700; font-size:15px; color:var(--navy); margin:0 0 12px; letter-spacing:0.02em; }
+  .ed-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; align-items:start; }
+  .ed-campo{ display:flex; flex-direction:column; gap:4px; font-size:13px; }
+  .ed-campo-full{ grid-column:1 / -1; }
+  .ed-campo > span{ font-weight:600; color:var(--ink); }
+  .ed-campo input[type=text], .ed-campo select, .ed-campo textarea{
+    font-family:'Barlow',system-ui,sans-serif; font-size:13px; padding:8px 10px;
+    border:1px solid var(--line); background:#fffdf7; color:var(--ink); resize:vertical; min-height:0; width:100%;
+  }
+  .ed-campo small{ color:var(--ink-soft); font-size:11.5px; line-height:1.4; }
+  /* exemplo esmaecido do preenchimento correto */
+  .ed-campo input::placeholder, .ed-campo textarea::placeholder{
+    color:var(--ink-soft); opacity:0.55; font-style:italic;
+  }
+  /* campo obrigatório ainda vazio: destaque em coral, sem bloquear nada */
+  .ed-campo input.p14-vazio, .ed-campo textarea.p14-vazio{
+    border-color:var(--coral); background:#fff6f4; box-shadow:0 0 0 2px rgba(235,85,59,0.12);
+  }
+  .ed-opcional{ display:inline-block; margin-left:6px; font-family:'Barlow Semi Condensed',system-ui,sans-serif;
+    font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-soft); }
+  .ed-auto{ display:inline-block; margin-left:6px; font-family:'Barlow Semi Condensed',system-ui,sans-serif;
+    font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--teal); }
+
+  /* prévia das linhas DATA/HORÁRIO/LOCAL como sairão no edital */
+  .p14-previa{ margin:14px 0 0; padding:12px 16px; background:#f8fbfc; border:1px solid var(--line);
+    border-left:3px solid var(--teal); font-family:Calibri,'Carlito',Arial,sans-serif; font-size:12.5px;
+    line-height:1.5; color:var(--ink); }
+  .p14-previa em{ color:var(--ink-soft); }
+
+  /* ---- blocos do edital gerado ---- */
+  .ed-bloco{ margin-bottom:24px; }
+  .ed-bloco-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+  .ed-bloco-tit{ font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-weight:700; font-size:13.5px;
+    letter-spacing:0.03em; text-transform:uppercase; color:var(--ink-soft); margin:0; }
+  .ed-bloco-sub{ margin-left:18px; padding-left:14px; border-left:2px solid var(--paper-dark); }
+  /* Entrelinha SIMPLES e sem espaçamento entre parágrafos — exatamente o que a
+     cópia entrega ao Athos (ver aplicarEstilosInline em ponto14_logic.js). */
+  .ed-bloco-conteudo{ border:1px solid var(--line); background:#fff; padding:22px 30px; max-height:620px;
+    overflow:auto; font-family:Calibri,'Carlito',Arial,sans-serif; font-size:11pt; line-height:1; color:#000; }
+  .ed-bloco-conteudo.ed-editando{ outline:2px solid var(--teal); background:#fffdf2; }
+  .ed-bloco-conteudo p{ margin:0; }
+  .ed-bloco-conteudo table{ font-family:Calibri,'Carlito',Arial,sans-serif; font-size:11pt; white-space:normal; }
+  .ed-j{ text-align:left; } .ed-c{ text-align:center; } .ed-b{ font-weight:bold; }
+
+  /* barra de formatação, exibida apenas no modo de edição */
+  .ed-toolbar{ display:none; align-items:center; gap:4px; flex-wrap:wrap; border:1px solid var(--line);
+    background:#f8fbfc; padding:8px 10px; margin-bottom:14px; }
+  .ed-toolbar.show{ display:flex; }
+  .ed-toolbar button{ min-width:32px; height:30px; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); background:var(--white); color:var(--ink);
+    font-family:Georgia,'Times New Roman',serif; font-size:14px; cursor:pointer; padding:0 8px; }
+  .ed-toolbar button:hover{ border-color:var(--teal); color:var(--teal); }
+  .ed-toolbar-sep{ width:1px; height:20px; background:var(--line); margin:0 6px; }
+  .ed-toolbar-hint{ margin-left:auto; font-family:'Barlow',system-ui,sans-serif; font-size:11px; color:var(--ink-soft); }
+
+  /* ---- tabela de candidatos ---- */
+  .p14-tab-acoes{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:0 0 12px; }
+  .p14-tab-acoes .link-btn.ativo{ background:var(--teal); color:var(--white); border-color:var(--teal); }
+  .p14Act{ border:1px solid transparent; background:none; color:var(--coral); font-size:14px;
+    line-height:1; padding:4px 6px; cursor:pointer; }
+  .p14Act:hover{ border-color:var(--coral); background:#fdf3f1; }
+  #p14Contagem{ font-size:12px; color:var(--ink-soft); margin:10px 0 0; }
+
+  @media (max-width:640px){ .ed-grid{ grid-template-columns:1fr; } .ed-bloco-conteudo{ padding:18px 20px; } }
+</style>
+</head><body><div class="sheet">
+<div id="institutional-placeholder"></div>
+<div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
+<main>
+
+  <div class="step step-info">
+    <div class="step-head"><span class="step-num">i</span><p class="step-title">Como funciona</p></div>
+    <p class="step-desc">Envie o <strong>formulário de abertura</strong> respondido pela unidade (PDF do SEI — o mesmo usado no edital de abertura) e o <strong>relatório de inscritos da Fábrica de Provas</strong>. A ferramenta extrai o nº do processo SEI, a modalidade, a duração da prova, o local e o endereço, monta a tabela com todos os candidatos cuja inscrição foi <strong>DEFERIDA</strong> e gera o Edital de Ensalamento dividido em blocos, prontos para colar no modelo de blocos de impressão do Athos.</p>
+    <p class="step-desc">Todo o processamento acontece no seu navegador — nenhum dado sai do computador. O trabalho pode ser salvo e retomado pela caixa <strong>Rascunho</strong>, no canto inferior direito.</p>
+  </div>
+
+  <!-- ============================ 1 ============================ -->
+  <div class="step">
+    <div class="step-head"><span class="step-num">1</span><p class="step-title">Envie o formulário de abertura (PDF do SEI)</p></div>
+    <div class="upload-panel">
+      <button class="file-btn" id="p14FileBtn" type="button">Escolher arquivo PDF</button>
+      <input type="file" id="p14PdfFile" accept=".pdf,application/pdf">
+      <span class="file-name" id="p14FileName">Nenhum arquivo selecionado</span>
+    </div>
+    <div class="alt-action">
+      <span>PDF digitalizado (foto/imagem) não tem texto extraível — nesse caso, cole o texto do formulário (Ctrl+A e Ctrl+C dentro do PDF):</span>
+      <button type="button" id="p14BtnColar" class="link-btn">Colar texto manualmente</button>
+    </div>
+    <div id="p14ColarWrap" class="collapse-panel" style="display:none;">
+      <textarea id="p14TextoColado" placeholder="Cole aqui o texto completo do formulário de abertura..." style="min-height:120px;"></textarea>
+    </div>
+  </div>
+
+  <!-- ============================ 2 ============================ -->
+  <div class="step">
+    <div class="step-head"><span class="step-num">2</span><p class="step-title">Envie o relatório de inscritos (Fábrica de Provas)</p></div>
+    <p class="step-desc">Planilha <strong>.xlsx</strong> ou <strong>.csv</strong> exportada da Fábrica de Provas. Serão aproveitados apenas os candidatos com <strong>Situação da inscrição = DEFERIDA</strong>; os demais são descartados e o total de cada situação é informado.</p>
+    <div class="upload-panel">
+      <button class="file-btn" id="p14XlsBtn" type="button">Escolher planilha</button>
+      <input type="file" id="p14XlsFile" accept=".xlsx,.xls,.csv,.tsv">
+      <span class="file-name" id="p14XlsName">Nenhum arquivo selecionado</span>
+    </div>
+    <div class="alt-action">
+      <span>Sem a planilha em mãos? Cole a lista de candidatos (uma linha por candidato, com o nº de inscrição e o nome):</span>
+      <button type="button" id="p14BtnColarLista" class="link-btn">Colar lista manualmente</button>
+    </div>
+    <div id="p14ColarListaWrap" class="collapse-panel" style="display:none;">
+      <textarea id="p14ListaColada" placeholder="5240056&#9;PATRÍCIA PRESTES DA SILVA&#10;5239195&#9;REINALDO DE PAIVA" style="min-height:110px;"></textarea>
+    </div>
+    <div style="margin-top:16px;"><button class="run-btn" id="p14BtnProcessar">Processar os dados</button></div>
+    <div id="p14ResumoPlanilha" class="notice-banner ok" style="display:none;"></div>
+    <div id="p14AvisosLeitura" class="notice-banner warn" style="display:none;"></div>
+  </div>
+
+  <!-- ============================ 3 ============================ -->
+  <div class="step" id="p14Etapa4" style="display:none;">
+    <div class="step-head"><span class="step-num">3</span><p class="step-title">Confira e ajuste os dados</p></div>
+    <p class="step-desc">Os campos marcados como <span class="ed-auto">automático</span> vieram do formulário de abertura — todos podem ser corrigidos. Campos obrigatórios ainda vazios ficam destacados em vermelho.</p>
+
+    <div class="ed-grupo">
+      <p class="ed-grupo-tit">Identificação</p>
+      <div class="ed-grid">
+        <label class="ed-campo">
+          <span>Número do processo SEI <span class="ed-auto">automático</span></span>
+          <input type="text" id="p14Sei" placeholder="Ex: 0024424-25.2026.8.16.6000">
+          <small>Extraído do formulário de abertura.</small>
+        </label>
+        <label class="ed-campo">
+          <span>Nome da unidade</span>
+          <input type="text" id="p14Unidade" placeholder="Ex: Secretaria da Direção do Fórum de Palmeira">
+          <small>Consulte no SEI do processo seletivo. Será impresso em MAIÚSCULAS no preâmbulo.</small>
+        </label>
+        <label class="ed-campo">
+          <span>Modalidade do processo seletivo <span class="ed-auto">automático</span></span>
+          <select id="p14Modalidade">
+            <option value="Presencial">Presencial</option>
+            <option value="On-line">On-line</option>
+          </select>
+          <small>On-line imprime a linha OBSERVAÇÕES com o link da prova e dispensa LOCAL e ENDEREÇO.</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="ed-grupo">
+      <p class="ed-grupo-tit">Data, horário e local da prova</p>
+      <div class="ed-grid">
+        <label class="ed-campo">
+          <span>Data de início da prova</span>
+          <input type="text" id="p14DataIni" placeholder="Ex: 10/07/2026">
+          <small>Use o 📅 ou digite: 10072026 vira 10/07/2026 sozinho.</small>
+        </label>
+        <label class="ed-campo">
+          <span>Horário de início da prova</span>
+          <input type="text" id="p14HoraIni" placeholder="Ex: 14h00min">
+          <small>Use o 🕐 ou digite: 1400 vira 14h00min sozinho.</small>
+        </label>
+        <label class="ed-campo">
+          <span>Data de fim da prova <span class="ed-opcional">opcional</span></span>
+          <input type="text" id="p14DataFim" placeholder="Ex: 13/07/2026">
+          <small>Só para provas que ficam disponíveis por vários dias.</small>
+        </label>
+        <label class="ed-campo">
+          <span>Horário de fim da prova <span class="ed-opcional">opcional</span></span>
+          <input type="text" id="p14HoraFim" placeholder="Ex: 23h59min">
+          <small>Obrigatório se a data de fim for preenchida.</small>
+        </label>
+        <label class="ed-campo">
+          <span>Duração da prova <span class="ed-auto">automático</span></span>
+          <input type="text" id="p14Duracao" placeholder="Ex: 03h00min">
+          <small>Lido do campo “Quantas horas o candidato terá para realizar a prova, a partir do seu início”.</small>
+        </label>
+        <label class="ed-campo" id="p14LocalWrap">
+          <span>Local <span class="ed-auto">automático</span></span>
+          <input type="text" id="p14Local" placeholder="Ex: Fórum da Comarca de Palmeira">
+          <small>Só para prova presencial. O formulário do SEI costuma cortar o texto — confira.</small>
+        </label>
+        <label class="ed-campo ed-campo-full" id="p14EnderecoWrap">
+          <span>Endereço <span class="ed-auto">automático</span></span>
+          <input type="text" id="p14Endereco" placeholder="Ex: Avenida 7 de Abril, nº 571, Centro, Palmeira-PR, CEP 84.130-000">
+          <small>Só para prova presencial. Abreviaturas são expandidas automaticamente; bairro, cidade-PR e CEP precisam ser conferidos.</small>
+        </label>
+      </div>
+      <div id="p14NotaOnline" class="notice-banner" style="display:none;">
+        <strong>Prova on-line:</strong> LOCAL e ENDEREÇO não são publicados. No lugar deles sai a linha
+        <em>OBSERVAÇÕES: Prova on-line: https://tjpr-pse.fabricadeprovas.com.br/login.</em>
+      </div>
+      <div class="p14-previa" id="p14Previa"></div>
+    </div>
+
+    <div class="ed-grupo">
+      <p class="ed-grupo-tit">Candidatos com inscrição deferida</p>
+      <div class="p14-tab-acoes">
+        <button type="button" class="link-btn" id="p14BtnEditarTabela">Editar tabela</button>
+        <span id="p14AcoesTabela" style="display:none;">
+          <button type="button" class="link-btn" id="p14BtnAddLinha">+ Adicionar linha</button>
+          <button type="button" class="link-btn" id="p14BtnOrdenar">Reordenar em ordem alfabética</button>
+        </span>
+      </div>
+      <div id="p14Tabela"></div>
+      <p id="p14Contagem"></p>
+      <small style="display:block;margin-top:6px;color:var(--ink-soft);font-size:11.5px;line-height:1.5;">
+        Com a edição ativa: arraste pela alça <strong>⠿</strong> (ou use Alt+↑ / Alt+↓) para reordenar,
+        <strong>✕</strong> para excluir uma linha e “+ Adicionar linha” para incluir um candidato.
+        Ao terminar, clique em “Desativar edição (salvar)”.
+      </small>
+    </div>
+
+    <div class="ed-grupo">
+      <p class="ed-grupo-tit">Data e assinatura</p>
+      <div class="ed-grid">
+        <label class="ed-campo">
+          <span>Local e data da assinatura</span>
+          <input type="text" id="p14DataAss" placeholder="Ex: Curitiba, 28 de julho de 2026">
+        </label>
+        <label class="ed-campo">
+          <span>Nome de quem assina</span>
+          <input type="text" id="p14Assinante" placeholder="Ex: JOÃO PEDRO DE PAULA SOARES VALENTE">
+        </label>
+        <label class="ed-campo ed-campo-full">
+          <span>Cargo/unidade de quem assina (uma linha por linha do bloco)</span>
+          <textarea id="p14Cargo" rows="3"></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div id="p14AvisoCampos" class="notice-banner" style="display:none;"></div>
+    <button class="run-btn" id="p14BtnGerar" style="margin-top:18px;">Gerar edital de ensalamento</button>
+  </div>
+
+  <!-- ============================ 4 ============================ -->
+  <div class="step" id="p14Etapa5" style="display:none;">
+    <div class="step-head"><span class="step-num">4</span><p class="step-title">Blocos para o Athos</p></div>
+    <p class="step-desc">Confira o texto integralmente antes de utilizar. Cada bloco tem seu próprio botão “Copiar” e sai com parágrafo simples, sem espaçamento — pronto para colar no campo correspondente do modelo de blocos de impressão. Você também pode editar direto nos quadros (“Editar texto”), copiar tudo de uma vez ou salvar em PDF.</p>
+
+    <div id="p14Toolbar" class="ed-toolbar">
+      <button type="button" data-cmd="bold" title="Negrito (Ctrl+B)"><b>N</b></button>
+      <button type="button" data-cmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
+      <button type="button" data-cmd="underline" title="Sublinhado (Ctrl+U)"><u>S</u></button>
+      <span class="ed-toolbar-sep"></span>
+      <button type="button" data-cmd="justifyLeft" title="Alinhar à esquerda"><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><line x1="1" y1="2" x2="15" y2="2" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="5.5" x2="10" y2="5.5" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="12.5" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button type="button" data-cmd="justifyCenter" title="Centralizar"><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><line x1="1" y1="2" x2="15" y2="2" stroke="currentColor" stroke-width="1.6"/><line x1="3.5" y1="5.5" x2="12.5" y2="5.5" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="3.5" y1="12.5" x2="12.5" y2="12.5" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <span class="ed-toolbar-hint">Atalhos: Ctrl+B negrito &middot; Ctrl+I itálico &middot; Ctrl+U sublinhado</span>
+    </div>
+
+    <div class="ed-bloco">
+      <div class="ed-bloco-head">
+        <p class="ed-bloco-tit">Bloco 1 — Nome do documento</p>
+        <button type="button" class="link-btn p14-bloco-copiar" data-bloco="1" data-rotulo="Nome do documento">Copiar</button>
+      </div>
+      <div id="p14Bloco1" class="ed-bloco-conteudo" contenteditable="false"></div>
+    </div>
+
+    <div class="ed-bloco">
+      <div class="ed-bloco-head">
+        <p class="ed-bloco-tit">Bloco 2 — Preâmbulo</p>
+        <span style="font-size:11.5px;color:var(--ink-soft);">copie cada parte no campo correspondente</span>
+      </div>
+      <div class="ed-bloco-sub">
+        <div class="ed-bloco-head" style="margin-bottom:6px;">
+          <p class="ed-bloco-tit" style="font-size:12px;">2.1 — Tipo de edital</p>
+          <button type="button" class="link-btn p14-bloco-copiar" data-bloco="2a" data-rotulo="“ENSALAMENTO”">Copiar</button>
+        </div>
+        <div id="p14Bloco2a" class="ed-bloco-conteudo" contenteditable="false" style="padding:14px 22px;"></div>
+        <div class="ed-bloco-head" style="margin:12px 0 6px;">
+          <p class="ed-bloco-tit" style="font-size:12px;">2.2 — Nome da unidade</p>
+          <button type="button" class="link-btn p14-bloco-copiar" data-bloco="2b" data-rotulo="Nome da unidade">Copiar</button>
+        </div>
+        <div id="p14Bloco2b" class="ed-bloco-conteudo" contenteditable="false" style="padding:14px 22px;"></div>
+      </div>
+    </div>
+
+    <div class="ed-bloco">
+      <div class="ed-bloco-head">
+        <p class="ed-bloco-tit">Bloco 3 — Numeração</p>
+        <button type="button" class="link-btn p14-bloco-copiar" data-bloco="3" data-rotulo="Numeração">Copiar</button>
+      </div>
+      <div id="p14Bloco3" class="ed-bloco-conteudo" contenteditable="false"></div>
+    </div>
+
+    <div class="ed-bloco">
+      <div class="ed-bloco-head">
+        <p class="ed-bloco-tit">Bloco 4 — Conteúdo</p>
+        <button type="button" class="link-btn p14-bloco-copiar" data-bloco="4" data-rotulo="Conteúdo">Copiar</button>
+      </div>
+      <div id="p14Bloco4" class="ed-bloco-conteudo" contenteditable="false"></div>
+    </div>
+
+    <div class="ed-bloco">
+      <div class="ed-bloco-head">
+        <p class="ed-bloco-tit">Bloco 5 — Data</p>
+        <button type="button" class="link-btn p14-bloco-copiar" data-bloco="5" data-rotulo="Data">Copiar</button>
+      </div>
+      <div id="p14Bloco5" class="ed-bloco-conteudo" contenteditable="false"></div>
+    </div>
+
+    <div class="ed-bloco">
+      <div class="ed-bloco-head">
+        <p class="ed-bloco-tit">Bloco 6 — Quem assina</p>
+        <button type="button" class="link-btn p14-bloco-copiar" data-bloco="6" data-rotulo="Assinatura">Copiar</button>
+      </div>
+      <div id="p14Bloco6" class="ed-bloco-conteudo" contenteditable="false"></div>
+    </div>
+
+    <div class="download-row" style="display:flex;">
+      <button class="download-btn" id="p14BtnCopiarTudo">Copiar tudo</button>
+      <button class="download-btn" id="p14BtnPDF" style="background:var(--ink);">Baixar PDF (imprimir)</button>
+      <button class="download-btn" id="p14BtnEditarTexto" style="background:var(--navy);">Editar texto</button>
+      <span class="count-note" id="p14MsgAcao"></span>
+    </div>
+  </div>
+
+</main>
+<footer>
+  <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+    <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+    É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer publicação ou lançamento em sistema oficial.
+  </p>
+  <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+</footer>
+</div>
+
+<!-- Rascunho: caixa fixa, ao alcance em qualquer ponto da página -->
+<aside class="float-draft" id="p14Draft">
+  <div class="float-draft-head">
+    <p class="float-draft-tit">Rascunho</p>
+    <button type="button" class="float-draft-toggle" id="p14DraftToggle" title="Recolher" aria-expanded="true">–</button>
+  </div>
+  <div class="float-draft-body">
+    <input type="file" id="p14Rascunho" accept="application/json">
+    <button type="button" class="link-btn" id="p14BtnExportar">Salvar (.json)</button>
+    <button type="button" class="link-btn" id="p14BtnAbrirRascunho">Abrir rascunho</button>
+    <p class="float-draft-nota" id="p14DraftNota">nada preenchido ainda</p>
+  </div>
+</aside>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.worker.min.js"></script>
+<script src="vendor/xlsx.min.js"></script>
+<script src="core.js"></script>
+<script src="ponto14_logic.js"></script>
+<script src="ferramentas.js"></script>
+<script src="layout.js"></script>
+</body></html>

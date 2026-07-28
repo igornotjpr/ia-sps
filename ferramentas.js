@@ -52,6 +52,16 @@ const FERRAMENTAS=[
     descricao:"Lê o formulário de abertura do processo seletivo (PDF do SEI), permite conferir/editar as respostas e gera o texto completo do Edital de Abertura a partir do modelo adequado."
   },
   {
+    arquivo:"ponto_14.html",
+    secao:"sps",
+    ponto:"14",
+    emoji:"🪑",
+    cor:"--navy",
+    eyebrow:"Ensalamento dos candidatos",
+    titulo:"Gerador do Edital de Ensalamento",
+    descricao:"Lê o formulário de abertura (PDF do SEI) e o Relatório de inscritos da Fábrica de Provas, monta a tabela dos candidatos com inscrição deferida e gera o Edital de Ensalamento em blocos, prontos para colar no Athos."
+  },
+  {
     arquivo:"ponto_18.html",
     secao:"sps",
     ponto:"18",
