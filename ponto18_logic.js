@@ -107,39 +107,106 @@ function lerDataBarra(txt){
   var d=new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
   return isNaN(d.getTime()) ? null : d;
 }
-// Botão 📅 ao lado do campo de data: abre um <input type="date"> nativo oculto.
-function ativarBotaoCalendario(el){
+// Máscara de horário: reconstrói a partir dos dígitos enquanto se digita
+// ("1400" -> "14h00") e só normaliza para "14h00min" ao sair do campo — assim
+// não atrapalha quem ainda está no meio da digitação. Mesmo comportamento do
+// Ponto 14.
+function ativarMascaraHora(el){
   if(!el) return;
-  if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
+  el.addEventListener('input',function(){
+    // valor já pronto (veio do seletor 🕐): não desmontar o "min" do fim
+    if(/^\d{2}h\d{2}min$/.test(el.value)) return;
+    var d=el.value.replace(/\D/g,'').slice(0,4);
+    var out=d.slice(0,2);
+    if(d.length>2) out+='h'+d.slice(2,4);
+    el.value=out;
+  });
+  el.addEventListener('blur',function(){
+    var o=interpretarHora(el.value);
+    el.value = o ? fmtHora(o) : '';
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+}
+// {h:14,m:30} -> "14:30", formato exigido pelo <input type="time">
+function horaParaInput(hora){
+  if(!hora) return '';
+  return String(hora.h).padStart(2,'0')+':'+String(hora.m).padStart(2,'0');
+}
+
+/* Embrulho comum dos botões 📅 e 🕐: o campo visível continua sendo um texto
+   livre (digitação com máscara) e o seletor nativo fica escondido ao lado,
+   só para quem preferir escolher com o mouse. */
+function embrulharComBotao(el, rotulo, emoji, compacto){
   var wrap=document.createElement('span');
   wrap.className='campo-data-wrap';
-  wrap.style.cssText='display:flex;align-items:stretch;gap:6px;width:100%;';
+  wrap.style.cssText='display:flex;align-items:stretch;gap:'+(compacto?'4px':'6px')+';width:100%;position:relative;';
   el.parentNode.insertBefore(wrap, el);
   // min-width:0 é o que permite ao campo encolher dentro do rótulo; sem ele o
-  // input mantém a largura intrínseca e empurra o botão 📅 para fora da caixa.
+  // input mantém a largura intrínseca e empurra o botão para fora da caixa.
   el.style.flex='1 1 auto'; el.style.width='auto'; el.style.minWidth='0';
   wrap.appendChild(el);
 
   var btn=document.createElement('button');
-  btn.type='button'; btn.className='date-pick-btn'; btn.title='Abrir calendário';
-  btn.setAttribute('aria-label','Abrir calendário');
-  btn.textContent='📅';
+  btn.type='button';
+  btn.className='date-pick-btn'+(compacto?' date-pick-btn-mini':'');
+  btn.title=rotulo;
+  btn.setAttribute('aria-label',rotulo);
+  btn.textContent=emoji;
+  btn.tabIndex=-1;                     // o Tab continua saltando de campo em campo
   wrap.appendChild(btn);
+  return { wrap:wrap, btn:btn };
+}
+
+// Botão 📅 ao lado do campo de data: abre um <input type="date"> nativo oculto.
+// `opcoes.ler` / `opcoes.escrever` permitem usar o mesmo botão em campos que não
+// estão em dd/mm/aaaa (a data da assinatura, por exemplo, é por extenso).
+function ativarBotaoCalendario(el, opcoes){
+  if(!el) return;
+  if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
+  var ler=(opcoes && opcoes.ler) || lerDataBarra;
+  var escrever=(opcoes && opcoes.escrever) || fmtDataBarra;
+  var w=embrulharComBotao(el, 'Abrir calendário', '📅', opcoes && opcoes.compacto);
 
   var nativo=document.createElement('input');
   nativo.type='date';
   nativo.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-  wrap.appendChild(nativo);
+  w.wrap.appendChild(nativo);
 
-  btn.addEventListener('click',function(){
-    var d=lerDataBarra(el.value);
+  w.btn.addEventListener('click',function(){
+    var d=ler(el.value);
     nativo.value = d ? (d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')) : '';
     if(nativo.showPicker) nativo.showPicker(); else nativo.click();
   });
   nativo.addEventListener('change',function(){
     if(!nativo.value) return;
     var p=nativo.value.split('-');
-    el.value=p[2]+'/'+p[1]+'/'+p[0];
+    el.value=escrever(new Date(Number(p[0]), Number(p[1])-1, Number(p[2])));
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+}
+
+// Botão 🕐 ao lado de um campo de horário: abre o seletor nativo (roda do mouse
+// ou lista do navegador) e devolve o valor já como "14h00min".
+function ativarBotaoRelogio(el, compacto){
+  if(!el) return;
+  if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
+  var w=embrulharComBotao(el, 'Abrir seletor de horário', '🕐', compacto);
+
+  var nativo=document.createElement('input');
+  nativo.type='time';
+  nativo.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+  w.wrap.appendChild(nativo);
+
+  w.btn.addEventListener('click',function(){
+    nativo.value=horaParaInput(interpretarHora(el.value));
+    if(nativo.showPicker) nativo.showPicker(); else nativo.click();
+  });
+  nativo.addEventListener('change',function(){
+    if(!nativo.value) return;
+    var p=nativo.value.split(':');
+    el.value=fmtHora({h:Number(p[0]), m:Number(p[1])});
+    el.dispatchEvent(new Event('input',{bubbles:true}));
     el.dispatchEvent(new Event('change',{bubbles:true}));
   });
 }
@@ -623,7 +690,7 @@ function tabelaDoBloco(lista, mostrarHora){
   var h='<div class="table-scroll" style="max-height:none;"><table class="cv-grade-table" style="white-space:normal;font-family:\'Barlow\',system-ui,sans-serif;font-size:12.5px;">';
   h+='<thead><tr><th style="width:30px;"></th><th style="width:34px;">#</th><th style="width:96px;">Inscrição</th><th>Nome do estudante</th><th style="width:70px;">Nota</th>';
   if(estado.cols.reserva) h+='<th style="width:86px;">Reserva</th>';
-  if(mostrarHora)         h+='<th style="width:84px;">Horário</th>';
+  if(mostrarHora)         h+='<th style="width:112px;">Horário</th>';   // campo + botão 🕐
   if(estado.cols.link)    h+='<th style="width:190px;">Link (texto e endereço)</th>';
   h+='<th style="width:190px;">E-mail</th><th style="width:60px;">Ações</th></tr></thead><tbody>';
   lista.forEach(function(c){
@@ -644,7 +711,7 @@ function tabelaDoBloco(lista, mostrarHora){
         h+='<option value="'+esc(c.reserva)+'" selected>'+esc(c.reserva)+'</option>';
       h+='</select></td>';
     }
-    if(mostrarHora) h+='<td>'+inputCel('hora', fmtHora(c.hora), '68px', true)+'</td>';
+    if(mostrarHora) h+='<td>'+inputCel('hora', fmtHora(c.hora), '58px', true)+'</td>';
     if(estado.cols.link){
       h+='<td>'+inputCel('linkTexto', c.linkTexto, '150px', false)
         +'<div style="height:4px;"></div>'+inputCel('linkUrl', c.linkUrl, '150px', false)+'</td>';
@@ -677,14 +744,14 @@ function renderQuadro(){
     h+='<div class="bloco-dia-horarios">'
       +'<label class="campo-check"><input type="radio" name="modo_'+d.id+'" class="p18ModoHora" data-dia="'+d.id+'" value="individual"'+(individual?' checked':'')+'> um horário por candidato</label>';
     if(individual){
-      h+='<label class="campo-vert">a partir de<input type="text" class="p18HoraIni" data-dia="'+d.id+'" value="'+esc(d.horaInicial)+'" style="width:88px;text-align:center;"></label>'
+      h+='<label class="campo-vert campo-hora">a partir de<input type="text" class="p18HoraIni" data-dia="'+d.id+'" value="'+esc(d.horaInicial)+'" placeholder="14h00min"></label>'
         +'<label class="campo-vert">intervalo (min)<input type="number" class="p18Interv" data-dia="'+d.id+'" value="'+esc(d.intervalo)+'" min="0" max="240"></label>'
         +'<button type="button" class="link-btn p18DiaAct" data-a="horarios" data-dia="'+d.id+'">Preencher horários</button>';
     }
     h+='<span style="width:1px;align-self:stretch;background:var(--paper-dark);"></span>'
       +'<label class="campo-check"><input type="radio" name="modo_'+d.id+'" class="p18ModoHora" data-dia="'+d.id+'" value="geral"'+(individual?'':' checked')+'> mesmo horário para todos</label>';
     if(!individual){
-      h+='<label class="campo-vert">horário do dia<input type="text" class="p18HoraGeral" data-dia="'+d.id+'" value="'+esc(d.horarioGeral)+'" placeholder="14h00min" style="width:110px;text-align:center;"></label>';
+      h+='<label class="campo-vert campo-hora">horário do dia<input type="text" class="p18HoraGeral" data-dia="'+d.id+'" value="'+esc(d.horarioGeral)+'" placeholder="14h00min"></label>';
     }
     h+='</div>';
 
@@ -719,6 +786,9 @@ function ligarEventosDoQuadro(){
   // só os avisos são refeitos. Assim o Tab nativo continua funcionando e o
   // foco nunca se perde no meio da digitação.
   Array.prototype.forEach.call(q.querySelectorAll('.p18In'), function(inp){
+    // A máscara entra ANTES dos ouvintes de estado: assim o commit já lê o valor
+    // formatado ("1400" -> "14h00"), e não o que estava na tela antes dela.
+    if(inp.dataset.f==='hora'){ ativarMascaraHora(inp); ativarBotaoRelogio(inp, true); }
     inp.addEventListener('input', function(){ commitCampo(inp); atualizarAvisos(); });
     inp.addEventListener('change', function(){ commitCampo(inp); normalizarExibicao(inp); atualizarAvisos(); });
   });
@@ -745,6 +815,8 @@ function ligarEventosDoQuadro(){
     });
   });
   Array.prototype.forEach.call(q.querySelectorAll('.p18HoraIni'), function(inp){
+    ativarMascaraHora(inp);
+    ativarBotaoRelogio(inp);
     inp.addEventListener('input', function(){
       var d=diaPorId(Number(inp.dataset.dia));
       if(d) d.horaInicial=inp.value;
@@ -757,6 +829,8 @@ function ligarEventosDoQuadro(){
     });
   });
   Array.prototype.forEach.call(q.querySelectorAll('.p18HoraGeral'), function(inp){
+    ativarMascaraHora(inp);
+    ativarBotaoRelogio(inp);
     inp.addEventListener('input', function(){
       var d=diaPorId(Number(inp.dataset.dia));
       if(d) d.horarioGeral=inp.value;
@@ -1389,6 +1463,20 @@ var MESES_EXTENSO=['janeiro','fevereiro','março','abril','maio','junho',
 function formatarDataExtenso(d){
   return d.getDate()+' de '+MESES_EXTENSO[d.getMonth()]+' de '+d.getFullYear();
 }
+// "27 de julho de 2026" -> Date. Aceita também 27/07/2026 (quem digita costuma
+// usar as barras) e o mês sem acento — é só para posicionar o calendário.
+function lerDataExtenso(txt){
+  var s=String(txt||'').trim();
+  var d=lerDataBarra(s);
+  if(d) return d;
+  var m=/(\d{1,2})\s+de\s+([A-Za-zÀ-ÿ]+)\s+de\s+(\d{4})/i.exec(s);
+  if(!m) return null;
+  var alvo=semAcento(m[2]).toLowerCase();
+  var mes=MESES_EXTENSO.map(function(x){ return semAcento(x).toLowerCase(); }).indexOf(alvo);
+  if(mes<0) return null;
+  var dt=new Date(Number(m[3]), mes, Number(m[1]));
+  return isNaN(dt.getTime()) ? null : dt;
+}
 // Próximo dia útil a partir de hoje — mesma conta do Ponto 20. Só sábado e
 // domingo são pulados: não há tabela de feriados embutida, e inventar uma que
 // envelhece em silêncio seria pior do que pedir a conferência ao usuário.
@@ -1704,6 +1792,8 @@ function iniciar(){
 
   // ---- passo 5 (Athos)
   estado.doc.dataAthos=formatarDataExtenso(proximoDiaUtil(new Date()));
+  // a data da assinatura é por extenso: o 📅 escreve nesse mesmo formato
+  ativarBotaoCalendario($('p18F_dataAthos'), { ler:lerDataExtenso, escrever:formatarDataExtenso });
   $('p18BtnAthos').addEventListener('click', montarBlocosAthos);
   $('p18BtnCopiarAthos').addEventListener('click', copiarTudoAthos);
   Array.prototype.forEach.call(document.querySelectorAll('.p18-bloco-copiar'), function(b){

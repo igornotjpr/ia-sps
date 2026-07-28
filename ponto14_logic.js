@@ -48,9 +48,22 @@ var MESES = ['janeiro','fevereiro','março','abril','maio','junho',
 
 function pad2(n){ return String(n).padStart(2,'0'); }
 
+/* O bloco de Data do Athos leva SÓ a data por extenso: nem a cidade nem o ponto
+   final — os dois vêm do próprio modelo de blocos. */
 function hojeExtenso(){
   var d = new Date();
-  return 'Curitiba, ' + pad2(d.getDate()) + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear();
+  return pad2(d.getDate()) + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear();
+}
+
+/* Reduz o que estiver no campo à data por extenso: "Curitiba, 28 de julho de
+   2026." -> "28 de julho de 2026". Serve tanto para o que o usuário digita
+   quanto para rascunhos antigos, salvos quando o local ainda entrava no bloco. */
+function somenteDataExtenso(txt){
+  var s = colapsa(txt);
+  if(!s) return '';
+  var m = /(\d{1,2}\s+de\s+[A-Za-zÀ-ÿ]+\s+de\s+\d{4})/i.exec(s);
+  if(m) return colapsa(m[1]);
+  return s.replace(/^[^,]+,\s*/,'').replace(/\.\s*$/,'');   // sem data reconhecível: tira local e ponto
 }
 
 // dd/mm/aaaa -> Date (ou null). Valida o dia de verdade: 31/02 não passa.
@@ -362,13 +375,34 @@ var TITULOS = [
   ['vl','Vila'], ['pq','Parque'], ['cj','Conjunto'], ['bl','Bloco'], ['visc','Visconde']
 ];
 
-/* Normaliza o endereço para o padrão publicado nos editais:
-   "Rua Fulano de Tal, nº 500, Bairro, Cidade-PR, CEP 00.000-000".
-   Nunca inventa dado: se o formulário não trouxe bairro, cidade ou CEP, eles
-   simplesmente não aparecem — e a ferramenta avisa o usuário. */
-function normalizarEndereco(bruto){
+var UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB',
+           'PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+/* Marcador interno que gruda na parte do endereço em que estava a sigla do
+   estado — é assim que sabemos qual dos pedaços é a cidade. Some no fim. */
+var MARCA_UF = '\u0001';
+
+var CEP_PLACEHOLDER = 'XXXXXX';
+
+/* Começo de logradouro (para achar onde o endereço começa de fato) e começo
+   típico de nome de bairro (para desempatar bairro × cidade). */
+var RE_LOGRADOURO = /^(Rua|Avenida|Pra[çc]a|Rodovia|Estrada|Alameda|Travessa|Largo|Linha|Quadra|Via|Marginal|Passeio|Servid[ãa]o)\b/i;
+var RE_BAIRRO = /^(Centro|Bairro|Jardim|Vila|Parque|Conjunto|Distrito|Alto|Núcleo|Nucleo|Colônia|Colonia|Chácara|Chacara|Balneário|Balneario|Loteamento|Zona|Cidade Industrial)\b/i;
+/* Complemento: sala, andar, bloco e afins. As palavras que também são nome de
+   bairro só contam como complemento quando vêm seguidas do identificador
+   ("Sala 5", "Bloco B") — "Casa da Cultura" e "Conjunto Solar" continuam bairro. */
+var RE_COMPLEMENTO = /^(?:(?:salas?|loja|bloco|bl\.?|apto\.?|apartamento|casa|lote|pavimento|andar)\s*\.?\s*(?:\d|[A-Za-z]\b)|\d+\s*[ºo°]?\s*(?:andar|pavimento)|t[ée]rreo|fundos|anexo|sobreloja|mezanino)/i;
+
+/* Reescreve o endereço no padrão publicado nos editais:
+   "Rua Fulano de Tal, nº 500 - Centro, Palmeira - PR, CEP 84.130-000".
+   Sem CEP no formulário, sai "CEP XXXXXX" para ser completado à mão (a linha
+   ENDEREÇO do edital acrescenta o ponto final).
+   Nada é inventado em silêncio: cada dedução e cada peça faltante vira uma nota
+   em `notas`, mostrada na caixa de avisos junto com o texto original. */
+function analisarEndereco(bruto){
+  var notas = [];
   var s = colapsa(bruto);
-  if(!s) return '';
+  if(!s) return { texto:'', notas:notas };
   s = s.replace(/\.\s*$/,'');
   s = ehCaixaUniforme(s) ? tituloCase(s) : capitalizarMinusculas(s);
 
@@ -379,27 +413,101 @@ function normalizarEndereco(bruto){
     s = s.replace(new RegExp('\\b'+t[0]+'\\.\\s*','gi'), t[1]+' ');
   });
 
-  // CEP sai da frente antes das demais regras (senão o "nº" seria inserido nele)
+  // 1) CEP sai da frente antes de tudo: senão seus 8 dígitos seriam tomados
+  //    pelo número do imóvel.
   var cep = '';
-  s = s.replace(/\b(?:cep\s*:?\s*)?(\d{2})\.?(\d{3})\s*-?\s*(\d{3})\b/i, function(_,a,b,c){
-    cep = a+'.'+b+'-'+c; return '';
+  s = s.replace(/\bcep\b\s*:?\s*/i, ' ');
+  s = s.replace(/\b(\d{2})\.?\s?(\d{3})\s*-?\s*(\d{3})\b/, function(_,a,b,c){
+    cep = a+'.'+b+'-'+c; return ' ';
   });
+  s = s.replace(/\bX{4,}\b/i, ' ');   // "CEP XXXXXX" de um texto já gerado aqui
 
-  // "Maringá - PR" / "Palmeira/PR" -> "Maringá-PR"
-  s = s.replace(/\s*[-\/]\s*(PR|Paran[áa])\b\.?/i,'-PR');
-  // separadores " - " viram vírgula; hífens sem espaço (Palmeira-PR) ficam
-  s = s.replace(/\s+-\s*|\s*-\s+/g, ', ');
-  // "nº" antes do número do imóvel
-  s = s.replace(/,\s*(?:n[º°o]?\.?\s*)?(\d{1,6})\b/i, ', nº $1');
-  if(!/n[º°]\s*\d/i.test(s)){
-    s = s.replace(/([A-Za-zÀ-ÿ])\s+(\d{1,6})(?=\s*,|$)/, '$1, nº $2');
+  // 2) sigla do estado: sai da string e volta no fim, colada à cidade.
+  //    O limite é (?![letra]) e não \b: em "Paraná," o \b não vale, porque o
+  //    "á" já não é caractere de palavra para o JavaScript.
+  var uf = '';
+  var alt = UFS.join('|') + '|Paran[áa]';
+  var fim = '(?![A-Za-zÀ-ÿ])\\.?';
+  s = s.replace(new RegExp('\\s*[-\\/,]\\s*(' + alt + ')' + fim, 'i'), function(_, sig){
+    uf = /paran/i.test(sig) ? 'PR' : sig.toUpperCase(); return MARCA_UF;
+  });
+  if(!uf){   // "Palmeira PR", sem separador nenhum
+    s = s.replace(new RegExp('\\s+(' + alt + ')' + fim + '\\s*$', 'i'), function(_, sig){
+      uf = /paran/i.test(sig) ? 'PR' : sig.toUpperCase(); return MARCA_UF;
+    });
   }
 
-  s = s.replace(/\s*,\s*/g,', ').replace(/(,\s*)+,/g,', ').replace(/^,\s*|,\s*$/g,'');
-  s = colapsa(s);
-  if(cep) s += ', CEP ' + cep;
-  return s;
+  // 3) o que sobrou dos pedaços retirados vira separador solto ("- ,"): junta
+  s = colapsa(s).replace(/\s*[-,;]\s*(?=[-,;])/g, '').replace(/^[-,;\s]+|[-,;\s]+$/g,'');
+
+  // 4) pedaços: nos formulários, vírgula e " - " são o mesmo separador
+  var partes = s.split(/\s*[,;]\s*|\s+-\s+/).map(colapsa).filter(Boolean);
+
+  // 5) o formulário às vezes traz o nome do prédio antes do endereço ("Fórum de
+  //    Palmeira, Avenida 7 de Abril, 571"): tudo que vem antes do logradouro
+  //    fica junto dele, nada é descartado.
+  var iLog = -1;
+  for(var q=0; q<partes.length && q<3; q++){ if(RE_LOGRADOURO.test(partes[q])){ iLog = q; break; } }
+  if(iLog > 0) partes.splice(0, iLog+1, partes.slice(0, iLog+1).join(', '));
+
+  // 6) número do imóvel: pedaço só com o número, ou grudado no fim do logradouro
+  var num = '';
+  for(var k=0; k<partes.length; k++){
+    var m = /^(?:n[º°o]?\.?\s*)?(\d{1,6}\s?[A-Za-z]?)$/i.exec(partes[k]);
+    if(m){ num = colapsa(m[1]); partes.splice(k,1); break; }
+    if(/^(?:n[º°o]?\.?\s*)?s\/?\s*n[º°]?\.?$/i.test(partes[k]) || /^sem\s+n[úu]mero$/i.test(partes[k])){
+      num = 's/n'; partes.splice(k,1); break;
+    }
+  }
+  if(!num && partes.length){
+    partes[0] = partes[0].replace(/([A-Za-zÀ-ÿ.])\s*,?\s*(?:n[º°o]?\.?\s*)?(\d{1,6}[A-Za-z]?)$/i,
+      function(_, antes, n){ num = n; return antes; });
+    partes[0] = colapsa(partes[0]).replace(/[,\s]+$/,'');
+  }
+
+  // 7) complemento (sala, andar, bloco…): fica junto do número, que é onde o
+  //    edital o publica — sem ele o bairro sairia com "Sala 5" na frente
+  var compl = [];
+  for(var c2=partes.length-1; c2>=0; c2--){
+    if(RE_COMPLEMENTO.test(partes[c2])) compl.unshift(partes.splice(c2,1)[0]);
+  }
+
+  // 8) logradouro, bairro e cidade
+  var logradouro = partes.shift() || '';
+  var cidade = '';
+  for(var j=0; j<partes.length; j++){
+    if(partes[j].indexOf(MARCA_UF) >= 0){
+      cidade = colapsa(partes[j].split(MARCA_UF).join(' '));
+      partes.splice(j,1);
+      break;
+    }
+  }
+  // Sem sigla de estado não há como saber, com certeza, se o último pedaço é
+  // bairro ou cidade. Sobrando mais de um, o último é a cidade; sobrando um só,
+  // decide pelo jeito do nome ("Centro", "Jardim das Flores" são bairro).
+  if(!cidade && partes.length > 1) cidade = partes.pop();
+  else if(!cidade && partes.length === 1 && !RE_BAIRRO.test(partes[0])) cidade = partes.pop();
+  var bairro = colapsa(partes.join(', ').split(MARCA_UF).join(' '));
+  logradouro = colapsa(logradouro.split(MARCA_UF).join(' '));
+
+  var texto = logradouro;
+  if(num)          texto += ', ' + (num === 's/n' ? 's/n' : 'nº ' + num);
+  if(compl.length) texto += ', ' + compl.join(', ');
+  if(bairro)       texto += ' - ' + bairro;
+  if(cidade) texto += ', ' + cidade + ' - ' + (uf || 'PR');
+  else if(uf) texto += ', ' + uf;
+  texto += ', CEP ' + (cep || CEP_PLACEHOLDER);
+
+  if(!num)    notas.push('não foi possível identificar o número do imóvel');
+  if(!bairro) notas.push('o bairro não foi identificado');
+  if(!cidade) notas.push('a cidade não foi identificada');
+  else if(!uf) notas.push('o estado não veio no formulário — foi impresso “- PR”');
+  if(!cep)    notas.push('o formulário não trouxe CEP — saiu “CEP ' + CEP_PLACEHOLDER + '”, complete antes de publicar');
+
+  return { texto: colapsa(texto), notas: notas };
 }
+
+function normalizarEndereco(bruto){ return analisarEndereco(bruto).texto; }
 
 function normalizarLocal(bruto){
   var s = colapsa(bruto);
@@ -457,17 +565,21 @@ function lerFormularioTexto(texto){
   out.localBruto = loc || '';
   out.enderecoBruto = end || '';
   out.local = normalizarLocal(loc || '');
-  out.endereco = normalizarEndereco(end || '');
+  var infoEnd = analisarEndereco(end || '');
+  out.endereco = infoEnd.texto;
 
   if(out.modalidade === 'Presencial'){
     if(!out.local)    avisos.push('Prova presencial, mas o campo "Local ou unidade para a realização da prova presencial" está vazio no formulário — preencha manualmente.');
     if(!out.endereco) avisos.push('Prova presencial, mas o campo "Endereço do local ou unidade" está vazio no formulário — preencha manualmente.');
     if(pareceTruncado(out.localBruto))    avisos.push('O LOCAL parece ter sido cortado pelo formulário do SEI ("'+out.localBruto+'") — confira e complete.');
     if(pareceTruncado(out.enderecoBruto)) avisos.push('O ENDEREÇO parece ter sido cortado pelo formulário do SEI ("'+out.enderecoBruto+'") — confira e complete.');
-    if(out.endereco && !/CEP/i.test(out.endereco))
-      avisos.push('O endereço foi normalizado automaticamente, mas não traz CEP. Confira bairro, cidade-PR e CEP antes de publicar.');
-    else if(out.endereco && out.endereco !== colapsa(out.enderecoBruto))
-      avisos.push('O endereço foi normalizado automaticamente ("'+colapsa(out.enderecoBruto)+'" → "'+out.endereco+'"). Confira antes de publicar.');
+    // Toda mudança no endereço é declarada, com o texto original ao lado do
+    // publicado, para o usuário conferir peça por peça.
+    if(out.endereco && out.endereco !== colapsa(out.enderecoBruto)){
+      avisos.push('O ENDEREÇO foi padronizado. Original do formulário: "'+colapsa(out.enderecoBruto)
+        + '". Como será publicado: "'+out.endereco+'". Confira antes de publicar.');
+    }
+    infoEnd.notas.forEach(function(n){ avisos.push('ENDEREÇO — ' + n + '.'); });
     if(out.local && out.local !== colapsa(out.localBruto))
       avisos.push('O local foi ajustado automaticamente ("'+colapsa(out.localBruto)+'" → "'+out.local+'"). Confira antes de publicar.');
   }
@@ -802,12 +914,14 @@ function gerarBlocos(){
   // 2 — Preâmbulo: dois pedaços copiáveis em separado
   b['2a'] = '<p class="ed-c ed-b">ENSALAMENTO</p>';
   b['2b'] = '<p class="ed-c ed-b">' + esc((est.unidade||'').toUpperCase()) + '</p>';
-  // 3 — Numeração
-  b[3] = '<p class="ed-c ed-b">SEI!TJPR N° ' + esc(textoNumSei()) + '</p>';
+  // 3 — Numeração: só o número. O rótulo "SEI!TJPR N°" já é impresso pelo
+  // próprio modelo de blocos do Athos — se viesse junto na cópia, sairia
+  // duplicado. Ele só reaparece no PDF (ver cabecalhoPDFHTML).
+  b[3] = '<p class="ed-c ed-b">' + esc(textoNumSei()) + '</p>';
   // 4 — Conteúdo
   b[4] = corpoEditalHTML();
-  // 5 — Data
-  b[5] = '<p class="ed-c">' + esc((est.dataAss || hojeExtenso()).replace(/\.\s*$/,'')) + '.</p>';
+  // 5 — Data: só "28 de julho de 2026" (sem local e sem ponto final)
+  b[5] = '<p class="ed-c">' + esc(somenteDataExtenso(est.dataAss) || hojeExtenso()) + '</p>';
   // 6 — Quem assina
   var b6 = '';
   if(est.assinanteNome) b6 += '<p class="ed-c ed-b">' + esc(est.assinanteNome.toUpperCase()) + '</p>';
@@ -886,16 +1000,49 @@ function aviso(msg){
   setTimeout(function(){ if(n.textContent === msg) n.textContent = ''; }, 6000);
 }
 
+/* Texto puro de um bloco, já com as edições feitas à mão nos quadros. */
+function textoBloco(n){
+  var el = elBloco(n);
+  return el ? colapsa(el.textContent || '') : '';
+}
+
+/* No Athos o preâmbulo é montado pelo modelo (que acrescenta "EDITAL DE" e o
+   rótulo "SEI!TJPR N°"); por isso os blocos 2 e 3 saem só com o miolo. O PDF não
+   passa pelo modelo, então reconstrói aqui o cabeçalho completo, em três linhas:
+   EDITAL DE ENSALAMENTO / SEI!TJPR N° 0000000-00.0000.0.00.0000 / UNIDADE.
+   O bloco 1 (nome do documento) é interno do SEI e não entra no PDF. */
+function cabecalhoPDFHTML(){
+  var linhas = [];
+  var tipo = (textoBloco('2a') || 'ENSALAMENTO').toUpperCase();
+  linhas.push(/^EDITAL\b/.test(tipo) ? tipo : 'EDITAL DE ' + tipo);
+  var num = textoBloco('3');
+  if(num) linhas.push('SEI!TJPR N° ' + num);
+  var unidade = textoBloco('2b');
+  if(unidade) linhas.push(unidade.toUpperCase());
+  return linhas.map(function(l){
+    return '<p align="center" style="text-align:center;margin:0;line-height:'
+      + ED_ENTRELINHA_PDF + ';"><b>' + esc(l) + '</b></p>';
+  }).join('');
+}
+
+var IDS_BLOCOS_PDF = ['4','5','6'];
+
 function baixarPDF(){
   var w = window.open('','_blank');
   if(!w){ aviso('O navegador bloqueou a janela de impressão — permita pop-ups para esta página.'); return; }
+  var corpo = IDS_BLOCOS_PDF.map(elBloco).filter(Boolean)
+    .map(function(el){ return htmlComEstilosInline(el, ED_ENTRELINHA_PDF); })
+    .join('<div class="p14-espaco"></div>');
   w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'
     + '<title>Edital de Ensalamento</title><style>'
     + '@page{margin:2.5cm 2cm;} body{font-family:Calibri,"Carlito",Arial,sans-serif;font-size:11pt;line-height:1.15;color:#000;}'
     + 'table{border-collapse:collapse;width:100%;} td{border:1pt solid #000;padding:4px 8px;text-align:left;}'
     + '.p14-espaco{height:12pt;}'
     + '</style></head><body>'
-    + blocosEls().map(function(el){ return htmlComEstilosInline(el, ED_ENTRELINHA_PDF); }).join('<div class="p14-espaco"></div>')
+    + '<div style="font-family:Calibri,\'Carlito\',Arial,sans-serif;font-size:11pt;">'
+    + cabecalhoPDFHTML() + '</div>'
+    + '<div class="p14-espaco"></div>'
+    + corpo
     + '</body></html>');
   w.document.close();
   w.focus();
@@ -1426,7 +1573,8 @@ if(TEM_DOM) document.addEventListener('DOMContentLoaded', function(){
    teste_ponto14_dom.js). No navegador, `module` não existe e este trecho é
    simplesmente ignorado — nada muda no funcionamento da ferramenta. */
 if(typeof module !== 'undefined' && module.exports){
-  module.exports = { lerFormularioTexto, lerMatrizInscritos, normalizarEndereco, normalizarLocal,
+  module.exports = { lerFormularioTexto, lerMatrizInscritos, normalizarEndereco, analisarEndereco,
+                     normalizarLocal, somenteDataExtenso,
                      lerDuracao, lerHora, fmtHora, fmtDuracao, somarHoras, lerListaColada,
                      limpaInscricao, campoForm, linhasDoFormulario, extrairSei,
                      linhasDataHora, gerarBlocos, hojeExtenso,

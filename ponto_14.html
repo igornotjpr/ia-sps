@@ -185,8 +185,8 @@
         </label>
         <label class="ed-campo ed-campo-full" id="p14EnderecoWrap">
           <span>Endereço <span class="ed-auto">automático</span></span>
-          <input type="text" id="p14Endereco" placeholder="Ex: Avenida 7 de Abril, nº 571, Centro, Palmeira-PR, CEP 84.130-000">
-          <small>Só para prova presencial. Abreviaturas são expandidas automaticamente; bairro, cidade-PR e CEP precisam ser conferidos.</small>
+          <input type="text" id="p14Endereco" placeholder="Ex: Avenida 7 de Abril, nº 571 - Centro, Palmeira - PR, CEP 84.130-000">
+          <small>Só para prova presencial. O endereço do formulário é reescrito no padrão <em>Rua, nº 000 - Bairro, Cidade - PR, CEP 00.000-000</em>; sem CEP no formulário sai <em>CEP XXXXXX</em>, para completar à mão. Toda alteração é listada na caixa de avisos, com o texto original.</small>
         </label>
       </div>
       <div id="p14NotaOnline" class="notice-banner" style="display:none;">
@@ -218,8 +218,9 @@
       <p class="ed-grupo-tit">Data e assinatura</p>
       <div class="ed-grid">
         <label class="ed-campo">
-          <span>Local e data da assinatura</span>
-          <input type="text" id="p14DataAss" placeholder="Ex: Curitiba, 28 de julho de 2026">
+          <span>Data da assinatura</span>
+          <input type="text" id="p14DataAss" placeholder="Ex: 28 de julho de 2026">
+          <small>O bloco de Data leva só a data por extenso — o local e o ponto final vêm do modelo do Athos.</small>
         </label>
         <label class="ed-campo">
           <span>Nome de quem assina</span>
@@ -239,7 +240,7 @@
   <!-- ============================ 4 ============================ -->
   <div class="step" id="p14Etapa5" style="display:none;">
     <div class="step-head"><span class="step-num">4</span><p class="step-title">Blocos para o Athos</p></div>
-    <p class="step-desc">Confira o texto integralmente antes de utilizar. Cada bloco tem seu próprio botão “Copiar” e sai com parágrafo simples, sem espaçamento — pronto para colar no campo correspondente do modelo de blocos de impressão. Você também pode editar direto nos quadros (“Editar texto”), copiar tudo de uma vez ou salvar em PDF.</p>
+    <p class="step-desc">Confira o texto integralmente antes de utilizar. Cada bloco tem seu próprio botão “Copiar” e sai com parágrafo simples, sem espaçamento — pronto para colar no campo correspondente do modelo de blocos de impressão. Você também pode editar direto nos quadros (“Editar texto”), copiar tudo de uma vez ou salvar em PDF. O PDF sai como o edital publicado: sem o nome do documento e com o cabeçalho completo (EDITAL DE ENSALAMENTO / SEI!TJPR N° … / nome da unidade), que no Athos vem do próprio modelo.</p>
 
     <div id="p14Toolbar" class="ed-toolbar">
       <button type="button" data-cmd="bold" title="Negrito (Ctrl+B)"><b>N</b></button>
@@ -254,6 +255,7 @@
     <div class="ed-bloco">
       <div class="ed-bloco-head">
         <p class="ed-bloco-tit">Bloco 1 — Nome do documento</p>
+        <span style="margin-left:auto;font-size:11.5px;color:var(--ink-soft);">só para nomear o documento no SEI — não sai no PDF</span>
         <button type="button" class="link-btn p14-bloco-copiar" data-bloco="1" data-rotulo="Nome do documento">Copiar</button>
       </div>
       <div id="p14Bloco1" class="ed-bloco-conteudo" contenteditable="false"></div>
@@ -281,6 +283,7 @@
     <div class="ed-bloco">
       <div class="ed-bloco-head">
         <p class="ed-bloco-tit">Bloco 3 — Numeração</p>
+        <span style="margin-left:auto;font-size:11.5px;color:var(--ink-soft);">só o número do processo — o “SEI!TJPR N°” é do próprio modelo do Athos</span>
         <button type="button" class="link-btn p14-bloco-copiar" data-bloco="3" data-rotulo="Numeração">Copiar</button>
       </div>
       <div id="p14Bloco3" class="ed-bloco-conteudo" contenteditable="false"></div>
