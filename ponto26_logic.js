@@ -129,6 +129,21 @@
   const PDF_ROW_START_RE = /^(\d{1,3})\s+(\d{4,9})\s*(.*)$/;
   const PDF_BOILERPLATE_RE = /^(TRIBUNAL DE JUSTIÇA|Pç\.|SEI!TJPR|SEI!DOC|EDITAL[\s\u00baº°]|PROCESSO SELETIVO|GABINETE|VARA |JUIZADO|SERVI[ÇC]O DE|SECRETARIA DA|DIVIS[ÃA]O |Documento assinado|A autenticidade|assinatura|www\.tjpr)/i;
 
+  // Quando o NOME ocupa duas linhas na tabela do PDF, o gerador do edital
+  // centraliza verticalmente ORDEM/INSCRIÇÃO/NOTA/RESERVA entre as duas linhas
+  // do nome — então a leitura visual (topo -> base) sai nesta ordem:
+  //   <1ª linha do nome>
+  //   <ordem> <inscrição> <nota> [<reserva>]     (sem nenhum texto do nome)
+  //   <2ª linha do nome>
+  // Uma linha "solta" (sem ORDEM/INSCRIÇÃO no início) só pode pertencer ao
+  // registro anterior quando ele ainda estiver incompleto (a linha de
+  // ORDEM/INSCRIÇÃO não trouxe nome nenhum, só NOTA/RESERVA); caso contrário
+  // ela pertence ao próximo registro, cujo nome ainda vai começar.
+  function remainderIncompleto(remainder){
+    const r = (remainder || '').trim();
+    return r === '' || /^\d{1,3}[.,]\d{1,2}(?:\s+\d(?:[.,]\d){1,3})?$/.test(r);
+  }
+
   function pdfTextToTabela1Lines(rawText){
     const allLines = rawText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l => l.trim()).filter(l => l !== '');
 
@@ -137,7 +152,16 @@
     const scanLines = fimIdx === -1 ? allLines : allLines.slice(0, fimIdx);
 
     const rows = [];
-    let current = null;
+    let current = null;      // { ordem, inscricao, remainder, prefix[], suffix[] }
+    let pendingPrefix = [];  // linhas soltas aguardando o próximo registro
+
+    function finalizarAtual(){
+      if(!current) return;
+      const nomeExtra = current.prefix.concat(current.suffix).join(' ').trim();
+      const buffer = (nomeExtra ? nomeExtra + ' ' : '') + current.remainder;
+      rows.push({ ordem: current.ordem, inscricao: current.inscricao, buffer: buffer.trim() });
+    }
+
     scanLines.forEach(line => {
       // pula linhas de cabeçalho da tabela (podem se repetir em páginas seguintes)
       if(/ORDEM/i.test(line) && /NOME/i.test(line)) return;
@@ -146,15 +170,24 @@
 
       const m = line.match(PDF_ROW_START_RE);
       if(m){
-        if(current) rows.push(current);
-        current = { ordem: m[1], inscricao: m[2], buffer: (m[3] || '').trim() };
+        finalizarAtual();
+        current = { ordem: m[1], inscricao: m[2], remainder: (m[3] || '').trim(), prefix: pendingPrefix, suffix: [] };
+        pendingPrefix = [];
+      } else if(current && current.suffix.length === 0 && remainderIncompleto(current.remainder)){
+        // registro atual ainda não tem nome — esta linha é a 2ª linha do nome dele.
+        // Só a linha imediatamente seguinte é consumida aqui: se houver mais de uma
+        // linha solta no intervalo, as demais pertencem ao próximo registro (evita
+        // "roubar" o prefixo do próximo nome quebrado quando dois registros seguidos
+        // têm nome em duas linhas).
+        current.suffix.push(line);
       } else if(current){
-        current.buffer = (current.buffer + ' ' + line).trim();
+        // registro atual já está completo — esta linha pertence ao próximo
+        pendingPrefix.push(line);
       }
       // linhas antes do primeiro registro reconhecido (nome da unidade, número do
       // edital etc.) são ignoradas
     });
-    if(current) rows.push(current);
+    finalizarAtual();
 
     return rows.map(r => r.ordem + '\t' + r.inscricao + '\t' + r.buffer);
   }

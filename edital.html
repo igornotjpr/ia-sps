@@ -40,11 +40,36 @@
   .ed-req-mark{ display:inline-block; margin-left:6px; font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--coral); }
   .ed-campo input.ed-required.ed-empty{ border-color:var(--coral); background:#fff6f4; box-shadow:0 0 0 2px rgba(235,85,59,0.12); }
   .ed-campo.ed-req-filled .ed-req-mark{ display:none; }
-  #edSaida{
-    border:1px solid var(--line); background:#fff; padding:34px 40px; max-height:640px; overflow-y:auto;
-    font-family:Calibri,"Carlito",Arial,sans-serif; font-size:11pt; line-height:1.35; color:#000;
+  /* Blocos separados do edital gerado — cada um pensado para colar num campo
+     diferente do Athos (título, preâmbulo, numeração, conteúdo, assinatura). */
+  .ed-bloco{ margin-bottom:24px; }
+  .ed-bloco-head{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; margin-bottom:8px;
   }
-  #edSaida.ed-editando{ outline:2px solid var(--teal); background:#fffdf2; }
+  .ed-bloco-tit{
+    font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+    font-weight:700; font-size:13.5px; letter-spacing:0.03em;
+    text-transform:uppercase; color:var(--ink-soft); margin:0;
+  }
+  /* Entrelinha SIMPLES, igual à que vai para o Athos: a pré-visualização tem de
+     mostrar exatamente o que a cópia entrega. Os parágrafos ainda recebem a
+     mesma medida em estilo inline (ver aplicarEstilosInline), que é o que
+     viaja na área de transferência — aqui é só para o que for digitado no
+     modo de edição nascer com o mesmo espaçamento. */
+  .ed-bloco-conteudo{
+    border:1px solid var(--line); background:#fff; padding:26px 34px; max-height:560px; overflow-y:auto;
+    font-family:Calibri,"Carlito",Arial,sans-serif; font-size:11pt; line-height:1; color:#000;
+  }
+  .ed-bloco-conteudo.ed-editando{ outline:2px solid var(--teal); background:#fffdf2; }
+  /* opção do cabeçalho institucional */
+  .ed-opcao{
+    display:block; margin:0 0 16px; padding:10px 14px;
+    background:#f8fbfc; border:1px solid var(--line); border-left:3px solid var(--teal);
+    font-size:13px; color:var(--ink); cursor:pointer;
+  }
+  .ed-opcao input{ width:auto; margin-right:8px; vertical-align:middle; }
+  .ed-opcao small{ display:block; margin:4px 0 0 24px; font-size:11.5px; line-height:1.5; color:var(--ink-soft); }
   /* barra de formatação exibida apenas no modo de edição */
   .ed-toolbar{
     display:none;
@@ -52,9 +77,9 @@
     gap:4px;
     flex-wrap:wrap;
     border:1px solid var(--line);
-    border-bottom:none;
     background:#f8fbfc;
     padding:8px 10px;
+    margin-bottom:14px;
   }
   .ed-toolbar.show{ display:flex; }
   .ed-toolbar button{
@@ -78,9 +103,11 @@
     font-size:11px;
     color:var(--ink-soft);
   }
-  #edSaida p{ margin:0 0 8pt; }
+  /* espaço padrão entre parágrafos; o Preâmbulo e a Numeração saem compactos
+     por estilo inline (ver espacoDoBloco em edital_logic.js) */
+  .ed-bloco-conteudo p{ margin:0 0 8pt; }
   .ed-j{ text-align:justify; } .ed-c{ text-align:center; } .ed-b{ font-weight:bold; }
-  @media (max-width:640px){ .ed-grid{ grid-template-columns:1fr; } #edSaida{ padding:20px; } }
+  @media (max-width:640px){ .ed-grid{ grid-template-columns:1fr; } .ed-bloco-conteudo{ padding:18px 20px; } }
 </style>
 </head><body><div class="sheet">
 <div id="institutional-placeholder"></div>
@@ -90,7 +117,7 @@
   <div class="step step-info">
     <div class="step-head"><span class="step-num">i</span><p class="step-title">Como funciona</p></div>
     <p class="step-desc">Envie o <strong>formulário de Abertura de Processo Seletivo</strong> respondido pela unidade (PDF do SEI). A ferramenta lê as respostas, identifica qual dos 40 modelos oficiais de edital se aplica e monta o texto completo, preenchendo os campos destacados. Antes de gerar, você confere e ajusta cada campo.</p>
-    <p class="step-desc">Todo o processamento acontece no seu navegador — nenhum dado sai do computador.</p>
+    <p class="step-desc">Todo o processamento acontece no seu navegador — nenhum dado sai do computador. O trabalho pode ser salvo e retomado a qualquer momento pela caixa <strong>Rascunho</strong>, no canto inferior direito da tela: ela guarda os eixos do modelo e os campos preenchidos, não os ajustes feitos à mão em “Editar texto”.</p>
   </div>
 
   <div class="step">
@@ -119,7 +146,11 @@
 
   <div class="step" id="edEtapa3" style="display:none;">
     <div class="step-head"><span class="step-num">3</span><p class="step-title">Texto final do edital</p></div>
-    <p class="step-desc">Confira o texto integralmente antes de utilizar. Você pode editar diretamente no quadro (botão "Editar texto"), copiar tudo com formatação ou salvar em PDF.</p>
+    <p class="step-desc">Confira o texto integralmente antes de utilizar. O edital sai dividido em blocos, para colar em cada campo do Athos separadamente — cada bloco tem seu próprio botão "Copiar". Você também pode editar diretamente nos quadros (botão "Editar texto"), copiar tudo com formatação ou salvar em PDF.</p>
+    <label class="ed-opcao">
+      <input type="checkbox" id="edIncluirTribunal">Incluir a linha "TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ" no cabeçalho
+      <small>Normalmente dispensável — a plataforma onde o texto será colado já exibe o nome do órgão. Marque para impressão ou PDF avulso.</small>
+    </label>
     <div id="edToolbar" class="ed-toolbar">
       <button type="button" data-cmd="bold" title="Negrito (Ctrl+B)"><b>N</b></button>
       <button type="button" data-cmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
@@ -131,7 +162,32 @@
       <button type="button" data-cmd="justifyFull" title="Justificar"><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><line x1="1" y1="2" x2="15" y2="2" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="5.5" x2="15" y2="5.5" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="1" y1="12.5" x2="15" y2="12.5" stroke="currentColor" stroke-width="1.6"/></svg></button>
       <span class="ed-toolbar-hint">Atalhos: Ctrl+B negrito &middot; Ctrl+I itálico &middot; Ctrl+U sublinhado</span>
     </div>
-    <div id="edSaida" contenteditable="false"></div>
+    <div id="edBlocos">
+      <div class="ed-bloco">
+        <div class="ed-bloco-head"><p class="ed-bloco-tit">Bloco 1 — Título do edital</p><button type="button" class="link-btn ed-bloco-copiar" data-bloco="1">Copiar</button></div>
+        <div id="edBloco1" class="ed-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="ed-bloco">
+        <div class="ed-bloco-head"><p class="ed-bloco-tit">Bloco 2 — Preâmbulo</p><button type="button" class="link-btn ed-bloco-copiar" data-bloco="2">Copiar</button></div>
+        <div id="edBloco2" class="ed-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="ed-bloco">
+        <div class="ed-bloco-head"><p class="ed-bloco-tit">Bloco 3 — Numeração</p><button type="button" class="link-btn ed-bloco-copiar" data-bloco="3">Copiar</button></div>
+        <div id="edBloco3" class="ed-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="ed-bloco">
+        <div class="ed-bloco-head"><p class="ed-bloco-tit">Bloco 4 — Conteúdo</p><button type="button" class="link-btn ed-bloco-copiar" data-bloco="4">Copiar</button></div>
+        <div id="edBloco4" class="ed-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="ed-bloco">
+        <div class="ed-bloco-head"><p class="ed-bloco-tit">Bloco 5 — Data</p><button type="button" class="link-btn ed-bloco-copiar" data-bloco="5">Copiar</button></div>
+        <div id="edBloco5" class="ed-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="ed-bloco">
+        <div class="ed-bloco-head"><p class="ed-bloco-tit">Bloco 6 — Quem assina</p><button type="button" class="link-btn ed-bloco-copiar" data-bloco="6">Copiar</button></div>
+        <div id="edBloco6" class="ed-bloco-conteudo" contenteditable="false"></div>
+      </div>
+    </div>
     <div class="download-row" style="display:flex;">
       <button class="download-btn" id="edBtnCopiar">Copiar tudo</button>
       <button class="download-btn" id="edBtnPDF" style="background:var(--ink);">Baixar PDF (imprimir)</button>
@@ -149,6 +205,20 @@
   <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
 </footer>
 </div>
+
+<!-- Rascunho: caixa fixa, ao alcance em qualquer ponto da página -->
+<aside class="float-draft" id="edDraft">
+  <div class="float-draft-head">
+    <p class="float-draft-tit">Rascunho</p>
+    <button type="button" class="float-draft-toggle" id="edDraftToggle" title="Recolher" aria-expanded="true">–</button>
+  </div>
+  <div class="float-draft-body">
+    <input type="file" id="edRascunho" accept="application/json">
+    <button type="button" class="link-btn" id="edBtnExportar">Salvar (.json)</button>
+    <button type="button" class="link-btn" id="edBtnAbrirRascunho">Abrir rascunho</button>
+    <p class="float-draft-nota" id="edDraftNota">nada preenchido ainda</p>
+  </div>
+</aside>
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="edital_modelos.js"></script>

@@ -388,6 +388,47 @@
     URL.revokeObjectURL(url);
   });
 
+  // ---- Data do próximo dia útil (copiar e colar no Athos) ----
+  const MESES_EXTENSO = ['janeiro','fevereiro','março','abril','maio','junho',
+    'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+  function proximoDiaUtil(base){
+    const d = new Date(base);
+    d.setDate(d.getDate() + 1);
+    while(d.getDay() === 0 || d.getDay() === 6){
+      d.setDate(d.getDate() + 1);
+    }
+    return d;
+  }
+
+  function formatarDataExtenso(d){
+    return d.getDate() + ' de ' + MESES_EXTENSO[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  const dateText = document.getElementById('p20DateText');
+  const dateCopyBtn = document.getElementById('p20DateCopyBtn');
+  if(dateText){
+    dateText.textContent = formatarDataExtenso(proximoDiaUtil(new Date()));
+  }
+  if(dateCopyBtn && dateText){
+    dateCopyBtn.addEventListener('click', async function(){
+      const plain = dateText.textContent.trim();
+
+      function showCopied(){
+        const original = dateCopyBtn.textContent;
+        dateCopyBtn.textContent = 'Copiado!';
+        setTimeout(() => { dateCopyBtn.textContent = original; }, 1800);
+      }
+
+      try{
+        await navigator.clipboard.writeText(plain);
+        showCopied();
+      }catch(err){
+        alert('Não foi possível copiar automaticamente. Selecione a data e use Ctrl+C.');
+      }
+    });
+  }
+
   // ---- Bloco de assinatura do chefe da unidade (copiar e colar) ----
   const sigCopyBtn = document.getElementById('p20SigCopyBtn');
   const sigText = document.getElementById('p20SigText');
