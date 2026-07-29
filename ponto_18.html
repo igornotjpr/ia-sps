@@ -83,11 +83,18 @@
     </div>
 
     <div class="upload-panel" style="gap:14px 22px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);">Modalidade
+        <select id="p18F_modalidade" style="padding:6px 8px;border:1px solid var(--line);background:#fffdf7;font-family:'Barlow',system-ui,sans-serif;font-size:13px;">
+          <option value="Presencial">Presencial</option>
+          <option value="On-line">On-line</option>
+        </select>
+      </label>
+      <span style="width:1px;align-self:stretch;background:var(--paper-dark);"></span>
       <span style="font-size:13px;color:var(--ink-soft);">Colunas extras:</span>
       <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="p18ColReserva"> Reserva</label>
       <label id="p18CampoColLink" style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="p18ColLink"> Link</label>
       <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="p18ColEmail"> E-mail</label>
-      <span class="file-name">Data e Horário aparecem sozinhos, conforme a alocação</span>
+      <span class="file-name">a modalidade define a coluna Link e os campos do passo 3; Data e Horário aparecem sozinhos, conforme a alocação</span>
     </div>
 
     <div class="painel-nova-data">
@@ -130,12 +137,6 @@
       <label style="font-size:12.5px;color:var(--ink-soft);">Ano do processo seletivo<br><input type="text" id="p18F_ano" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);">Protocolo SEI n°<br><input type="text" class="exemplo-input" id="p18F_sei" placeholder="Ex: 0040476-96.2026.8.16.6000" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Nome da unidade<br><textarea id="p18F_unidade" class="exemplo-input" style="min-height:58px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Ex: Gabinete do Desembargador Jorge de Oliveira Vargas"></textarea></label>
-      <label style="font-size:12.5px;color:var(--ink-soft);">Modalidade<br>
-        <select id="p18F_modalidade" style="width:100%;padding:8px;border:1px solid var(--line);background:#fffdf7;">
-          <option value="Presencial">Presencial</option>
-          <option value="On-line">On-line</option>
-        </select>
-      </label>
       <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Local<br><input type="text" class="exemplo-input" id="p18F_local" placeholder="Ex: Gabinete do Desembargador Jorge de Oliveira Vargas — ou, se on-line: Microsoft Teams" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <!-- Endereço só no presencial; LINK só no on-line (e some quando cada convocado tem o seu, no passo 2) -->
       <label id="p18CampoEndereco" style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Endereço<br><input type="text" class="exemplo-input" id="p18F_endereco" placeholder="Ex: Palácio da Justiça, 7º andar, sala 706, Curitiba/PR" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
@@ -144,7 +145,7 @@
     </div>
     <div class="notice-banner warn" id="p18AvisoLink" style="margin-left:0;display:none;"></div>
     <div class="notice-banner" id="p18ResumoAlocacao" style="margin-left:0;"></div>
-    <p class="step-desc" style="font-size:12.5px;">Data e horário vêm da alocação feita no passo 2. Em observações, cada linha vira um parágrafo.</p>
+    <p class="step-desc" style="font-size:12.5px;">Data e horário vêm da alocação feita no passo 2, e é lá que fica a <strong>modalidade</strong> — é ela que decide se aqui aparece o Endereço ou o Link da sala. Em observações, cada linha vira um parágrafo.</p>
     <div class="step-content" style="margin-top:18px;">
       <button type="button" class="run-btn" id="p18BtnGerar">Gerar convocação</button>
     </div>

@@ -1908,6 +1908,9 @@ function iniciar(){
       aplicarModalidade();   // ligar a coluna Link tira o campo de link único
     });
   });
+  // A modalidade mora no passo 2, junto das colunas extras: é ela que libera a
+  // coluna Link, e as duas coisas precisam estar ao alcance do mesmo olhar.
+  $('p18F_modalidade').addEventListener('change', aplicarModalidade);
   ativarMascaraData($('p18NovaData'));
   ativarBotaoCalendario($('p18NovaData'));
   $('p18QuantosModo').addEventListener('change', sincronizarControles);
@@ -1921,7 +1924,6 @@ function iniciar(){
   // ---- passo 3
   ativarMascaraSei($('p18F_sei'));
   $('p18F_sei').addEventListener('input', atualizarAssuntoEmail);
-  $('p18F_modalidade').addEventListener('change', aplicarModalidade);
   $('p18F_link').addEventListener('input', atualizarAvisoLink);
   $('p18BtnGerar').addEventListener('click', function(){ atualizarResumoAlocacao(); gerarDocumento(); });
 
