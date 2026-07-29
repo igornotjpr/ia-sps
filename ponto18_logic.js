@@ -1630,6 +1630,13 @@ function renderConferenciaEmails(linhas){
   box.innerHTML=h+'</tbody></table></div>';
 }
 
+/* O quadro do resultado (campo + botões) nasce escondido: só faz sentido depois
+   que existe alguma lista para copiar. */
+function mostrarResultadoEmails(mostrar){
+  var box=$('p18ResultadoEmails');
+  if(box) box.style.display = mostrar ? '' : 'none';
+}
+
 /* O botão da conferência só faz sentido depois de gerar a lista pela tabela;
    uma colagem manual não tem a quem conferir. */
 function mostrarBotaoConferencia(mostrar){
@@ -1648,6 +1655,7 @@ function gerarEmailsDaTabela(){
   var reais=r.reais, comEmail=r.lista, sem=r.sem, repetidos=r.repetidos;
   $('p18EmailsSaida').value=montarBloco(comEmail);
 
+  mostrarResultadoEmails(reais.length > 0);
   mostrarBotaoConferencia(reais.length > 0);
   if(reais.length) renderConferenciaEmails(r.linhas);
 
@@ -1667,6 +1675,7 @@ function gerarEmailsDaTabela(){
 function processarColagem(){
   var valores=$('p18EmailsEntrada').value.split(/[\r\n;,]+/).map(function(v){ return v.trim(); }).filter(Boolean);
   $('p18EmailsSaida').value=montarBloco(valores);
+  mostrarResultadoEmails(valores.length > 0);
   // o que foi colado não vem da tabela: não há conferência a oferecer
   mostrarBotaoConferencia(false);
   var invalidos=valores.filter(function(v){ return v.indexOf('@')<1; });
