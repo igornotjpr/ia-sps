@@ -50,11 +50,20 @@
   });
   maxInput.addEventListener('input', checkReady);
 
+  /* Quantidade em branco significa "todos os classificados" — devolve null.
+     Qualquer coisa que não seja um inteiro positivo é entrada inválida, e aí o
+     botão continua desabilitado em vez de a ferramenta adivinhar. */
+  function limiteInformado(){
+    const v = maxInput.value.trim();
+    if(v === '') return { vazio:true, valor:null, ok:true };
+    const ok = /^\d+$/.test(v) && parseInt(v,10) > 0;
+    return { vazio:false, valor: ok ? parseInt(v,10) : null, ok:ok };
+  }
+
   function checkReady(){
     const hasT1 = fileInput1.files && fileInput1.files[0];
     const hasT2 = fileInput2.files && fileInput2.files[0];
-    const maxOk = /^\d+$/.test(maxInput.value.trim()) && parseInt(maxInput.value.trim(),10) > 0;
-    processBtn.disabled = !(hasT1 && hasT2 && maxOk);
+    processBtn.disabled = !(hasT1 && hasT2 && limiteInformado().ok);
   }
 
   function normHeader(h){
@@ -200,7 +209,8 @@
       if(nome && !lookupByName[nome]) lookupByName[nome] = r;
     });
 
-    const maxNum = parseInt(maxInput.value.trim(), 10);
+    // null = quantidade não informada: entram todos os classificados
+    const maxNum = limiteInformado().valor;
 
     let reprovadosCount = 0;
     let notaErrors = [];
@@ -236,7 +246,7 @@
 
     filtered.sort((a,b) => a.ordem - b.ordem);
     const totalDisponivel = filtered.length;
-    const limited = filtered.slice(0, maxNum);
+    const limited = (maxNum === null) ? filtered.slice() : filtered.slice(0, maxNum);
 
     let unmatched = [];
     let reservaErrors = [];
@@ -292,9 +302,14 @@
 
   function renderResults(info){
     stampWrap.classList.add('show');
+    // Quantidade em branco não é erro, mas pede conferência: a lista saiu com
+    // todo mundo, e é fácil não ser essa a intenção.
+    const semLimite = info.maxNum === null;
+    const avisoSemLimite = '<br><strong>A quantidade não foi informada</strong> — entraram <strong>todos os '
+      + info.totalDisponivel + '</strong> candidato(s) classificado(s) da Tabela 1. Confira se é isso mesmo.';
     const temAviso = info.unmatched.length > 0 || info.classErrors.length > 0 || info.notaErrors.length > 0 ||
                      info.reservaErrors.length > 0 || info.reservaDivergencias.length > 0 ||
-                     info.totalDisponivel < info.maxNum;
+                     (!semLimite && info.totalDisponivel < info.maxNum);
 
     if(!temAviso){
       stampBadge.classList.remove('warn');
@@ -303,15 +318,17 @@
       if(info.reservaSuprimida){
         okHtml += '<br>Nenhum candidato aprovado é cotista — a coluna RESERVA, vazia, foi suprimida da tabela final.';
       }
+      if(semLimite) okHtml += avisoSemLimite;
       stampText.innerHTML = okHtml;
     } else {
       stampBadge.classList.add('warn');
       stampBadge.textContent = 'REVISAR';
       let html = '<strong>' + outputRows.length + ' registros</strong> gerados';
-      if(info.totalDisponivel < info.maxNum){
+      if(!semLimite && info.totalDisponivel < info.maxNum){
         html += ' — atenção: a Tabela 1 possui apenas <strong>' + info.totalDisponivel + '</strong> candidato(s) classificado(s) (não-REPROVADO), menos do que os ' + info.maxNum + ' solicitados';
       }
       html += '.';
+      if(semLimite) html += avisoSemLimite;
       if(info.reprovadosCount > 0){
         html += '<br>' + info.reprovadosCount + ' candidato(s) marcado(s) como REPROVADO foram excluídos automaticamente.';
       }
