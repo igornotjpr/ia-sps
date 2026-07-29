@@ -1091,7 +1091,7 @@ table.cv-grade-table tbody tr.drop-after td{ box-shadow:inset 0 -3px 0 var(--tea
 .campo-data input[type=text]{ text-align:center; }
 /* Campo de horário: mesmo arranjo do campo de data, com o botão 🕐 (ver
    ativarBotaoRelogio). A largura comporta "14h00min" mais o botão. */
-.campo-hora{ width:132px; }
+.campo-hora{ width:152px; }   /* comporta o campo, o botão 🕐 e o "Ex: 14h00min" */
 .campo-hora > .campo-data-wrap{
   display:flex; align-items:stretch; gap:6px; width:100%;
 }
@@ -1103,6 +1103,46 @@ table.cv-grade-table tbody tr.drop-after td{ box-shadow:inset 0 -3px 0 var(--tea
 .date-pick-btn-mini{
   width:26px; min-height:26px; font-size:12px;
 }
+
+/* Seletor de horário próprio (ver seletorHora em core.js). Cada coluna é uma
+   lista de rolagem comum — para no 00 e no 23/59, sem girar sem fim como a do
+   navegador — e a rolagem não vaza para a página. */
+.hora-pop{
+  position:absolute; z-index:200;
+  display:flex; gap:2px;
+  padding:8px;
+  background:var(--white);
+  border:1px solid var(--line);
+  box-shadow:0 6px 20px rgba(0,0,0,0.14);
+}
+.hora-col{ display:flex; flex-direction:column; min-width:56px; }
+.hora-col-tit{
+  margin:0 0 4px;
+  font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+  font-size:10.5px; font-weight:700; letter-spacing:0.06em;
+  text-transform:uppercase; text-align:center; color:var(--ink-soft);
+}
+.hora-lista{
+  /* position:relative faz o offsetTop dos itens ser medido a partir da lista —
+     é o que a rolagem inicial (centralizar, em core.js) usa para abrir já no
+     horário do campo. Sem isso a conta sairia deslocada pelo título da coluna. */
+  position:relative;
+  max-height:176px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  border:1px solid var(--paper-dark);
+  background:#fffdf7;
+}
+.hora-item{
+  display:block; width:100%;
+  padding:5px 12px;
+  border:none; background:none;
+  font-family:'IBM Plex Mono', 'Consolas', monospace;
+  font-size:12.5px; color:var(--ink);
+  text-align:center; cursor:pointer;
+}
+.hora-item:hover{ background:var(--teal); color:var(--white); }
+.hora-item.sel{ background:var(--ink); color:var(--white); font-weight:700; }
 .painel-nova-data .link-btn,
 .bloco-dia .link-btn{ height:34px; padding:0 16px; }
 /* caixa de marcar e botão de rádio: alinham pela base, junto com os campos */

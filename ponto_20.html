@@ -64,7 +64,7 @@
         <p class="step-title">Quantidade máxima de classificados/aprovados</p>
       </div>
       <p class="step-desc">Informe o número total de candidatos que devem constar na tabela final (ex.: "5" ou "21"). Candidatos marcados como REPROVADO na Tabela 1 nunca entram na lista, independentemente deste número.</p>
-      <input type="text" inputmode="numeric" class="num-input" id="p20MaxInput" placeholder="Ex.: 10">
+      <input type="text" inputmode="numeric" class="num-input exemplo-input" id="p20MaxInput" placeholder="Ex: 10">
     </div>
 
     <div class="step">
@@ -89,6 +89,34 @@
     </div>
 
     <hr class="divider">
+
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">📄</span>
+        <p class="step-title">Blocos para colar no Athos</p>
+      </div>
+      <p class="step-desc">Cada bloco vai no campo correspondente do modelo de blocos de impressão do Athos. O número do processo SEI é <strong>opcional</strong>: sem ele, os blocos saem com a lacuna <code>____________________</code>, para completar à mão.</p>
+      <div class="step-content" style="margin-bottom:6px;">
+        <label for="p20SeiInput" style="display:block;font-family:'Barlow',system-ui,sans-serif;font-size:13px;color:var(--ink-soft);margin-bottom:6px;">Número do processo SEI <em>(opcional)</em></label>
+        <input type="text" class="num-input exemplo-input" id="p20SeiInput" style="width:300px;" placeholder="Ex: 0040476-96.2026.8.16.6000">
+      </div>
+
+      <p class="step-desc" style="margin-top:18px;margin-bottom:6px;"><strong>Bloco 1 — Nome do documento</strong></p>
+      <div class="sig-block">
+        <p class="sig-text" id="p20AthosNome"></p>
+      </div>
+      <div class="step-content download-row" style="margin-top:12px;">
+        <button class="download-btn" id="p20AthosNomeBtn" type="button" style="background:var(--ink);">Copiar nome do documento</button>
+      </div>
+
+      <p class="step-desc" style="margin-top:18px;margin-bottom:6px;"><strong>Bloco 2 — Classificação</strong></p>
+      <div class="sig-block">
+        <p class="sig-text" id="p20AthosClass"><strong>CLASSIFICAÇÃO</strong></p>
+      </div>
+      <div class="step-content download-row" style="margin-top:12px;">
+        <button class="download-btn" id="p20AthosClassBtn" type="button" style="background:var(--ink);">Copiar “CLASSIFICAÇÃO”</button>
+      </div>
+    </div>
 
     <div class="step">
       <div class="step-head">

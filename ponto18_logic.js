@@ -28,6 +28,8 @@
 
 /* ==================== A) utilidades ==================== */
 
+var C = window.TJPRCore;   // utilidades compartilhadas (core.js)
+
 function $(id){ return document.getElementById(id); }
 function esc(s){
   return String(s==null?'':s)
@@ -127,12 +129,6 @@ function ativarMascaraHora(el){
     el.dispatchEvent(new Event('change',{bubbles:true}));
   });
 }
-// {h:14,m:30} -> "14:30", formato exigido pelo <input type="time">
-function horaParaInput(hora){
-  if(!hora) return '';
-  return String(hora.h).padStart(2,'0')+':'+String(hora.m).padStart(2,'0');
-}
-
 /* Embrulho comum dos botões 📅 e 🕐: o campo visível continua sendo um texto
    livre (digitação com máscara) e o seletor nativo fica escondido ao lado,
    só para quem preferir escolher com o mouse. */
@@ -186,28 +182,35 @@ function ativarBotaoCalendario(el, opcoes){
   });
 }
 
-// Botão 🕐 ao lado de um campo de horário: abre o seletor nativo (roda do mouse
-// ou lista do navegador) e devolve o valor já como "14h00min".
+// Botão 🕐 ao lado de um campo de horário: abre o seletor da ferramenta (ver
+// seletorHora em core.js) e devolve o valor já como "14h00min". Clicar de novo
+// no botão fecha — coisa que o popup nativo do navegador não permite.
 function ativarBotaoRelogio(el, compacto){
   if(!el) return;
   if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
   var w=embrulharComBotao(el, 'Abrir seletor de horário', '🕐', compacto);
 
-  var nativo=document.createElement('input');
-  nativo.type='time';
-  nativo.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-  w.wrap.appendChild(nativo);
-
   w.btn.addEventListener('click',function(){
-    nativo.value=horaParaInput(interpretarHora(el.value));
-    if(nativo.showPicker) nativo.showPicker(); else nativo.click();
+    C.seletorHora(w.btn, {
+      valor: interpretarHora(el.value),
+      aoEscolher: function(o){
+        el.value=fmtHora(o);
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    });
   });
-  nativo.addEventListener('change',function(){
-    if(!nativo.value) return;
-    var p=nativo.value.split(':');
-    el.value=fmtHora({h:Number(p[0]), m:Number(p[1])});
-    el.dispatchEvent(new Event('input',{bubbles:true}));
-    el.dispatchEvent(new Event('change',{bubbles:true}));
+}
+
+/* Painel que abre e fecha por um botão-link, com o rótulo acompanhando o
+   estado. Começa fechado pelo style="display:none" do próprio HTML. */
+function alternarPainel(btnId, painelId, textoAbrir, textoFechar){
+  var b=$(btnId), p=$(painelId);
+  if(!b || !p) return;
+  b.addEventListener('click', function(){
+    var aberto = p.style.display !== 'none';
+    p.style.display = aberto ? 'none' : '';
+    b.textContent = aberto ? textoAbrir : textoFechar;
   });
 }
 
@@ -322,7 +325,9 @@ var ASSINANTE_CARGO_PADRAO=
  +'Secretaria de Gestão de Pessoas';
 
 var estado={
-  cols:{ reserva:false, link:false },   // Data e Horário são derivados da alocação
+  // E-mail nasce desmarcada: a coluna só atrapalha a alocação, e a conferência
+  // dos endereços é feita no passo 6.
+  cols:{ reserva:false, link:false, email:false },   // Data e Horário são derivados da alocação
   // cand: {id,inscricao,nome,nota,reserva,diaId,hora,linkTexto,linkUrl,email}
   //   `diaId` aponta para um item de `dias`; a data nunca fica na linha, o que
   //   permite mover o candidato de dia sem tocar em mais nada.
@@ -417,6 +422,7 @@ function importarRelatorio(aoa){
   estado.cands.forEach(function(c){ c.diaId=null; });
   estado.cols.reserva=temReserva;
   estado.cols.link=false;
+  estado.cols.email=false;
 
   sincronizarControles();
   renderQuadro();
@@ -605,7 +611,8 @@ function avisosGrade(){
     if(c.reserva && CODIGOS_RESERVA.indexOf(c.reserva)===-1)
       av.push({id:c.id, txt:'Linha '+n+quem+': código de reserva “'+c.reserva+'” não previsto no edital.'});
     if(c.email && c.email.indexOf('@')===-1)
-      av.push({id:c.id, txt:'Linha '+n+quem+': o e-mail “'+c.email+'” não parece válido.'});
+      av.push({id:c.id, txt:'Linha '+n+quem+': o e-mail “'+c.email+'” não parece válido'
+        + (estado.cols.email ? '.' : ' — marque a coluna E-mail para corrigir aqui.')});
     if(estado.cols.link && !c.linkUrl.trim() && c.nome.trim())
       av.push({id:c.id, txt:'Linha '+n+quem+': coluna Link ligada, mas esta linha está sem endereço.'});
   });
@@ -692,7 +699,8 @@ function tabelaDoBloco(lista, mostrarHora){
   if(estado.cols.reserva) h+='<th style="width:86px;">Reserva</th>';
   if(mostrarHora)         h+='<th style="width:112px;">Horário</th>';   // campo + botão 🕐
   if(estado.cols.link)    h+='<th style="width:190px;">Link (texto e endereço)</th>';
-  h+='<th style="width:190px;">E-mail</th><th style="width:60px;">Ações</th></tr></thead><tbody>';
+  if(estado.cols.email)   h+='<th style="width:190px;">E-mail</th>';
+  h+='<th style="width:60px;">Ações</th></tr></thead><tbody>';
   lista.forEach(function(c){
     h+='<tr data-id="'+c.id+'" draggable="false">';
     h+='<td style="text-align:center;width:30px;"><button type="button" class="drag-handle" data-id="'+c.id+'" tabindex="0" title="Arrastar para remanejar ou mudar de dia (ou Alt+↑ / Alt+↓)" aria-label="Remanejar '+esc(c.nome||'linha')+'">⠿</button></td>';
@@ -716,7 +724,7 @@ function tabelaDoBloco(lista, mostrarHora){
       h+='<td>'+inputCel('linkTexto', c.linkTexto, '150px', false)
         +'<div style="height:4px;"></div>'+inputCel('linkUrl', c.linkUrl, '150px', false)+'</td>';
     }
-    h+='<td>'+inputCel('email', c.email, '170px', false)+'</td>';
+    if(estado.cols.email) h+='<td>'+inputCel('email', c.email, '170px', false)+'</td>';
     h+='<td style="text-align:center;"><button type="button" class="p18Act" tabindex="-1" data-a="apaga" title="Excluir linha">✕</button></td>';
     h+='</tr>';
   });
@@ -735,7 +743,7 @@ function renderQuadro(){
     h+='<div class="bloco-dia-cab">'
       +'<p class="bloco-dia-tit">'+(k+1)+'º dia</p>'
       +'<label class="campo-vert campo-data">data'
-      +'<input type="text" class="p18DataDia" data-dia="'+d.id+'" value="'+esc(d.data)+'" placeholder="dd/mm/aaaa">'
+      +'<input type="text" class="p18DataDia" data-dia="'+d.id+'" value="'+esc(d.data)+'" placeholder="Ex: 30/07/2026">'
       +'</label>'
       +'<span class="bloco-dia-qtd">'+n+' candidato'+(n===1?'':'s')+'</span>'
       +'<span class="bloco-dia-acoes"><button type="button" class="link-btn p18DiaAct" data-a="desfazer" data-dia="'+d.id+'" title="Devolve os candidatos para “A atribuir”">Desfazer dia</button></span>'
@@ -744,14 +752,14 @@ function renderQuadro(){
     h+='<div class="bloco-dia-horarios">'
       +'<label class="campo-check"><input type="radio" name="modo_'+d.id+'" class="p18ModoHora" data-dia="'+d.id+'" value="individual"'+(individual?' checked':'')+'> um horário por candidato</label>';
     if(individual){
-      h+='<label class="campo-vert campo-hora">a partir de<input type="text" class="p18HoraIni" data-dia="'+d.id+'" value="'+esc(d.horaInicial)+'" placeholder="14h00min"></label>'
+      h+='<label class="campo-vert campo-hora">a partir de<input type="text" class="p18HoraIni" data-dia="'+d.id+'" value="'+esc(d.horaInicial)+'" placeholder="Ex: 14h00min"></label>'
         +'<label class="campo-vert">intervalo (min)<input type="number" class="p18Interv" data-dia="'+d.id+'" value="'+esc(d.intervalo)+'" min="0" max="240"></label>'
         +'<button type="button" class="link-btn p18DiaAct" data-a="horarios" data-dia="'+d.id+'">Preencher horários</button>';
     }
     h+='<span style="width:1px;align-self:stretch;background:var(--paper-dark);"></span>'
       +'<label class="campo-check"><input type="radio" name="modo_'+d.id+'" class="p18ModoHora" data-dia="'+d.id+'" value="geral"'+(individual?'':' checked')+'> mesmo horário para todos</label>';
     if(!individual){
-      h+='<label class="campo-vert campo-hora">horário do dia<input type="text" class="p18HoraGeral" data-dia="'+d.id+'" value="'+esc(d.horarioGeral)+'" placeholder="14h00min"></label>';
+      h+='<label class="campo-vert campo-hora">horário do dia<input type="text" class="p18HoraGeral" data-dia="'+d.id+'" value="'+esc(d.horarioGeral)+'" placeholder="Ex: 14h00min"></label>';
     }
     h+='</div>';
 
@@ -1123,6 +1131,7 @@ function escreverCamposDoc(){
 function sincronizarControles(){
   $('p18ColReserva').checked=!!estado.cols.reserva;
   $('p18ColLink').checked=!!estado.cols.link;
+  $('p18ColEmail').checked=!!estado.cols.email;
   // "Todos os restantes" dispensa a caixa de quantidade
   var especificar = $('p18QuantosModo').value==='especificar';
   $('p18CampoQuantos').style.display = especificar ? 'flex' : 'none';
@@ -1584,21 +1593,67 @@ function montarBloco(valores){
   return valores.length ? (valores.join('; ')+';') : '';
 }
 
-function gerarEmailsDaTabela(){
+/* Percorre os convocados uma única vez e classifica cada um: o que entra na
+   lista, o que ficou de fora por não ter e-mail e o que ficou de fora por
+   repetição. É a mesma passagem que alimenta o bloco de e-mails e a tabela de
+   conferência — as duas coisas nunca divergem. */
+function classificarEmails(){
   var reais=estado.cands.filter(function(c){ return c.nome.trim(); });
-  var comEmail=[], sem=[], vistos={}, repetidos=[];
+  var lista=[], linhas=[], vistos={}, sem=[], repetidos=[];
   reais.forEach(function(c){
     var e=String(c.email||'').trim().toLowerCase();
-    if(!e || e.indexOf('@')<1){ sem.push(c.nome); return; }
-    if(vistos[e]){ repetidos.push(e); return; }
-    vistos[e]=true;
-    comEmail.push(e);
+    var sit;
+    if(!e || e.indexOf('@')<1){ sit='sem e-mail válido'; sem.push(c.nome); }
+    else if(vistos[e]){ sit='repetido — incluído uma vez'; repetidos.push(e); }
+    else { sit='na lista'; vistos[e]=true; lista.push(e); }
+    linhas.push({ inscricao:c.inscricao, nome:c.nome, email:e, situacao:sit, ok:sit==='na lista' });
   });
+  return { reais:reais, lista:lista, linhas:linhas, sem:sem, repetidos:repetidos };
+}
+
+/* Tabela de conferência: inscrição, nome e e-mail de cada convocado, na ordem
+   da tabela do passo 2, com destaque em quem ficou de fora do bloco. */
+function renderConferenciaEmails(linhas){
+  var box=$('p18Conferencia');
+  if(!box) return;
+  if(!linhas.length){ box.innerHTML='<p class="empty-hint">Nenhum convocado na tabela do passo 2.</p>'; return; }
+  var h='<div class="table-scroll" style="margin-top:10px;"><table>'
+    + '<thead><tr><th style="width:110px;">Inscrição</th><th>Nome do estudante</th>'
+    + '<th style="width:240px;">E-mail</th><th style="width:190px;">Situação</th></tr></thead><tbody>';
+  linhas.forEach(function(l){
+    h+='<tr'+(l.ok?'':' class="unmatched"')+'>'
+      +'<td>'+esc(l.inscricao)+'</td>'
+      +'<td style="white-space:normal;">'+esc(l.nome)+'</td>'
+      +'<td>'+esc(l.email || '—')+'</td>'
+      +'<td>'+esc(l.situacao)+'</td></tr>';
+  });
+  box.innerHTML=h+'</tbody></table></div>';
+}
+
+/* O botão da conferência só faz sentido depois de gerar a lista pela tabela;
+   uma colagem manual não tem a quem conferir. */
+function mostrarBotaoConferencia(mostrar){
+  var b=$('p18BtnConferencia'), box=$('p18Conferencia');
+  if(!b || !box) return;
+  b.style.display = mostrar ? '' : 'none';
+  if(!mostrar){
+    box.style.display='none';
+    box.innerHTML='';
+    b.textContent='Mostrar tabela de conferência';
+  }
+}
+
+function gerarEmailsDaTabela(){
+  var r=classificarEmails();
+  var reais=r.reais, comEmail=r.lista, sem=r.sem, repetidos=r.repetidos;
   $('p18EmailsSaida').value=montarBloco(comEmail);
+
+  mostrarBotaoConferencia(reais.length > 0);
+  if(reais.length) renderConferenciaEmails(r.linhas);
 
   var h='';
   if(!reais.length){
-    h='<div class="notice-banner warn" style="margin-left:0;">A tabela do passo 2 está vazia — envie o relatório no passo 1 ou cole a lista no quadro acima.</div>';
+    h='<div class="notice-banner warn" style="margin-left:0;">A tabela do passo 2 está vazia — envie o relatório no passo 1 ou use a colagem manual, logo abaixo.</div>';
   } else {
     var partes=['<strong>'+comEmail.length+'</strong> e-mail(s) na lista, na mesma ordem da tabela.'];
     if(repetidos.length) partes.push('<strong>'+repetidos.length+'</strong> repetido(s) foram incluídos uma única vez.');
@@ -1612,6 +1667,8 @@ function gerarEmailsDaTabela(){
 function processarColagem(){
   var valores=$('p18EmailsEntrada').value.split(/[\r\n;,]+/).map(function(v){ return v.trim(); }).filter(Boolean);
   $('p18EmailsSaida').value=montarBloco(valores);
+  // o que foi colado não vem da tabela: não há conferência a oferecer
+  mostrarBotaoConferencia(false);
   var invalidos=valores.filter(function(v){ return v.indexOf('@')<1; });
   $('p18EmailsAviso').innerHTML = valores.length
     ? '<div class="notice-banner '+(invalidos.length?'warn':'ok')+'" style="margin-left:0;"><strong>'+valores.length+'</strong> valor(es) processado(s).'
@@ -1676,7 +1733,7 @@ function importarRascunho(file){
     try{
       var d=JSON.parse(fr.result);
       if(!d || !Array.isArray(d.cands)) throw new Error('arquivo sem lista de convocados');
-      estado.cols=Object.assign({reserva:false, link:false}, d.cols||{});
+      estado.cols=Object.assign({reserva:false, link:false, email:false}, d.cols||{});
       estado.doc=Object.assign(estado.doc, d.doc||{});
       // Converte rascunhos antigos: v1 marcava o dia como "quebra" na linha,
       // v2 já tinha lista de dias mas sem regime de horário. Nenhum trabalho
@@ -1762,7 +1819,7 @@ function iniciar(){
   });
 
   // ---- passo 2
-  [['p18ColReserva','reserva'], ['p18ColLink','link']].forEach(function(par){
+  [['p18ColReserva','reserva'], ['p18ColLink','link'], ['p18ColEmail','email']].forEach(function(par){
     $(par[0]).addEventListener('change', function(e){
       estado.cols[par[1]]=e.target.checked;
       renderQuadro();
@@ -1805,6 +1862,8 @@ function iniciar(){
   $('p18BtnProcessarColagem').addEventListener('click', processarColagem);
   $('p18BtnCopiarEmails').addEventListener('click', copiarEmails);
   $('p18BtnCopiarAssunto').addEventListener('click', copiarAssuntoEmail);
+  alternarPainel('p18BtnColarEmails','p18ColarEmailsWrap','Colar lista manualmente','Ocultar colagem manual');
+  alternarPainel('p18BtnConferencia','p18Conferencia','Mostrar tabela de conferência','Ocultar tabela de conferência');
 
   escreverCamposDoc();
   ligarCaixaRascunho();

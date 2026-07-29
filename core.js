@@ -179,8 +179,119 @@ window.TJPRCore = (function(){
     return out;
   }
 
+  /* ------------------------------------------------------------------------
+     Seletor de horário próprio, no lugar do popup nativo do <input type="time">.
+     Dois motivos para não usar o do navegador:
+       1) não há como fechá-lo por código — clicar de novo no 🕐 não o fecha;
+       2) suas colunas giram sem fim (de 23 passa direto para 00).
+     Aqui cada coluna é uma lista de rolagem comum: para no primeiro e no último
+     item, e a roda do mouse não vaza para a página (overscroll-behavior).
+     ------------------------------------------------------------------------ */
+
+  let horaAberto = null;   // { caixa, ancora }
+
+  function fecharSeletorHora(){
+    if(!horaAberto) return;
+    horaAberto.caixa.remove();
+    horaAberto = null;
+    document.removeEventListener('mousedown', fecharPorClickFora, true);
+    document.removeEventListener('keydown', fecharPorEsc, true);
+    window.removeEventListener('resize', fecharSeletorHora);
+  }
+  function fecharPorClickFora(ev){
+    if(!horaAberto) return;
+    if(horaAberto.caixa.contains(ev.target) || horaAberto.ancora.contains(ev.target)) return;
+    fecharSeletorHora();
+  }
+  function fecharPorEsc(ev){ if(ev.key === 'Escape') fecharSeletorHora(); }
+
+  function colunaHora(titulo, de, ate, selecionado, aoClicar){
+    const col = document.createElement('div');
+    col.className = 'hora-col';
+    const tit = document.createElement('p');
+    tit.className = 'hora-col-tit';
+    tit.textContent = titulo;
+    col.appendChild(tit);
+    const lista = document.createElement('div');
+    lista.className = 'hora-lista';
+    for(let v = de; v <= ate; v++){
+      const it = document.createElement('button');
+      it.type = 'button';
+      it.tabIndex = -1;                    // 84 itens não entram na ordem do Tab
+      it.className = 'hora-item' + (v === selecionado ? ' sel' : '');
+      it.textContent = String(v).padStart(2,'0');
+      it.addEventListener('click', function(){ aoClicar(v, lista, it); });
+      lista.appendChild(it);
+    }
+    col.appendChild(lista);
+    return { col, lista };
+  }
+
+  // Deixa o item escolhido visível sem animação: o seletor abre já no valor
+  // que está no campo.
+  function centralizar(lista, item){
+    if(!item) return;
+    lista.scrollTop = Math.max(0, item.offsetTop - lista.clientHeight/2 + item.offsetHeight/2);
+  }
+
+  /* Abre (ou fecha, se já estiver aberto no mesmo botão) o seletor ancorado em
+     `ancora`. `opcoes.valor` é {h,m} ou null; `opcoes.aoEscolher` recebe {h,m}
+     a cada clique — o campo acompanha a escolha em tempo real. */
+  function seletorHora(ancora, opcoes){
+    if(horaAberto && horaAberto.ancora === ancora){ fecharSeletorHora(); return; }
+    fecharSeletorHora();
+    opcoes = opcoes || {};
+    const atual = opcoes.valor || null;
+    let h = atual ? atual.h : null;
+    let m = atual ? atual.m : null;
+
+    const caixa = document.createElement('div');
+    caixa.className = 'hora-pop';
+    caixa.setAttribute('role','dialog');
+    caixa.setAttribute('aria-label','Escolher horário');
+
+    function avisar(){
+      if(opcoes.aoEscolher) opcoes.aoEscolher({ h: h || 0, m: m || 0 });
+    }
+
+    const ch = colunaHora('hora', 0, 23, h, function(v, lista, it){
+      h = v;
+      lista.querySelectorAll('.hora-item.sel').forEach(e => e.classList.remove('sel'));
+      it.classList.add('sel');
+      avisar();
+    });
+    // escolher o minuto encerra: é sempre o último passo
+    const cm = colunaHora('min', 0, 59, m, function(v, lista, it){
+      m = v;
+      lista.querySelectorAll('.hora-item.sel').forEach(e => e.classList.remove('sel'));
+      it.classList.add('sel');
+      avisar();
+      fecharSeletorHora();
+    });
+    caixa.appendChild(ch.col);
+    caixa.appendChild(cm.col);
+    document.body.appendChild(caixa);
+
+    const r = ancora.getBoundingClientRect();
+    const alturaPop = caixa.offsetHeight;
+    const cabeAbaixo = (window.innerHeight - r.bottom) > (alturaPop + 8);
+    caixa.style.top = (cabeAbaixo ? r.bottom + 4 : r.top - alturaPop - 4) + window.scrollY + 'px';
+    caixa.style.left = Math.max(8, Math.min(r.left, window.innerWidth - caixa.offsetWidth - 8))
+      + window.scrollX + 'px';
+
+    // sem valor no campo, abre no começo do expediente em vez de 00h
+    centralizar(ch.lista, ch.lista.querySelector('.hora-item.sel') || ch.lista.children[8]);
+    centralizar(cm.lista, cm.lista.querySelector('.hora-item.sel') || cm.lista.children[0]);
+
+    horaAberto = { caixa, ancora };
+    document.addEventListener('mousedown', fecharPorClickFora, true);
+    document.addEventListener('keydown', fecharPorEsc, true);
+    window.addEventListener('resize', fecharSeletorHora);
+  }
+
   return {
     escapeHtml, csvEscape, normName, detectDelimiter, parseCSV,
-    buildCleanTableHTML, buildTSV, copyTableToClipboard, pdfToText
+    buildCleanTableHTML, buildTSV, copyTableToClipboard, pdfToText,
+    seletorHora, fecharSeletorHora
   };
 })();

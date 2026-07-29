@@ -388,6 +388,72 @@
     URL.revokeObjectURL(url);
   });
 
+  /* ---- Blocos para colar no Athos ----------------------------------------
+     Os campos do formulário do Athos são de texto puro: o que vale aqui é
+     copiar exatamente a string, sem formatação. */
+
+  // "Copiado!" no próprio botão, como no resto da página.
+  function ligarCopiaTexto(btn, obterTexto, msgErro){
+    if(!btn) return;
+    btn.addEventListener('click', async function(){
+      const texto = obterTexto();
+      if(!texto) return;
+      const original = btn.textContent;
+      function copiado(){
+        btn.textContent = 'Copiado!';
+        setTimeout(() => { btn.textContent = original; }, 1800);
+      }
+      try{
+        await navigator.clipboard.writeText(texto);
+        copiado();
+      }catch(err){
+        alert(msgErro);
+      }
+    });
+  }
+
+  // Sem número informado, o nome do documento sai com a lacuna — nunca com um
+  // número inventado ou com o campo vazio, que passaria despercebido no Athos.
+  const SEI_LACUNA = '____________________';
+  const seiInput = document.getElementById('p20SeiInput');
+  const athosNome = document.getElementById('p20AthosNome');
+
+  // Máscara do protocolo SEI: 0000000-00.0000.0.00.0000 (20 dígitos), a mesma
+  // dos Pontos 14 e 18.
+  function mascaraSei(v){
+    const d = String(v == null ? '' : v).replace(/\D/g,'').slice(0,20);
+    let out = d.slice(0,7);
+    if(d.length>7)  out += '-' + d.slice(7,9);
+    if(d.length>9)  out += '.' + d.slice(9,13);
+    if(d.length>13) out += '.' + d.slice(13,14);
+    if(d.length>14) out += '.' + d.slice(14,16);
+    if(d.length>16) out += '.' + d.slice(16,20);
+    return out;
+  }
+
+  function numeroSei(){
+    const v = seiInput ? seiInput.value.trim() : '';
+    return v || SEI_LACUNA;
+  }
+  function nomeDocumento(){
+    return 'Edital de Classificação - SEI!TJPR n°' + numeroSei();
+  }
+  function atualizarBlocosAthos(){
+    if(athosNome) athosNome.textContent = nomeDocumento();
+  }
+
+  if(seiInput){
+    seiInput.addEventListener('input', function(){
+      seiInput.value = mascaraSei(seiInput.value);
+      atualizarBlocosAthos();
+    });
+  }
+  atualizarBlocosAthos();
+
+  const MSG_COPIA = 'Não foi possível copiar automaticamente. Selecione o texto do bloco e use Ctrl+C.';
+  ligarCopiaTexto(document.getElementById('p20AthosNomeBtn'), nomeDocumento, MSG_COPIA);
+  ligarCopiaTexto(document.getElementById('p20AthosClassBtn'), () => 'CLASSIFICAÇÃO', MSG_COPIA);
+
   // ---- Data do próximo dia útil (copiar e colar no Athos) ----
   const MESES_EXTENSO = ['janeiro','fevereiro','março','abril','maio','junho',
     'julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -410,23 +476,9 @@
   if(dateText){
     dateText.textContent = formatarDataExtenso(proximoDiaUtil(new Date()));
   }
-  if(dateCopyBtn && dateText){
-    dateCopyBtn.addEventListener('click', async function(){
-      const plain = dateText.textContent.trim();
-
-      function showCopied(){
-        const original = dateCopyBtn.textContent;
-        dateCopyBtn.textContent = 'Copiado!';
-        setTimeout(() => { dateCopyBtn.textContent = original; }, 1800);
-      }
-
-      try{
-        await navigator.clipboard.writeText(plain);
-        showCopied();
-      }catch(err){
-        alert('Não foi possível copiar automaticamente. Selecione a data e use Ctrl+C.');
-      }
-    });
+  if(dateText){
+    ligarCopiaTexto(dateCopyBtn, () => dateText.textContent.trim(),
+      'Não foi possível copiar automaticamente. Selecione a data e use Ctrl+C.');
   }
 
   // ---- Bloco de assinatura do chefe da unidade (copiar e colar) ----

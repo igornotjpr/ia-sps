@@ -125,7 +125,6 @@ function lerHora(s){
   return {h:h, m:m};
 }
 function fmtHora(o){ return o ? pad2(o.h)+'h'+pad2(o.m)+'min' : ''; }
-function horaParaInput(o){ return o ? pad2(o.h)+':'+pad2(o.m) : ''; }
 
 /* Máscara de horário: reconstrói a partir dos dígitos e só normaliza para
    "14h00min" ao sair do campo — assim não atrapalha quem ainda está digitando. */
@@ -144,10 +143,11 @@ function ativarMascaraHora(el){
   });
 }
 
-/* Botão 🕐 ao lado do campo de horário: abre o seletor nativo (roda do mouse /
-   lista de horários do navegador) e devolve o valor já no padrão 14h00min.
-   O <input type="time"> fica escondido justamente para que o campo visível
-   continue aceitando digitação livre. */
+/* Botão 🕐 ao lado do campo de horário: abre o seletor da ferramenta (ver
+   seletorHora em core.js) e devolve o valor já no padrão 14h00min. Clicar de
+   novo no botão fecha o seletor, e suas listas param no primeiro e no último
+   item — as duas coisas que o popup nativo do navegador não faz. O campo
+   visível continua sendo texto livre, aceitando digitação. */
 function ativarBotaoRelogio(inputEl){
   if(!inputEl) return;
   var wrap = document.createElement('span');
@@ -166,20 +166,14 @@ function ativarBotaoRelogio(inputEl){
   btn.textContent = '🕐';
   wrap.appendChild(btn);
 
-  var nativo = document.createElement('input');
-  nativo.type = 'time';
-  nativo.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-  wrap.appendChild(nativo);
-
   btn.addEventListener('click', function(){
-    nativo.value = horaParaInput(lerHora(inputEl.value));
-    if(nativo.showPicker) nativo.showPicker(); else nativo.click();
-  });
-  nativo.addEventListener('change', function(){
-    if(!nativo.value) return;
-    var p = nativo.value.split(':');
-    inputEl.value = fmtHora({h:+p[0], m:+p[1]});
-    inputEl.dispatchEvent(new Event('change',{bubbles:true}));
+    C.seletorHora(btn, {
+      valor: lerHora(inputEl.value),
+      aoEscolher: function(o){
+        inputEl.value = fmtHora(o);
+        inputEl.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    });
   });
 }
 
