@@ -337,7 +337,7 @@ var estado={
   doc:{
     ano:String(new Date().getFullYear()),
     sei:'', unidade:'',
-    modalidade:'Presencial', local:'', endereco:'',
+    modalidade:'Presencial', local:'', endereco:'', link:'',
     observacoes:'O candidato que não comparecer à entrevista será desclassificado do processo seletivo.',
     // exclusivos da publicação no Athos (passo 5)
     dataAthos:'',
@@ -1120,14 +1120,42 @@ function lerCamposDoc(){
     var el=$('p18F_'+k);
     if(el) estado.doc[k]=el.value;
   });
+  estado.doc.modalidade=normalizarModalidade(estado.doc.modalidade);
 }
 function escreverCamposDoc(){
+  // rascunho antigo pode trazer "Online": sem normalizar antes, o <select> não
+  // acharia a opção e ficaria em branco
+  estado.doc.modalidade=normalizarModalidade(estado.doc.modalidade);
   Object.keys(estado.doc).forEach(function(k){
     var el=$('p18F_'+k);
     if(el) el.value=estado.doc[k]||'';
   });
   atualizarAssuntoEmail();   // o assunto do passo 6 acompanha o protocolo SEI
+  aplicarModalidade();       // campos visíveis acompanham o que foi carregado
 }
+/* Grafia da modalidade: o rascunho pode ter sido salvo quando o dropdown ainda
+   escrevia "Online". Normaliza para o que a ferramenta publica hoje. */
+function normalizarModalidade(v){
+  return /on\s*-?\s*line/i.test(String(v||'')) ? 'On-line' : 'Presencial';
+}
+function ehOnline(){ return normalizarModalidade(estado.doc.modalidade) === 'On-line'; }
+
+/* Cada convocado pode ter o seu próprio link (coluna Link do passo 2). Quando
+   essa coluna está ligada, o link único do passo 3 não existe — seria uma
+   segunda fonte para a mesma informação. */
+function usaLinkPorCandidato(){ return !!estado.cols.link; }
+
+/* Mostra apenas os campos que fazem sentido na modalidade escolhida:
+   presencial tem Endereço, on-line tem LINK (quando o link não é por candidato). */
+function aplicarModalidade(){
+  var sel=$('p18F_modalidade');
+  if(sel) estado.doc.modalidade=normalizarModalidade(sel.value);
+  var online=ehOnline();
+  var campoEnd=$('p18CampoEndereco'), campoLink=$('p18CampoLink');
+  if(campoEnd)  campoEnd.style.display  = online ? 'none' : '';
+  if(campoLink) campoLink.style.display = (online && !usaLinkPorCandidato()) ? '' : 'none';
+}
+
 function sincronizarControles(){
   $('p18ColReserva').checked=!!estado.cols.reserva;
   $('p18ColLink').checked=!!estado.cols.link;
@@ -1302,14 +1330,21 @@ function conteudoHtml(lh, lhCel){
     if(dias[0].horarioModo==='geral' && String(dias[0].horarioGeral||'').trim())
       h+=linha('HORÁRIO:', esc(dias[0].horarioGeral.trim()));
   }
+  // LOCAL sempre traz a modalidade na frente ("Presencial | " ou "On-line | ").
   if(String(d.local||'').trim())
-    h+=linha('LOCAL:', esc(d.modalidade)+' | '+esc(comPontoFinal(d.local)));
-  if(String(d.endereco||'').trim()){
+    h+=linha('LOCAL:', esc(normalizarModalidade(d.modalidade))+' | '+esc(comPontoFinal(d.local)));
+  // Presencial imprime o ENDEREÇO; on-line imprime o LINK da sala — e só quando
+  // o link não é por candidato (aí ele já está na coluna da tabela).
+  if(!ehOnline() && String(d.endereco||'').trim()){
     var end=String(d.endereco).trim();
-    var valor = ehUrl(end)
+    var valorEnd = ehUrl(end)
       ? '<a href="'+esc(comHttp(end))+'" style="color:#0563c1;text-decoration:underline;">'+esc(end)+'</a>'
       : esc(comPontoFinal(end));
-    h+=linha('ENDEREÇO:', valor);
+    h+=linha('ENDEREÇO:', valorEnd);
+  }
+  if(ehOnline() && !usaLinkPorCandidato() && String(d.link||'').trim()){
+    var lk=String(d.link).trim();
+    h+=linha('LINK:', '<a href="'+esc(comHttp(lk))+'" style="color:#0563c1;text-decoration:underline;">'+esc(lk)+'</a>');
   }
 
   // tabela dos convocados (sem convocados, mantém o respiro entre os blocos)
@@ -1744,6 +1779,14 @@ function importarRascunho(file){
       if(!d || !Array.isArray(d.cands)) throw new Error('arquivo sem lista de convocados');
       estado.cols=Object.assign({reserva:false, link:false, email:false}, d.cols||{});
       estado.doc=Object.assign(estado.doc, d.doc||{});
+      // Antes desta versão a convocação on-line guardava o link da sala no
+      // campo Endereço, que hoje só existe no presencial. Sem esta conversão o
+      // rascunho antigo abriria sem o link — e ele sumiria do documento.
+      if(normalizarModalidade(estado.doc.modalidade)==='On-line'
+         && !String(estado.doc.link||'').trim() && String(estado.doc.endereco||'').trim()){
+        estado.doc.link=estado.doc.endereco;
+        estado.doc.endereco='';
+      }
       // Converte rascunhos antigos: v1 marcava o dia como "quebra" na linha,
       // v2 já tinha lista de dias mas sem regime de horário. Nenhum trabalho
       // anterior se perde ao abrir.
@@ -1832,6 +1875,7 @@ function iniciar(){
     $(par[0]).addEventListener('change', function(e){
       estado.cols[par[1]]=e.target.checked;
       renderQuadro();
+      aplicarModalidade();   // ligar a coluna Link tira o campo de link único
     });
   });
   ativarMascaraData($('p18NovaData'));
@@ -1847,6 +1891,7 @@ function iniciar(){
   // ---- passo 3
   ativarMascaraSei($('p18F_sei'));
   $('p18F_sei').addEventListener('input', atualizarAssuntoEmail);
+  $('p18F_modalidade').addEventListener('change', aplicarModalidade);
   $('p18BtnGerar').addEventListener('click', function(){ atualizarResumoAlocacao(); gerarDocumento(); });
 
   // ---- passo 4

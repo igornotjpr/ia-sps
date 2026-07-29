@@ -133,11 +133,13 @@
       <label style="font-size:12.5px;color:var(--ink-soft);">Modalidade<br>
         <select id="p18F_modalidade" style="width:100%;padding:8px;border:1px solid var(--line);background:#fffdf7;">
           <option value="Presencial">Presencial</option>
-          <option value="Online">Online</option>
+          <option value="On-line">On-line</option>
         </select>
       </label>
       <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Local<br><input type="text" class="exemplo-input" id="p18F_local" placeholder="Ex: Gabinete do Desembargador Jorge de Oliveira Vargas — ou, se on-line: Microsoft Teams" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
-      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Endereço<br><input type="text" class="exemplo-input" id="p18F_endereco" placeholder="Ex: Palácio da Justiça, 7º andar, sala 706, Curitiba/PR — ou, se on-line, o link da sala" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <!-- Endereço só no presencial; LINK só no on-line (e some quando cada convocado tem o seu, no passo 2) -->
+      <label id="p18CampoEndereco" style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Endereço<br><input type="text" class="exemplo-input" id="p18F_endereco" placeholder="Ex: Palácio da Justiça, 7º andar, sala 706, Curitiba/PR" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label id="p18CampoLink" style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Link da sala virtual<br><input type="text" class="exemplo-input" id="p18F_link" placeholder="Ex: https://teams.microsoft.com/l/meetup-join/..." style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Observações<br><textarea id="p18F_observacoes" style="min-height:80px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;"></textarea></label>
     </div>
     <div class="notice-banner" id="p18ResumoAlocacao" style="margin-left:0;"></div>
