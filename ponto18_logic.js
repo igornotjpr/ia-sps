@@ -1146,14 +1146,44 @@ function ehOnline(){ return normalizarModalidade(estado.doc.modalidade) === 'On-
 function usaLinkPorCandidato(){ return !!estado.cols.link; }
 
 /* Mostra apenas os campos que fazem sentido na modalidade escolhida:
-   presencial tem Endereço, on-line tem LINK (quando o link não é por candidato). */
+   presencial tem Endereço, on-line tem LINK (quando o link não é por candidato).
+   A coluna Link do passo 2 também é exclusiva do on-line — no presencial não há
+   sala virtual para apontar. Desligá-la não apaga os links já digitados: eles
+   continuam guardados e voltam a aparecer se a modalidade voltar para on-line. */
 function aplicarModalidade(){
   var sel=$('p18F_modalidade');
   if(sel) estado.doc.modalidade=normalizarModalidade(sel.value);
   var online=ehOnline();
+
+  var colLink=$('p18CampoColLink');
+  if(colLink) colLink.style.display = online ? '' : 'none';
+  if(!online && estado.cols.link){
+    estado.cols.link=false;
+    if($('p18ColLink')) $('p18ColLink').checked=false;
+    renderQuadro();
+  }
+
   var campoEnd=$('p18CampoEndereco'), campoLink=$('p18CampoLink');
   if(campoEnd)  campoEnd.style.display  = online ? 'none' : '';
   if(campoLink) campoLink.style.display = (online && !usaLinkPorCandidato()) ? '' : 'none';
+  atualizarAvisoLink();
+}
+
+/* Convocação on-line sem link é a falha que passa despercebida: o documento sai
+   completo, mas o convocado não sabe onde entrar. O aviso acompanha a digitação
+   e não bloqueia nada — quem decide publicar é o usuário. */
+function atualizarAvisoLink(){
+  var box=$('p18AvisoLink');
+  if(!box) return;
+  var campo=$('p18F_link');
+  var temLink=String((campo ? campo.value : estado.doc.link)||'').trim() !== '';
+  var faltando = ehOnline() && !usaLinkPorCandidato() && !temLink;
+  box.style.display = faltando ? '' : 'none';
+  if(faltando){
+    box.innerHTML = '<strong>Convocação on-line sem o link da sala.</strong> '
+      + 'Preencha o campo <em>Link da sala virtual</em> acima ou, se cada convocado tem a sua sala, '
+      + 'marque a coluna <strong>Link</strong> no passo 2. Do jeito que está, o documento sai sem a linha LINK.';
+  }
 }
 
 function sincronizarControles(){
@@ -1892,6 +1922,7 @@ function iniciar(){
   ativarMascaraSei($('p18F_sei'));
   $('p18F_sei').addEventListener('input', atualizarAssuntoEmail);
   $('p18F_modalidade').addEventListener('change', aplicarModalidade);
+  $('p18F_link').addEventListener('input', atualizarAvisoLink);
   $('p18BtnGerar').addEventListener('click', function(){ atualizarResumoAlocacao(); gerarDocumento(); });
 
   // ---- passo 4
