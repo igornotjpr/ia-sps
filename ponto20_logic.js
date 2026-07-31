@@ -50,11 +50,20 @@
   });
   maxInput.addEventListener('input', checkReady);
 
+  /* Quantidade em branco significa "todos os classificados" — devolve null.
+     Qualquer coisa que não seja um inteiro positivo é entrada inválida, e aí o
+     botão continua desabilitado em vez de a ferramenta adivinhar. */
+  function limiteInformado(){
+    const v = maxInput.value.trim();
+    if(v === '') return { vazio:true, valor:null, ok:true };
+    const ok = /^\d+$/.test(v) && parseInt(v,10) > 0;
+    return { vazio:false, valor: ok ? parseInt(v,10) : null, ok:ok };
+  }
+
   function checkReady(){
     const hasT1 = fileInput1.files && fileInput1.files[0];
     const hasT2 = fileInput2.files && fileInput2.files[0];
-    const maxOk = /^\d+$/.test(maxInput.value.trim()) && parseInt(maxInput.value.trim(),10) > 0;
-    processBtn.disabled = !(hasT1 && hasT2 && maxOk);
+    processBtn.disabled = !(hasT1 && hasT2 && limiteInformado().ok);
   }
 
   function normHeader(h){
@@ -200,7 +209,8 @@
       if(nome && !lookupByName[nome]) lookupByName[nome] = r;
     });
 
-    const maxNum = parseInt(maxInput.value.trim(), 10);
+    // null = quantidade não informada: entram todos os classificados
+    const maxNum = limiteInformado().valor;
 
     let reprovadosCount = 0;
     let notaErrors = [];
@@ -236,7 +246,7 @@
 
     filtered.sort((a,b) => a.ordem - b.ordem);
     const totalDisponivel = filtered.length;
-    const limited = filtered.slice(0, maxNum);
+    const limited = (maxNum === null) ? filtered.slice() : filtered.slice(0, maxNum);
 
     let unmatched = [];
     let reservaErrors = [];
@@ -292,9 +302,14 @@
 
   function renderResults(info){
     stampWrap.classList.add('show');
+    // Quantidade em branco não é erro, mas pede conferência: a lista saiu com
+    // todo mundo, e é fácil não ser essa a intenção.
+    const semLimite = info.maxNum === null;
+    const avisoSemLimite = '<br><strong>A quantidade não foi informada</strong> — entraram <strong>todos os '
+      + info.totalDisponivel + '</strong> candidato(s) classificado(s) da Tabela 1. Confira se é isso mesmo.';
     const temAviso = info.unmatched.length > 0 || info.classErrors.length > 0 || info.notaErrors.length > 0 ||
                      info.reservaErrors.length > 0 || info.reservaDivergencias.length > 0 ||
-                     info.totalDisponivel < info.maxNum;
+                     (!semLimite && info.totalDisponivel < info.maxNum);
 
     if(!temAviso){
       stampBadge.classList.remove('warn');
@@ -303,15 +318,17 @@
       if(info.reservaSuprimida){
         okHtml += '<br>Nenhum candidato aprovado é cotista — a coluna RESERVA, vazia, foi suprimida da tabela final.';
       }
+      if(semLimite) okHtml += avisoSemLimite;
       stampText.innerHTML = okHtml;
     } else {
       stampBadge.classList.add('warn');
       stampBadge.textContent = 'REVISAR';
       let html = '<strong>' + outputRows.length + ' registros</strong> gerados';
-      if(info.totalDisponivel < info.maxNum){
+      if(!semLimite && info.totalDisponivel < info.maxNum){
         html += ' — atenção: a Tabela 1 possui apenas <strong>' + info.totalDisponivel + '</strong> candidato(s) classificado(s) (não-REPROVADO), menos do que os ' + info.maxNum + ' solicitados';
       }
       html += '.';
+      if(semLimite) html += avisoSemLimite;
       if(info.reprovadosCount > 0){
         html += '<br>' + info.reprovadosCount + ' candidato(s) marcado(s) como REPROVADO foram excluídos automaticamente.';
       }
@@ -388,6 +405,72 @@
     URL.revokeObjectURL(url);
   });
 
+  /* ---- Blocos para colar no Athos ----------------------------------------
+     Os campos do formulário do Athos são de texto puro: o que vale aqui é
+     copiar exatamente a string, sem formatação. */
+
+  // "Copiado!" no próprio botão, como no resto da página.
+  function ligarCopiaTexto(btn, obterTexto, msgErro){
+    if(!btn) return;
+    btn.addEventListener('click', async function(){
+      const texto = obterTexto();
+      if(!texto) return;
+      const original = btn.textContent;
+      function copiado(){
+        btn.textContent = 'Copiado!';
+        setTimeout(() => { btn.textContent = original; }, 1800);
+      }
+      try{
+        await navigator.clipboard.writeText(texto);
+        copiado();
+      }catch(err){
+        alert(msgErro);
+      }
+    });
+  }
+
+  // Sem número informado, o nome do documento sai com a lacuna — nunca com um
+  // número inventado ou com o campo vazio, que passaria despercebido no Athos.
+  const SEI_LACUNA = '____________________';
+  const seiInput = document.getElementById('p20SeiInput');
+  const athosNome = document.getElementById('p20AthosNome');
+
+  // Máscara do protocolo SEI: 0000000-00.0000.0.00.0000 (20 dígitos), a mesma
+  // dos Pontos 14 e 18.
+  function mascaraSei(v){
+    const d = String(v == null ? '' : v).replace(/\D/g,'').slice(0,20);
+    let out = d.slice(0,7);
+    if(d.length>7)  out += '-' + d.slice(7,9);
+    if(d.length>9)  out += '.' + d.slice(9,13);
+    if(d.length>13) out += '.' + d.slice(13,14);
+    if(d.length>14) out += '.' + d.slice(14,16);
+    if(d.length>16) out += '.' + d.slice(16,20);
+    return out;
+  }
+
+  function numeroSei(){
+    const v = seiInput ? seiInput.value.trim() : '';
+    return v || SEI_LACUNA;
+  }
+  function nomeDocumento(){
+    return 'Edital de Classificação - SEI!TJPR n°' + numeroSei();
+  }
+  function atualizarBlocosAthos(){
+    if(athosNome) athosNome.textContent = nomeDocumento();
+  }
+
+  if(seiInput){
+    seiInput.addEventListener('input', function(){
+      seiInput.value = mascaraSei(seiInput.value);
+      atualizarBlocosAthos();
+    });
+  }
+  atualizarBlocosAthos();
+
+  const MSG_COPIA = 'Não foi possível copiar automaticamente. Selecione o texto do bloco e use Ctrl+C.';
+  ligarCopiaTexto(document.getElementById('p20AthosNomeBtn'), nomeDocumento, MSG_COPIA);
+  ligarCopiaTexto(document.getElementById('p20AthosClassBtn'), () => 'CLASSIFICAÇÃO', MSG_COPIA);
+
   // ---- Data do próximo dia útil (copiar e colar no Athos) ----
   const MESES_EXTENSO = ['janeiro','fevereiro','março','abril','maio','junho',
     'julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -410,23 +493,9 @@
   if(dateText){
     dateText.textContent = formatarDataExtenso(proximoDiaUtil(new Date()));
   }
-  if(dateCopyBtn && dateText){
-    dateCopyBtn.addEventListener('click', async function(){
-      const plain = dateText.textContent.trim();
-
-      function showCopied(){
-        const original = dateCopyBtn.textContent;
-        dateCopyBtn.textContent = 'Copiado!';
-        setTimeout(() => { dateCopyBtn.textContent = original; }, 1800);
-      }
-
-      try{
-        await navigator.clipboard.writeText(plain);
-        showCopied();
-      }catch(err){
-        alert('Não foi possível copiar automaticamente. Selecione a data e use Ctrl+C.');
-      }
-    });
+  if(dateText){
+    ligarCopiaTexto(dateCopyBtn, () => dateText.textContent.trim(),
+      'Não foi possível copiar automaticamente. Selecione a data e use Ctrl+C.');
   }
 
   // ---- Bloco de assinatura do chefe da unidade (copiar e colar) ----

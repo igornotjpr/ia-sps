@@ -11,6 +11,16 @@ const JOGOS=[
     eyebrow:"ASCII arcade",
     titulo:"Flappy Bird (ASCII)",
     descricao:"Desvie dos obstáculos batendo asas com a barra de espaço — a pontuação é o tempo sobrevivido. Recorde salvo neste navegador."
+  },
+  {
+    arquivo:"arkanoia.html",
+    rotulo:"Arkanoia",
+    ordem:1,
+    emoji:"🧱",
+    cor:"--teal",
+    eyebrow:"Pixel art arcade",
+    titulo:"Arkanoia",
+    descricao:"Clone de Arkanoid: rebata a bola e derrube a parede de blocos, com combo, fases e pause discreto para o escritório. Ranking global compartilhado."
   }
 ].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 

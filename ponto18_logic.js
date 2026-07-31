@@ -28,6 +28,8 @@
 
 /* ==================== A) utilidades ==================== */
 
+var C = window.TJPRCore;   // utilidades compartilhadas (core.js)
+
 function $(id){ return document.getElementById(id); }
 function esc(s){
   return String(s==null?'':s)
@@ -107,40 +109,108 @@ function lerDataBarra(txt){
   var d=new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
   return isNaN(d.getTime()) ? null : d;
 }
-// Botão 📅 ao lado do campo de data: abre um <input type="date"> nativo oculto.
-function ativarBotaoCalendario(el){
+// Máscara de horário: reconstrói a partir dos dígitos enquanto se digita
+// ("1400" -> "14h00") e só normaliza para "14h00min" ao sair do campo — assim
+// não atrapalha quem ainda está no meio da digitação. Mesmo comportamento do
+// Ponto 14.
+function ativarMascaraHora(el){
   if(!el) return;
-  if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
+  el.addEventListener('input',function(){
+    // valor já pronto (veio do seletor 🕐): não desmontar o "min" do fim
+    if(/^\d{2}h\d{2}min$/.test(el.value)) return;
+    var d=el.value.replace(/\D/g,'').slice(0,4);
+    var out=d.slice(0,2);
+    if(d.length>2) out+='h'+d.slice(2,4);
+    el.value=out;
+  });
+  el.addEventListener('blur',function(){
+    var o=interpretarHora(el.value);
+    el.value = o ? fmtHora(o) : '';
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+}
+/* Embrulho comum dos botões 📅 e 🕐: o campo visível continua sendo um texto
+   livre (digitação com máscara) e o seletor nativo fica escondido ao lado,
+   só para quem preferir escolher com o mouse. */
+function embrulharComBotao(el, rotulo, emoji, compacto){
   var wrap=document.createElement('span');
   wrap.className='campo-data-wrap';
-  wrap.style.cssText='display:flex;align-items:stretch;gap:6px;width:100%;';
+  wrap.style.cssText='display:flex;align-items:stretch;gap:'+(compacto?'4px':'6px')+';width:100%;position:relative;';
   el.parentNode.insertBefore(wrap, el);
   // min-width:0 é o que permite ao campo encolher dentro do rótulo; sem ele o
-  // input mantém a largura intrínseca e empurra o botão 📅 para fora da caixa.
+  // input mantém a largura intrínseca e empurra o botão para fora da caixa.
   el.style.flex='1 1 auto'; el.style.width='auto'; el.style.minWidth='0';
   wrap.appendChild(el);
 
   var btn=document.createElement('button');
-  btn.type='button'; btn.className='date-pick-btn'; btn.title='Abrir calendário';
-  btn.setAttribute('aria-label','Abrir calendário');
-  btn.textContent='📅';
+  btn.type='button';
+  btn.className='date-pick-btn'+(compacto?' date-pick-btn-mini':'');
+  btn.title=rotulo;
+  btn.setAttribute('aria-label',rotulo);
+  btn.textContent=emoji;
+  btn.tabIndex=-1;                     // o Tab continua saltando de campo em campo
   wrap.appendChild(btn);
+  return { wrap:wrap, btn:btn };
+}
+
+// Botão 📅 ao lado do campo de data: abre um <input type="date"> nativo oculto.
+// `opcoes.ler` / `opcoes.escrever` permitem usar o mesmo botão em campos que não
+// estão em dd/mm/aaaa (a data da assinatura, por exemplo, é por extenso).
+function ativarBotaoCalendario(el, opcoes){
+  if(!el) return;
+  if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
+  var ler=(opcoes && opcoes.ler) || lerDataBarra;
+  var escrever=(opcoes && opcoes.escrever) || fmtDataBarra;
+  var w=embrulharComBotao(el, 'Abrir calendário', '📅', opcoes && opcoes.compacto);
 
   var nativo=document.createElement('input');
   nativo.type='date';
   nativo.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-  wrap.appendChild(nativo);
+  w.wrap.appendChild(nativo);
 
-  btn.addEventListener('click',function(){
-    var d=lerDataBarra(el.value);
+  w.btn.addEventListener('click',function(){
+    var d=ler(el.value);
     nativo.value = d ? (d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')) : '';
     if(nativo.showPicker) nativo.showPicker(); else nativo.click();
   });
   nativo.addEventListener('change',function(){
     if(!nativo.value) return;
     var p=nativo.value.split('-');
-    el.value=p[2]+'/'+p[1]+'/'+p[0];
+    el.value=escrever(new Date(Number(p[0]), Number(p[1])-1, Number(p[2])));
+    el.dispatchEvent(new Event('input',{bubbles:true}));
     el.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+}
+
+// Botão 🕐 ao lado de um campo de horário: abre o seletor da ferramenta (ver
+// seletorHora em core.js) e devolve o valor já como "14h00min". Clicar de novo
+// no botão fecha — coisa que o popup nativo do navegador não permite.
+function ativarBotaoRelogio(el, compacto){
+  if(!el) return;
+  if(el.parentNode && el.parentNode.classList.contains('campo-data-wrap')) return;
+  var w=embrulharComBotao(el, 'Abrir seletor de horário', '🕐', compacto);
+
+  w.btn.addEventListener('click',function(){
+    C.seletorHora(w.btn, {
+      valor: interpretarHora(el.value),
+      aoEscolher: function(o){
+        el.value=fmtHora(o);
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    });
+  });
+}
+
+/* Painel que abre e fecha por um botão-link, com o rótulo acompanhando o
+   estado. Começa fechado pelo style="display:none" do próprio HTML. */
+function alternarPainel(btnId, painelId, textoAbrir, textoFechar){
+  var b=$(btnId), p=$(painelId);
+  if(!b || !p) return;
+  b.addEventListener('click', function(){
+    var aberto = p.style.display !== 'none';
+    p.style.display = aberto ? 'none' : '';
+    b.textContent = aberto ? textoAbrir : textoFechar;
   });
 }
 
@@ -255,7 +325,9 @@ var ASSINANTE_CARGO_PADRAO=
  +'Secretaria de Gestão de Pessoas';
 
 var estado={
-  cols:{ reserva:false, link:false },   // Data e Horário são derivados da alocação
+  // E-mail nasce desmarcada: a coluna só atrapalha a alocação, e a conferência
+  // dos endereços é feita no passo 6.
+  cols:{ reserva:false, link:false, email:false },   // Data e Horário são derivados da alocação
   // cand: {id,inscricao,nome,nota,reserva,diaId,hora,linkTexto,linkUrl,email}
   //   `diaId` aponta para um item de `dias`; a data nunca fica na linha, o que
   //   permite mover o candidato de dia sem tocar em mais nada.
@@ -265,7 +337,7 @@ var estado={
   doc:{
     ano:String(new Date().getFullYear()),
     sei:'', unidade:'',
-    modalidade:'Presencial', local:'', endereco:'',
+    modalidade:'Presencial', local:'', endereco:'', link:'',
     observacoes:'O candidato que não comparecer à entrevista será desclassificado do processo seletivo.',
     // exclusivos da publicação no Athos (passo 5)
     dataAthos:'',
@@ -350,6 +422,7 @@ function importarRelatorio(aoa){
   estado.cands.forEach(function(c){ c.diaId=null; });
   estado.cols.reserva=temReserva;
   estado.cols.link=false;
+  estado.cols.email=false;
 
   sincronizarControles();
   renderQuadro();
@@ -538,7 +611,8 @@ function avisosGrade(){
     if(c.reserva && CODIGOS_RESERVA.indexOf(c.reserva)===-1)
       av.push({id:c.id, txt:'Linha '+n+quem+': código de reserva “'+c.reserva+'” não previsto no edital.'});
     if(c.email && c.email.indexOf('@')===-1)
-      av.push({id:c.id, txt:'Linha '+n+quem+': o e-mail “'+c.email+'” não parece válido.'});
+      av.push({id:c.id, txt:'Linha '+n+quem+': o e-mail “'+c.email+'” não parece válido'
+        + (estado.cols.email ? '.' : ' — marque a coluna E-mail para corrigir aqui.')});
     if(estado.cols.link && !c.linkUrl.trim() && c.nome.trim())
       av.push({id:c.id, txt:'Linha '+n+quem+': coluna Link ligada, mas esta linha está sem endereço.'});
   });
@@ -623,9 +697,10 @@ function tabelaDoBloco(lista, mostrarHora){
   var h='<div class="table-scroll" style="max-height:none;"><table class="cv-grade-table" style="white-space:normal;font-family:\'Barlow\',system-ui,sans-serif;font-size:12.5px;">';
   h+='<thead><tr><th style="width:30px;"></th><th style="width:34px;">#</th><th style="width:96px;">Inscrição</th><th>Nome do estudante</th><th style="width:70px;">Nota</th>';
   if(estado.cols.reserva) h+='<th style="width:86px;">Reserva</th>';
-  if(mostrarHora)         h+='<th style="width:84px;">Horário</th>';
+  if(mostrarHora)         h+='<th style="width:112px;">Horário</th>';   // campo + botão 🕐
   if(estado.cols.link)    h+='<th style="width:190px;">Link (texto e endereço)</th>';
-  h+='<th style="width:190px;">E-mail</th><th style="width:60px;">Ações</th></tr></thead><tbody>';
+  if(estado.cols.email)   h+='<th style="width:190px;">E-mail</th>';
+  h+='<th style="width:60px;">Ações</th></tr></thead><tbody>';
   lista.forEach(function(c){
     h+='<tr data-id="'+c.id+'" draggable="false">';
     h+='<td style="text-align:center;width:30px;"><button type="button" class="drag-handle" data-id="'+c.id+'" tabindex="0" title="Arrastar para remanejar ou mudar de dia (ou Alt+↑ / Alt+↓)" aria-label="Remanejar '+esc(c.nome||'linha')+'">⠿</button></td>';
@@ -644,12 +719,12 @@ function tabelaDoBloco(lista, mostrarHora){
         h+='<option value="'+esc(c.reserva)+'" selected>'+esc(c.reserva)+'</option>';
       h+='</select></td>';
     }
-    if(mostrarHora) h+='<td>'+inputCel('hora', fmtHora(c.hora), '68px', true)+'</td>';
+    if(mostrarHora) h+='<td>'+inputCel('hora', fmtHora(c.hora), '58px', true)+'</td>';
     if(estado.cols.link){
       h+='<td>'+inputCel('linkTexto', c.linkTexto, '150px', false)
         +'<div style="height:4px;"></div>'+inputCel('linkUrl', c.linkUrl, '150px', false)+'</td>';
     }
-    h+='<td>'+inputCel('email', c.email, '170px', false)+'</td>';
+    if(estado.cols.email) h+='<td>'+inputCel('email', c.email, '170px', false)+'</td>';
     h+='<td style="text-align:center;"><button type="button" class="p18Act" tabindex="-1" data-a="apaga" title="Excluir linha">✕</button></td>';
     h+='</tr>';
   });
@@ -668,7 +743,7 @@ function renderQuadro(){
     h+='<div class="bloco-dia-cab">'
       +'<p class="bloco-dia-tit">'+(k+1)+'º dia</p>'
       +'<label class="campo-vert campo-data">data'
-      +'<input type="text" class="p18DataDia" data-dia="'+d.id+'" value="'+esc(d.data)+'" placeholder="dd/mm/aaaa">'
+      +'<input type="text" class="p18DataDia" data-dia="'+d.id+'" value="'+esc(d.data)+'" placeholder="Ex: 30/07/2026">'
       +'</label>'
       +'<span class="bloco-dia-qtd">'+n+' candidato'+(n===1?'':'s')+'</span>'
       +'<span class="bloco-dia-acoes"><button type="button" class="link-btn p18DiaAct" data-a="desfazer" data-dia="'+d.id+'" title="Devolve os candidatos para “A atribuir”">Desfazer dia</button></span>'
@@ -677,14 +752,14 @@ function renderQuadro(){
     h+='<div class="bloco-dia-horarios">'
       +'<label class="campo-check"><input type="radio" name="modo_'+d.id+'" class="p18ModoHora" data-dia="'+d.id+'" value="individual"'+(individual?' checked':'')+'> um horário por candidato</label>';
     if(individual){
-      h+='<label class="campo-vert">a partir de<input type="text" class="p18HoraIni" data-dia="'+d.id+'" value="'+esc(d.horaInicial)+'" style="width:88px;text-align:center;"></label>'
+      h+='<label class="campo-vert campo-hora">a partir de<input type="text" class="p18HoraIni" data-dia="'+d.id+'" value="'+esc(d.horaInicial)+'" placeholder="Ex: 14h00min"></label>'
         +'<label class="campo-vert">intervalo (min)<input type="number" class="p18Interv" data-dia="'+d.id+'" value="'+esc(d.intervalo)+'" min="0" max="240"></label>'
         +'<button type="button" class="link-btn p18DiaAct" data-a="horarios" data-dia="'+d.id+'">Preencher horários</button>';
     }
     h+='<span style="width:1px;align-self:stretch;background:var(--paper-dark);"></span>'
       +'<label class="campo-check"><input type="radio" name="modo_'+d.id+'" class="p18ModoHora" data-dia="'+d.id+'" value="geral"'+(individual?'':' checked')+'> mesmo horário para todos</label>';
     if(!individual){
-      h+='<label class="campo-vert">horário do dia<input type="text" class="p18HoraGeral" data-dia="'+d.id+'" value="'+esc(d.horarioGeral)+'" placeholder="14h00min" style="width:110px;text-align:center;"></label>';
+      h+='<label class="campo-vert campo-hora">horário do dia<input type="text" class="p18HoraGeral" data-dia="'+d.id+'" value="'+esc(d.horarioGeral)+'" placeholder="Ex: 14h00min"></label>';
     }
     h+='</div>';
 
@@ -719,6 +794,9 @@ function ligarEventosDoQuadro(){
   // só os avisos são refeitos. Assim o Tab nativo continua funcionando e o
   // foco nunca se perde no meio da digitação.
   Array.prototype.forEach.call(q.querySelectorAll('.p18In'), function(inp){
+    // A máscara entra ANTES dos ouvintes de estado: assim o commit já lê o valor
+    // formatado ("1400" -> "14h00"), e não o que estava na tela antes dela.
+    if(inp.dataset.f==='hora'){ ativarMascaraHora(inp); ativarBotaoRelogio(inp, true); }
     inp.addEventListener('input', function(){ commitCampo(inp); atualizarAvisos(); });
     inp.addEventListener('change', function(){ commitCampo(inp); normalizarExibicao(inp); atualizarAvisos(); });
   });
@@ -745,6 +823,8 @@ function ligarEventosDoQuadro(){
     });
   });
   Array.prototype.forEach.call(q.querySelectorAll('.p18HoraIni'), function(inp){
+    ativarMascaraHora(inp);
+    ativarBotaoRelogio(inp);
     inp.addEventListener('input', function(){
       var d=diaPorId(Number(inp.dataset.dia));
       if(d) d.horaInicial=inp.value;
@@ -757,6 +837,8 @@ function ligarEventosDoQuadro(){
     });
   });
   Array.prototype.forEach.call(q.querySelectorAll('.p18HoraGeral'), function(inp){
+    ativarMascaraHora(inp);
+    ativarBotaoRelogio(inp);
     inp.addEventListener('input', function(){
       var d=diaPorId(Number(inp.dataset.dia));
       if(d) d.horarioGeral=inp.value;
@@ -1038,17 +1120,76 @@ function lerCamposDoc(){
     var el=$('p18F_'+k);
     if(el) estado.doc[k]=el.value;
   });
+  estado.doc.modalidade=normalizarModalidade(estado.doc.modalidade);
 }
 function escreverCamposDoc(){
+  // rascunho antigo pode trazer "Online": sem normalizar antes, o <select> não
+  // acharia a opção e ficaria em branco
+  estado.doc.modalidade=normalizarModalidade(estado.doc.modalidade);
   Object.keys(estado.doc).forEach(function(k){
     var el=$('p18F_'+k);
     if(el) el.value=estado.doc[k]||'';
   });
   atualizarAssuntoEmail();   // o assunto do passo 6 acompanha o protocolo SEI
+  aplicarModalidade();       // campos visíveis acompanham o que foi carregado
 }
+/* Grafia da modalidade: o rascunho pode ter sido salvo quando o dropdown ainda
+   escrevia "Online". Normaliza para o que a ferramenta publica hoje. */
+function normalizarModalidade(v){
+  return /on\s*-?\s*line/i.test(String(v||'')) ? 'On-line' : 'Presencial';
+}
+function ehOnline(){ return normalizarModalidade(estado.doc.modalidade) === 'On-line'; }
+
+/* Cada convocado pode ter o seu próprio link (coluna Link do passo 2). Quando
+   essa coluna está ligada, o link único do passo 3 não existe — seria uma
+   segunda fonte para a mesma informação. */
+function usaLinkPorCandidato(){ return !!estado.cols.link; }
+
+/* Mostra apenas os campos que fazem sentido na modalidade escolhida:
+   presencial tem Endereço, on-line tem LINK (quando o link não é por candidato).
+   A coluna Link do passo 2 também é exclusiva do on-line — no presencial não há
+   sala virtual para apontar. Desligá-la não apaga os links já digitados: eles
+   continuam guardados e voltam a aparecer se a modalidade voltar para on-line. */
+function aplicarModalidade(){
+  var sel=$('p18F_modalidade');
+  if(sel) estado.doc.modalidade=normalizarModalidade(sel.value);
+  var online=ehOnline();
+
+  var colLink=$('p18CampoColLink');
+  if(colLink) colLink.style.display = online ? '' : 'none';
+  if(!online && estado.cols.link){
+    estado.cols.link=false;
+    if($('p18ColLink')) $('p18ColLink').checked=false;
+    renderQuadro();
+  }
+
+  var campoEnd=$('p18CampoEndereco'), campoLink=$('p18CampoLink');
+  if(campoEnd)  campoEnd.style.display  = online ? 'none' : '';
+  if(campoLink) campoLink.style.display = (online && !usaLinkPorCandidato()) ? '' : 'none';
+  atualizarAvisoLink();
+}
+
+/* Convocação on-line sem link é a falha que passa despercebida: o documento sai
+   completo, mas o convocado não sabe onde entrar. O aviso acompanha a digitação
+   e não bloqueia nada — quem decide publicar é o usuário. */
+function atualizarAvisoLink(){
+  var box=$('p18AvisoLink');
+  if(!box) return;
+  var campo=$('p18F_link');
+  var temLink=String((campo ? campo.value : estado.doc.link)||'').trim() !== '';
+  var faltando = ehOnline() && !usaLinkPorCandidato() && !temLink;
+  box.style.display = faltando ? '' : 'none';
+  if(faltando){
+    box.innerHTML = '<strong>Convocação on-line sem o link da sala.</strong> '
+      + 'Preencha o campo <em>Link da sala virtual</em> acima ou, se cada convocado tem a sua sala, '
+      + 'marque a coluna <strong>Link</strong> no passo 2. Do jeito que está, o documento sai sem a linha LINK.';
+  }
+}
+
 function sincronizarControles(){
   $('p18ColReserva').checked=!!estado.cols.reserva;
   $('p18ColLink').checked=!!estado.cols.link;
+  $('p18ColEmail').checked=!!estado.cols.email;
   // "Todos os restantes" dispensa a caixa de quantidade
   var especificar = $('p18QuantosModo').value==='especificar';
   $('p18CampoQuantos').style.display = especificar ? 'flex' : 'none';
@@ -1219,14 +1360,21 @@ function conteudoHtml(lh, lhCel){
     if(dias[0].horarioModo==='geral' && String(dias[0].horarioGeral||'').trim())
       h+=linha('HORÁRIO:', esc(dias[0].horarioGeral.trim()));
   }
+  // LOCAL sempre traz a modalidade na frente ("Presencial | " ou "On-line | ").
   if(String(d.local||'').trim())
-    h+=linha('LOCAL:', esc(d.modalidade)+' | '+esc(comPontoFinal(d.local)));
-  if(String(d.endereco||'').trim()){
+    h+=linha('LOCAL:', esc(normalizarModalidade(d.modalidade))+' | '+esc(comPontoFinal(d.local)));
+  // Presencial imprime o ENDEREÇO; on-line imprime o LINK da sala — e só quando
+  // o link não é por candidato (aí ele já está na coluna da tabela).
+  if(!ehOnline() && String(d.endereco||'').trim()){
     var end=String(d.endereco).trim();
-    var valor = ehUrl(end)
+    var valorEnd = ehUrl(end)
       ? '<a href="'+esc(comHttp(end))+'" style="color:#0563c1;text-decoration:underline;">'+esc(end)+'</a>'
       : esc(comPontoFinal(end));
-    h+=linha('ENDEREÇO:', valor);
+    h+=linha('ENDEREÇO:', valorEnd);
+  }
+  if(ehOnline() && !usaLinkPorCandidato() && String(d.link||'').trim()){
+    var lk=String(d.link).trim();
+    h+=linha('LINK:', '<a href="'+esc(comHttp(lk))+'" style="color:#0563c1;text-decoration:underline;">'+esc(lk)+'</a>');
   }
 
   // tabela dos convocados (sem convocados, mantém o respiro entre os blocos)
@@ -1389,6 +1537,20 @@ var MESES_EXTENSO=['janeiro','fevereiro','março','abril','maio','junho',
 function formatarDataExtenso(d){
   return d.getDate()+' de '+MESES_EXTENSO[d.getMonth()]+' de '+d.getFullYear();
 }
+// "27 de julho de 2026" -> Date. Aceita também 27/07/2026 (quem digita costuma
+// usar as barras) e o mês sem acento — é só para posicionar o calendário.
+function lerDataExtenso(txt){
+  var s=String(txt||'').trim();
+  var d=lerDataBarra(s);
+  if(d) return d;
+  var m=/(\d{1,2})\s+de\s+([A-Za-zÀ-ÿ]+)\s+de\s+(\d{4})/i.exec(s);
+  if(!m) return null;
+  var alvo=semAcento(m[2]).toLowerCase();
+  var mes=MESES_EXTENSO.map(function(x){ return semAcento(x).toLowerCase(); }).indexOf(alvo);
+  if(mes<0) return null;
+  var dt=new Date(Number(m[3]), mes, Number(m[1]));
+  return isNaN(dt.getTime()) ? null : dt;
+}
 // Próximo dia útil a partir de hoje — mesma conta do Ponto 20. Só sábado e
 // domingo são pulados: não há tabela de feriados embutida, e inventar uma que
 // envelhece em silêncio seria pior do que pedir a conferência ao usuário.
@@ -1496,21 +1658,75 @@ function montarBloco(valores){
   return valores.length ? (valores.join('; ')+';') : '';
 }
 
-function gerarEmailsDaTabela(){
+/* Percorre os convocados uma única vez e classifica cada um: o que entra na
+   lista, o que ficou de fora por não ter e-mail e o que ficou de fora por
+   repetição. É a mesma passagem que alimenta o bloco de e-mails e a tabela de
+   conferência — as duas coisas nunca divergem. */
+function classificarEmails(){
   var reais=estado.cands.filter(function(c){ return c.nome.trim(); });
-  var comEmail=[], sem=[], vistos={}, repetidos=[];
+  var lista=[], linhas=[], vistos={}, sem=[], repetidos=[];
   reais.forEach(function(c){
     var e=String(c.email||'').trim().toLowerCase();
-    if(!e || e.indexOf('@')<1){ sem.push(c.nome); return; }
-    if(vistos[e]){ repetidos.push(e); return; }
-    vistos[e]=true;
-    comEmail.push(e);
+    var sit;
+    if(!e || e.indexOf('@')<1){ sit='sem e-mail válido'; sem.push(c.nome); }
+    else if(vistos[e]){ sit='repetido — incluído uma vez'; repetidos.push(e); }
+    else { sit='na lista'; vistos[e]=true; lista.push(e); }
+    linhas.push({ inscricao:c.inscricao, nome:c.nome, email:e, situacao:sit, ok:sit==='na lista' });
   });
+  return { reais:reais, lista:lista, linhas:linhas, sem:sem, repetidos:repetidos };
+}
+
+/* Tabela de conferência: inscrição, nome e e-mail de cada convocado, na ordem
+   da tabela do passo 2, com destaque em quem ficou de fora do bloco. */
+function renderConferenciaEmails(linhas){
+  var box=$('p18Conferencia');
+  if(!box) return;
+  if(!linhas.length){ box.innerHTML='<p class="empty-hint">Nenhum convocado na tabela do passo 2.</p>'; return; }
+  var h='<div class="table-scroll" style="margin-top:10px;"><table>'
+    + '<thead><tr><th style="width:110px;">Inscrição</th><th>Nome do estudante</th>'
+    + '<th style="width:240px;">E-mail</th><th style="width:190px;">Situação</th></tr></thead><tbody>';
+  linhas.forEach(function(l){
+    h+='<tr'+(l.ok?'':' class="unmatched"')+'>'
+      +'<td>'+esc(l.inscricao)+'</td>'
+      +'<td style="white-space:normal;">'+esc(l.nome)+'</td>'
+      +'<td>'+esc(l.email || '—')+'</td>'
+      +'<td>'+esc(l.situacao)+'</td></tr>';
+  });
+  box.innerHTML=h+'</tbody></table></div>';
+}
+
+/* O quadro do resultado (campo + botões) nasce escondido: só faz sentido depois
+   que existe alguma lista para copiar. */
+function mostrarResultadoEmails(mostrar){
+  var box=$('p18ResultadoEmails');
+  if(box) box.style.display = mostrar ? '' : 'none';
+}
+
+/* O botão da conferência só faz sentido depois de gerar a lista pela tabela;
+   uma colagem manual não tem a quem conferir. */
+function mostrarBotaoConferencia(mostrar){
+  var b=$('p18BtnConferencia'), box=$('p18Conferencia');
+  if(!b || !box) return;
+  b.style.display = mostrar ? '' : 'none';
+  if(!mostrar){
+    box.style.display='none';
+    box.innerHTML='';
+    b.textContent='Mostrar tabela de conferência';
+  }
+}
+
+function gerarEmailsDaTabela(){
+  var r=classificarEmails();
+  var reais=r.reais, comEmail=r.lista, sem=r.sem, repetidos=r.repetidos;
   $('p18EmailsSaida').value=montarBloco(comEmail);
+
+  mostrarResultadoEmails(reais.length > 0);
+  mostrarBotaoConferencia(reais.length > 0);
+  if(reais.length) renderConferenciaEmails(r.linhas);
 
   var h='';
   if(!reais.length){
-    h='<div class="notice-banner warn" style="margin-left:0;">A tabela do passo 2 está vazia — envie o relatório no passo 1 ou cole a lista no quadro acima.</div>';
+    h='<div class="notice-banner warn" style="margin-left:0;">A tabela do passo 2 está vazia — envie o relatório no passo 1 ou use a colagem manual, logo abaixo.</div>';
   } else {
     var partes=['<strong>'+comEmail.length+'</strong> e-mail(s) na lista, na mesma ordem da tabela.'];
     if(repetidos.length) partes.push('<strong>'+repetidos.length+'</strong> repetido(s) foram incluídos uma única vez.');
@@ -1524,6 +1740,9 @@ function gerarEmailsDaTabela(){
 function processarColagem(){
   var valores=$('p18EmailsEntrada').value.split(/[\r\n;,]+/).map(function(v){ return v.trim(); }).filter(Boolean);
   $('p18EmailsSaida').value=montarBloco(valores);
+  mostrarResultadoEmails(valores.length > 0);
+  // o que foi colado não vem da tabela: não há conferência a oferecer
+  mostrarBotaoConferencia(false);
   var invalidos=valores.filter(function(v){ return v.indexOf('@')<1; });
   $('p18EmailsAviso').innerHTML = valores.length
     ? '<div class="notice-banner '+(invalidos.length?'warn':'ok')+'" style="margin-left:0;"><strong>'+valores.length+'</strong> valor(es) processado(s).'
@@ -1588,8 +1807,16 @@ function importarRascunho(file){
     try{
       var d=JSON.parse(fr.result);
       if(!d || !Array.isArray(d.cands)) throw new Error('arquivo sem lista de convocados');
-      estado.cols=Object.assign({reserva:false, link:false}, d.cols||{});
+      estado.cols=Object.assign({reserva:false, link:false, email:false}, d.cols||{});
       estado.doc=Object.assign(estado.doc, d.doc||{});
+      // Antes desta versão a convocação on-line guardava o link da sala no
+      // campo Endereço, que hoje só existe no presencial. Sem esta conversão o
+      // rascunho antigo abriria sem o link — e ele sumiria do documento.
+      if(normalizarModalidade(estado.doc.modalidade)==='On-line'
+         && !String(estado.doc.link||'').trim() && String(estado.doc.endereco||'').trim()){
+        estado.doc.link=estado.doc.endereco;
+        estado.doc.endereco='';
+      }
       // Converte rascunhos antigos: v1 marcava o dia como "quebra" na linha,
       // v2 já tinha lista de dias mas sem regime de horário. Nenhum trabalho
       // anterior se perde ao abrir.
@@ -1674,12 +1901,16 @@ function iniciar(){
   });
 
   // ---- passo 2
-  [['p18ColReserva','reserva'], ['p18ColLink','link']].forEach(function(par){
+  [['p18ColReserva','reserva'], ['p18ColLink','link'], ['p18ColEmail','email']].forEach(function(par){
     $(par[0]).addEventListener('change', function(e){
       estado.cols[par[1]]=e.target.checked;
       renderQuadro();
+      aplicarModalidade();   // ligar a coluna Link tira o campo de link único
     });
   });
+  // A modalidade mora no passo 2, junto das colunas extras: é ela que libera a
+  // coluna Link, e as duas coisas precisam estar ao alcance do mesmo olhar.
+  $('p18F_modalidade').addEventListener('change', aplicarModalidade);
   ativarMascaraData($('p18NovaData'));
   ativarBotaoCalendario($('p18NovaData'));
   $('p18QuantosModo').addEventListener('change', sincronizarControles);
@@ -1693,6 +1924,7 @@ function iniciar(){
   // ---- passo 3
   ativarMascaraSei($('p18F_sei'));
   $('p18F_sei').addEventListener('input', atualizarAssuntoEmail);
+  $('p18F_link').addEventListener('input', atualizarAvisoLink);
   $('p18BtnGerar').addEventListener('click', function(){ atualizarResumoAlocacao(); gerarDocumento(); });
 
   // ---- passo 4
@@ -1704,6 +1936,8 @@ function iniciar(){
 
   // ---- passo 5 (Athos)
   estado.doc.dataAthos=formatarDataExtenso(proximoDiaUtil(new Date()));
+  // a data da assinatura é por extenso: o 📅 escreve nesse mesmo formato
+  ativarBotaoCalendario($('p18F_dataAthos'), { ler:lerDataExtenso, escrever:formatarDataExtenso });
   $('p18BtnAthos').addEventListener('click', montarBlocosAthos);
   $('p18BtnCopiarAthos').addEventListener('click', copiarTudoAthos);
   Array.prototype.forEach.call(document.querySelectorAll('.p18-bloco-copiar'), function(b){
@@ -1715,6 +1949,8 @@ function iniciar(){
   $('p18BtnProcessarColagem').addEventListener('click', processarColagem);
   $('p18BtnCopiarEmails').addEventListener('click', copiarEmails);
   $('p18BtnCopiarAssunto').addEventListener('click', copiarAssuntoEmail);
+  alternarPainel('p18BtnColarEmails','p18ColarEmailsWrap','Colar lista manualmente','Ocultar colagem manual');
+  alternarPainel('p18BtnConferencia','p18Conferencia','Mostrar tabela de conferência','Ocultar tabela de conferência');
 
   escreverCamposDoc();
   ligarCaixaRascunho();

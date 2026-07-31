@@ -4,6 +4,19 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ponto 18 — Convocação para Entrevista</title>
 <link rel="stylesheet" href="core.css">
+<style>
+  /* Sugestão de preenchimento: vale para TODOS os campos da página, inclusive
+     os que a grade do passo 2 desenha em tempo de execução. Mais esmaecida do
+     que o padrão do core.css, para nunca ser confundida com valor digitado —
+     o texto sempre começa por "Ex:". */
+  input::placeholder,
+  textarea::placeholder,
+  .exemplo-input::placeholder{
+    color:var(--ink-soft);
+    opacity:0.42;
+    font-style:italic;
+  }
+</style>
 </head><body><div class="sheet">
 <div id="institutional-placeholder"></div>
 <div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
@@ -57,6 +70,10 @@
       Depois defina os horários daquele dia. Para realocar alguém, arraste a linha pela alça <strong>⠿</strong>
       (ou, pelo teclado, foque a alça e use <strong>Alt+↑</strong> / <strong>Alt+↓</strong>).
     </p>
+    <p class="step-desc" style="font-size:12.5px;">
+      Nos campos de data e de horário você escolhe: digite só os números (<strong>22072026</strong> vira 22/07/2026 e
+      <strong>1400</strong> vira 14h00min sozinho) ou clique em <strong>📅</strong> / <strong>🕐</strong> para selecionar com o mouse.
+    </p>
 
     <div class="notice-banner warn" style="margin-left:0;">
       <strong>Confira a regra de convocação do item 6 do edital.</strong>
@@ -66,15 +83,23 @@
     </div>
 
     <div class="upload-panel" style="gap:14px 22px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);">Modalidade
+        <select id="p18F_modalidade" style="padding:6px 8px;border:1px solid var(--line);background:#fffdf7;font-family:'Barlow',system-ui,sans-serif;font-size:13px;">
+          <option value="Presencial">Presencial</option>
+          <option value="On-line">On-line</option>
+        </select>
+      </label>
+      <span style="width:1px;align-self:stretch;background:var(--paper-dark);"></span>
       <span style="font-size:13px;color:var(--ink-soft);">Colunas extras:</span>
       <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="p18ColReserva"> Reserva</label>
-      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="p18ColLink"> Link</label>
-      <span class="file-name">Data e Horário aparecem sozinhos, conforme a alocação</span>
+      <label id="p18CampoColLink" style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="p18ColLink"> Link</label>
+      <label style="font-size:13px;color:var(--ink-soft);"><input type="checkbox" id="p18ColEmail"> E-mail</label>
+      <span class="file-name">a modalidade define a coluna Link e os campos do passo 3; Data e Horário aparecem sozinhos, conforme a alocação</span>
     </div>
 
     <div class="painel-nova-data">
       <label class="campo-vert campo-data">Nova data de entrevista
-        <input type="text" class="exemplo-input" id="p18NovaData" placeholder="dd/mm/aaaa">
+        <input type="text" class="exemplo-input" id="p18NovaData" placeholder="Ex: 30/07/2026">
       </label>
       <label class="campo-vert">Candidatos
         <select id="p18QuantosModo">
@@ -110,20 +135,17 @@
     </div>
     <div class="step-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 18px;">
       <label style="font-size:12.5px;color:var(--ink-soft);">Ano do processo seletivo<br><input type="text" id="p18F_ano" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
-      <label style="font-size:12.5px;color:var(--ink-soft);">Protocolo SEI n°<br><input type="text" class="exemplo-input" id="p18F_sei" placeholder="Ex.: 0040476-96.2026.8.16.6000" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
-      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Nome da unidade<br><textarea id="p18F_unidade" class="exemplo-input" style="min-height:58px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Ex.: Gabinete do Desembargador Jorge de Oliveira Vargas"></textarea></label>
-      <label style="font-size:12.5px;color:var(--ink-soft);">Modalidade<br>
-        <select id="p18F_modalidade" style="width:100%;padding:8px;border:1px solid var(--line);background:#fffdf7;">
-          <option value="Presencial">Presencial</option>
-          <option value="Online">Online</option>
-        </select>
-      </label>
-      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Local<br><input type="text" class="exemplo-input" id="p18F_local" placeholder="Ex.: Gabinete do Desembargador Jorge de Oliveira Vargas — ou, se online: Microsoft Teams" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
-      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Endereço<br><input type="text" class="exemplo-input" id="p18F_endereco" placeholder="Ex.: Palácio da Justiça, 7º andar, sala 706, Curitiba/PR — ou, se online, o link da sala" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Protocolo SEI n°<br><input type="text" class="exemplo-input" id="p18F_sei" placeholder="Ex: 0040476-96.2026.8.16.6000" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Nome da unidade<br><textarea id="p18F_unidade" class="exemplo-input" style="min-height:58px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Ex: Gabinete do Desembargador Jorge de Oliveira Vargas"></textarea></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Local<br><input type="text" class="exemplo-input" id="p18F_local" placeholder="Ex: Gabinete do Desembargador Jorge de Oliveira Vargas — ou, se on-line: Microsoft Teams" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <!-- Endereço só no presencial; LINK só no on-line (e some quando cada convocado tem o seu, no passo 2) -->
+      <label id="p18CampoEndereco" style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Endereço<br><input type="text" class="exemplo-input" id="p18F_endereco" placeholder="Ex: Palácio da Justiça, 7º andar, sala 706, Curitiba/PR" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label id="p18CampoLink" style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Link da sala virtual<br><input type="text" class="exemplo-input" id="p18F_link" placeholder="Ex: https://teams.microsoft.com/l/meetup-join/..." style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Observações<br><textarea id="p18F_observacoes" style="min-height:80px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;"></textarea></label>
     </div>
+    <div class="notice-banner warn" id="p18AvisoLink" style="margin-left:0;display:none;"></div>
     <div class="notice-banner" id="p18ResumoAlocacao" style="margin-left:0;"></div>
-    <p class="step-desc" style="font-size:12.5px;">Data e horário vêm da alocação feita no passo 2. Em observações, cada linha vira um parágrafo.</p>
+    <p class="step-desc" style="font-size:12.5px;">Data e horário vêm da alocação feita no passo 2, e é lá que fica a <strong>modalidade</strong> — é ela que decide se aqui aparece o Endereço ou o Link da sala. Em observações, cada linha vira um parágrafo.</p>
     <div class="step-content" style="margin-top:18px;">
       <button type="button" class="run-btn" id="p18BtnGerar">Gerar convocação</button>
     </div>
@@ -165,7 +187,7 @@
       <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Quem assina<br><input type="text" id="p18F_assinanteNome" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
       <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Cargo e unidade de quem assina (uma linha por linha do bloco)<br><textarea id="p18F_assinanteCargo" style="min-height:76px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;"></textarea></label>
     </div>
-    <p class="step-desc" style="margin-top:10px;font-size:12.5px;">A data já vem com o <strong>próximo dia útil</strong> a partir de hoje (contando apenas sábado e domingo — feriados precisam ser conferidos por você).</p>
+    <p class="step-desc" style="margin-top:10px;font-size:12.5px;">A data já vem com o <strong>próximo dia útil</strong> a partir de hoje (contando apenas sábado e domingo — feriados precisam ser conferidos por você). Para trocar, escreva por extenso ou use o <strong>📅</strong>, que já devolve a data no formato do bloco.</p>
 
     <div class="step-content" style="margin-top:18px;">
       <button type="button" class="run-btn" id="p18BtnAthos">Montar blocos do Athos</button>
@@ -216,26 +238,33 @@
       <span class="step-num">6</span>
       <p class="step-title">Lista de e-mails para o SEI</p>
     </div>
-    <p class="step-desc">Gera o bloco único, separado por ponto e vírgula, com os e-mails dos convocados que estão na tabela do passo 2. Se preferir, cole a coluna de e-mails direto do Excel no quadro abaixo.</p>
+    <p class="step-desc">Gera o bloco único, separado por ponto e vírgula, com os e-mails dos convocados que estão na tabela do passo 2.</p>
 
     <div class="upload-panel">
       <button type="button" class="link-btn" id="p18BtnGerarEmails">Gerar lista de e-mails</button>
       <span class="file-name" id="p18EmailsNota">a partir da tabela do passo 2</span>
     </div>
 
-    <div class="step-content" style="margin-top:14px;">
-      <p class="step-desc">Colagem manual (um valor por linha) — opcional:</p>
-      <textarea id="p18EmailsEntrada" placeholder="Cole aqui a coluna copiada do Excel"></textarea>
-      <div class="download-row">
-        <button type="button" class="link-btn" id="p18BtnProcessarColagem">Processar a colagem</button>
-      </div>
-    </div>
-
-    <div class="step-content" style="margin-top:14px;">
+    <!-- só aparece depois de gerar a lista (ou de processar uma colagem) -->
+    <div class="step-content" id="p18ResultadoEmails" style="margin-top:14px;display:none;">
       <p class="step-desc">Resultado:</p>
       <textarea id="p18EmailsSaida" readonly></textarea>
       <div class="download-row">
         <button type="button" class="download-btn" id="p18BtnCopiarEmails">Copiar resultado</button>
+        <button type="button" class="download-btn" id="p18BtnConferencia" style="display:none;background:var(--ink);">Mostrar tabela de conferência</button>
+      </div>
+      <div id="p18Conferencia" class="collapse-panel" style="display:none;"></div>
+    </div>
+
+    <div class="alt-action">
+      <span>A lista vem da tabela do passo 2. Se preferir montá-la a partir de uma coluna copiada do Excel:</span>
+      <button type="button" class="link-btn" id="p18BtnColarEmails">Colar lista manualmente</button>
+    </div>
+    <div id="p18ColarEmailsWrap" class="collapse-panel" style="display:none;">
+      <p class="step-desc" style="font-size:12.5px;">Um valor por linha — a colagem substitui o resultado acima e não passa pela conferência com a tabela do passo 2.</p>
+      <textarea id="p18EmailsEntrada" class="exemplo-input" placeholder="Ex: fulano@gmail.com — um endereço por linha, como sai da coluna do Excel"></textarea>
+      <div class="download-row">
+        <button type="button" class="link-btn" id="p18BtnProcessarColagem">Processar a colagem</button>
       </div>
     </div>
 
