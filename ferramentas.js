@@ -35,6 +35,18 @@ const SECOES=[
     descricao:"Apoio operacional à residência jurídica: leitura dos PDFs e relatórios da Fábrica de Provas para gerar editais prontos para copiar ou baixar.",
     sufixoTitulo:" — Divisão de Residência (TJPR)",
     emBreve:"Novas ferramentas da residência aparecerão aqui conforme forem desenvolvidas."
+  },
+  {
+    id:"fluxo",
+    ordem:2,
+    rotulo:"Fluxo",
+    emoji:"🧭",
+    cor:"--coral",
+    eyebrow:"Mapa do processo seletivo",
+    titulo:"Fluxo de Processo Seletivo",
+    descricao:"Visão do processo seletivo de ponta a ponta: em que fase cada atividade acontece, quem responde por ela e como é classificada em Ponto, Tag e Vinculação.",
+    sufixoTitulo:" — Fluxo do Processo Seletivo (TJPR)",
+    emBreve:"Novas ferramentas de fluxo aparecerão aqui conforme forem desenvolvidas."
   }
 ].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 
@@ -125,6 +137,19 @@ const FERRAMENTAS=[
     eyebrow:"Resultado do certame",
     titulo:"Gerador do Edital de Classificação Final",
     descricao:"Cruzará o relatório de classificação da Fábrica de Provas com os dados dos inscritos para gerar o Edital de Classificação Final. (Em desenvolvimento.)"
+  },
+
+  /* ---------- Fluxo de Processo Seletivo ---------- */
+  {
+    arquivo:"fluxo.html",
+    secao:"fluxo",
+    rotulo:"Editor do Fluxo",
+    ordem:0,
+    emoji:"🗺️",
+    cor:"--coral",
+    eyebrow:"Ponto, Tag e Vinculação",
+    titulo:"Editor do Fluxo do Processo Seletivo",
+    descricao:"Quadro compartilhado com as etapas do processo seletivo — fase, atividade, responsáveis, número da etapa e a marcação de Ponto, Tag e Vinculação. Permite reordenar as etapas arrastando, salvar para todos de uma vez, baixar uma cópia de segurança e gerar o PDF do fluxo."
   }
 ];
 
