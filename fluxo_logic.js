@@ -38,19 +38,6 @@ function escAttr(s){
 
 function limpar(v){ return String(v==null?'':v).trim(); }
 
-/* Cor da letra sobre o fundo da fase. O quadro original escrevia sempre em
-   branco, o que deixava as fases claras (o dourado, o azul-claro) quase
-   ilegíveis. Aqui a decisão vem da luminância relativa da WCAG: o ponto em que
-   preto e branco empatam em contraste é L ≈ 0,179. */
-function corDoTexto(hex){
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(limpar(hex));
-  if(!m) return '#ffffff';
-  const n = parseInt(m[1], 16);
-  const canal = c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
-  const L = 0.2126*canal((n>>16)&255) + 0.7152*canal((n>>8)&255) + 0.0722*canal(n&255);
-  return L > 0.179 ? '#14232a' : '#ffffff';
-}
-
 // O <input type="color"> só aceita #rrggbb; qualquer outra coisa o zera em
 // silêncio e a fase perderia a cor ao ser redesenhada.
 function corValida(v, padrao){
@@ -256,26 +243,17 @@ function campoTexto(classe, campo, valor, extra){
 
 /* O nome da fase é um <textarea>, e não um <input>: nomes como "Retificações,
    assinaturas e exceções" não cabem numa linha e ficavam cortados no meio.
-   Como textarea não aceita `list`, as fases padronizadas passaram do
-   <datalist> para um <select> de atalho ao lado do seletor de cor — que, de
-   quebra, é bem mais visível do que a listinha do datalist. */
+   Digitar o nome exato de uma das fases padronizadas continua aplicando a cor
+   dela (ver ligarEventosDaGrade). */
 function celulaFase(linha){
-  const tinta = corDoTexto(linha.color);
-  let opcoes = '<option value="">aplicar fase padrão…</option>';
-  Object.keys(CORES_POR_FASE).forEach(f=>{
-    opcoes += '<option value="' + escAttr(f) + '">' + esc(f) + '</option>';
-  });
-  return '<td class="fluxo-fase" style="--fase:' + escAttr(linha.color) + ';color:' + tinta + ';">'
-    + '<div class="fluxo-fase-topo">'
+  return '<td class="fluxo-fase" style="--fase:' + escAttr(linha.color) + ';">'
+    + '<div class="fluxo-fase-linha">'
     + '<input type="color" class="fluxo-cor" value="' + escAttr(linha.color) + '"'
     + ' title="Alterar a cor desta fase" aria-label="Cor da fase">'
-    + '<select class="fluxo-fase-padrao" title="Preencher com uma das fases padronizadas"'
-    + ' aria-label="Aplicar uma fase padronizada">' + opcoes + '</select>'
-    + '</div>'
     + '<textarea class="fluxo-fase-nome" rows="1" data-campo="phase"'
     + ' placeholder="Digite a fase" title="Nome da fase — texto livre"'
     + ' aria-label="Nome da fase">' + esc(linha.phase) + '</textarea>'
-    + '</td>';
+    + '</div></td>';
 }
 
 function celulaClassificacao(linha){
@@ -331,10 +309,15 @@ function desenhar(){
   Array.prototype.forEach.call(corpo.querySelectorAll('.fluxo-campo, .fluxo-fase-nome'), ajustarAltura);
 }
 
-// Os campos crescem com o texto: a atividade pode ter uma linha ou cinco, e uma
-// barra de rolagem dentro da célula esconderia justamente o que se quer ler.
+/* Os campos crescem com o texto: a atividade pode ter uma linha ou cinco, e uma
+   barra de rolagem dentro da célula esconderia justamente o que se quer ler.
+
+   Zeramos a altura antes de medir, e não usamos 'auto': dentro de uma célula de
+   tabela, 'auto' pode ser resolvido como a altura da própria célula (ditada
+   pela coluna mais alta), e aí o scrollHeight devolveria a linha inteira — era
+   o que esticava o campo da fase até o pé da linha, sem nunca encolher. */
 function ajustarAltura(campo){
-  campo.style.height = 'auto';
+  campo.style.height = '0px';
   campo.style.height = (campo.scrollHeight + 2) + 'px';
 }
 
@@ -377,23 +360,6 @@ function ligarEventosDaGrade(){
     };
     campo.addEventListener('input', aplicarCorSugerida);
     campo.addEventListener('change', aplicarCorSugerida);
-  });
-
-  Array.prototype.forEach.call(corpo.querySelectorAll('.fluxo-fase-padrao'), function(atalho){
-    atalho.addEventListener('change', function(){
-      const linha = linhaDoElemento(atalho);
-      if(!linha || !atalho.value) return;
-      linha.phase = atalho.value;
-      linha.color = CORES_POR_FASE[atalho.value] || linha.color;
-      const celula = atalho.closest('.fluxo-fase');
-      const nome = celula && celula.querySelector('.fluxo-fase-nome');
-      if(nome){ nome.value = linha.phase; ajustarAltura(nome); }
-      pintarFase(atalho, linha);
-      // volta ao rótulo: o select é um atalho de preenchimento, não o estado da
-      // linha — deixá-lo marcado sugeriria que a fase só pode ser uma daquelas
-      atalho.value = '';
-      agendarGravacao();
-    });
   });
 
   Array.prototype.forEach.call(corpo.querySelectorAll('.fluxo-cor'), function(seletor){
@@ -441,7 +407,6 @@ function pintarFase(elementoDaCelula, linha){
   const td = elementoDaCelula.closest('.fluxo-fase');
   if(!td) return;
   td.style.setProperty('--fase', linha.color);
-  td.style.color = corDoTexto(linha.color);
   const seletor = td.querySelector('.fluxo-cor');
   if(seletor && seletor.value !== linha.color) seletor.value = linha.color;
 }
@@ -624,7 +589,7 @@ function documentoImpresso(){
   const linhas = estado.linhas.map(l=>{
     const classes = l.classifications.length ? l.classifications.join(' • ') : '—';
     return '<tr>'
-      + '<td class="fase" style="background:' + escAttr(l.color) + ';color:' + corDoTexto(l.color) + ';">' + esc(l.phase) + '</td>'
+      + '<td class="fase" style="background:' + escAttr(l.color) + ';">' + esc(l.phase) + '</td>'
       + '<td>' + esc(l.activity) + '</td>'
       + '<td class="forte">' + esc(l.owners) + '</td>'
       + '<td class="forte meio">' + esc(l.stage) + '</td>'
@@ -649,7 +614,8 @@ function documentoImpresso(){
     + 'th:nth-child(1),td:nth-child(1){width:20%;} th:nth-child(2),td:nth-child(2){width:34%;}'
     + 'th:nth-child(3),td:nth-child(3){width:15%;} th:nth-child(4),td:nth-child(4){width:7%;}'
     + 'th:nth-child(5),td:nth-child(5){width:18%;}'
-    + 'td.fase{font-weight:700;} td.forte{font-weight:600;} td.meio{text-align:center;}'
+    // letra branca na fase, como na tela — a cor de fundo vem inline por linha
+    + 'td.fase{font-weight:700;color:#ffffff;} td.forte{font-weight:600;} td.meio{text-align:center;}'
     + 'td.classe{font-weight:600;color:#002a3a;}'
     + 'footer{margin-top:12px;font-size:8.5px;color:#4d5e64;}'
     + '</style></head><body>'
@@ -751,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 /* Exposto para depuração e para os testes automatizados. */
 window.Fluxo = {
-  estado, corDoTexto, corValida, normalizarLinha, lerEstado, montarEstado,
+  estado, corValida, normalizarLinha, lerEstado, montarEstado,
   soltarEm, mover, excluir, desfazerExclusao, acrescentar, desenhar,
   documentoImpresso, restaurarCopia, gravar, carregar, lerDaNuvem, gravarNaNuvem,
   CLASSIFICACOES, CORES_POR_FASE, QUADRO_SEMENTE, CHAVE_LOCAL, VERSAO_ESTADO

@@ -1270,39 +1270,30 @@ table.fluxo-table{
 table.fluxo-table tbody tr:nth-child(even){ background:none; }
 table.fluxo-table tbody td{ vertical-align:top; }
 
-/* Célula da fase: o fundo É a cor da fase, então o texto precisa de contraste
-   próprio — a cor da letra é calculada pela luminância no fluxo_logic.js e
-   chega por herança, nunca fixada em branco. */
+/* Célula da fase: o fundo é a cor da fase e a letra é SEMPRE branca, como no
+   quadro original — é o que mantém a coluna com leitura uniforme de cima a
+   baixo, mesmo com as fases mudando de cor. */
 .fluxo-fase{
   background:var(--fase, var(--navy));
+  color:var(--white);
   padding:6px;
 }
-.fluxo-fase-topo{ display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+/* align-items:flex-start é o que impede o campo do nome de ser esticado até a
+   altura da linha (que é ditada pela coluna Atividade). */
+.fluxo-fase-linha{ display:flex; align-items:flex-start; gap:6px; }
 .fluxo-cor{
   flex:0 0 auto;
   width:30px; height:30px; padding:0;
-  /* currentColor: a borda acompanha a cor da letra calculada para a fase, e
-     assim continua visível tanto no dourado quanto no azul-marinho */
-  border:1px solid currentColor;
+  border:1px solid rgba(255,255,255,0.6);
   background:transparent; cursor:pointer;
-}
-/* Atalho para as fases padronizadas. Substituiu o <datalist>: o nome da fase
-   passou a ser textarea (para quebrar linha) e textarea não aceita `list`. */
-.fluxo-fase-padrao{
-  flex:1 1 auto; min-width:0;
-  height:30px; padding:0 6px;
-  font-family:'Barlow', system-ui, sans-serif;
-  font-size:11.5px;
-  /* fundo sólido: o <select> fechado é desenhado pelo sistema e ficaria
-     ilegível herdando a cor da fase */
-  color:var(--ink); background:var(--white);
-  border:1px solid var(--line); cursor:pointer;
 }
 /* O nome da fase é textarea, e não input, justamente para exibir por inteiro
    nomes longos como "Retificações, assinaturas e exceções" — a altura é
    ajustada ao conteúdo pelo ajustarAltura(), no fluxo_logic.js. */
 .fluxo-fase-nome{
+  flex:1 1 auto;
   width:100%; min-width:0;
+  display:block;
   font-family:'Barlow', system-ui, sans-serif;
   font-size:12.5px; font-weight:700; color:inherit;
   line-height:1.35;
@@ -1312,8 +1303,8 @@ table.fluxo-table tbody td{ vertical-align:top; }
   resize:none; overflow:hidden;
 }
 .fluxo-fase-nome:hover{ background:rgba(255,255,255,0.22); border-color:rgba(255,255,255,0.45); }
-.fluxo-fase-nome:focus{ background:rgba(255,255,255,0.28); border-color:currentColor; outline:none; }
-.fluxo-fase-nome::placeholder{ color:currentColor; opacity:0.6; font-style:italic; font-weight:500; }
+.fluxo-fase-nome:focus{ background:rgba(255,255,255,0.28); border-color:var(--white); outline:none; }
+.fluxo-fase-nome::placeholder{ color:var(--white); opacity:0.6; font-style:italic; font-weight:500; }
 
 /* Campos de texto da grade: crescem com o conteúdo (ver ajustarAltura), sem
    barra de rolagem interna — a etapa inteira precisa ficar visível de relance. */
