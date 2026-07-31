@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Residência — Gerar arquivo para importar no Hércules</title>
+<link rel="stylesheet" href="core.css">
+</head><body><div class="sheet">
+<div id="institutional-placeholder"></div>
+<div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
+<main>
+
+  <div class="step step-info">
+    <div class="step-head">
+      <span class="step-num">i</span>
+      <p class="step-title">Como funciona</p>
+    </div>
+    <p class="step-desc">Esta ferramenta gera o arquivo <strong>.CSV</strong> de importação da Classificação Final no <strong>Hércules</strong>, a partir dos dois PDFs da Residência.</p>
+    <ul class="step-list">
+      <li><strong>Passo 1</strong> — Edital de Classificação Final (PDF do SEI/Athos): traz ordem, nome e nota de cada tabela de cota.</li>
+      <li><strong>Passo 2</strong> — Lista de dados dos inscritos (PDF): traz CPF, modalidade da inscrição, celular e e-mail.</li>
+      <li><strong>Passo 3</strong> — cruzamento por nome, aplicação da ordem de chamamento e download do CSV.</li>
+    </ul>
+    <p class="step-desc">A <strong>Classificação</strong> gravada no CSV é a <strong>ordem de chamamento</strong> (Decisão 11697384), com o candidato cotista encaixado na posição que lhe for mais vantajosa e o nome aparecendo uma única vez. Na conferência em tela também é exibida a ordem original de cada tabela do edital.</p>
+    <p class="step-desc">As cotas do arquivo (PNE/AFRO/INDÍGENA) vêm da <strong>modalidade da inscrição</strong>, na Lista de dados. Se ela divergir das tabelas do edital, a ferramenta avisa — mas não corrige sozinha.</p>
+    <p class="step-desc">Vagas de <strong>Vulnerabilidade Social (VS)</strong> só valem para editais de Ensino Médio; na Residência (pós-graduação) elas revertem para concorrência Geral.</p>
+    <p class="step-desc"><strong>Atenção:</strong> alguns editais chegam como PDF-imagem (print colado), sem texto extraível. Nesse caso a leitura automática não funciona e você digita ou cola a tabela no quadro do Passo 1 — que é sempre editável.</p>
+  </div>
+
+  <!-- ===================== PASSO 1 ===================== -->
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <p class="step-title">Edital de Classificação Final</p>
+    </div>
+    <p class="step-desc">Escolha o PDF do edital exatamente como baixado do SEI. As tabelas de Ampla Concorrência, Pessoa Preta ou Parda, PcD e Indígena são reconhecidas e separadas automaticamente, inclusive nos modelos de cabeçalho embaralhado.</p>
+
+    <div class="upload-panel">
+      <input type="file" id="edArquivo" accept=".pdf,application/pdf">
+      <button type="button" class="file-btn" id="edBtnArquivo">Escolher PDF do edital</button>
+      <span class="file-name" id="edNomeArquivo">nenhum arquivo escolhido</span>
+    </div>
+
+    <div id="edStatus" class="notice-banner" style="display:none;"></div>
+
+    <p class="step-desc" style="margin-top:16px;">Quadro de conferência — pode editar livremente. Cada linha de cota (<code>AMPLA CONCORRÊNCIA</code>, <code>PESSOA PRETA OU PARDA</code>, <code>PcD</code>, <code>INDÍGENA</code>) abre uma tabela; as linhas seguintes são <code>ORDEM · NOME · NOTA FINAL</code>.</p>
+    <div class="step-content">
+      <textarea id="edTexto" style="min-height:200px;" placeholder="AMPLA CONCORRÊNCIA
+1&#9;CARLOS EDUARDO BRITTO WEISS&#9;9,30
+2&#9;ÉRIKA STREPPEL ROCHA PRATES&#9;9,20
+
+PESSOA PRETA OU PARDA
+1&#9;MARIANA LIMA CAMARA&#9;8,40"></textarea>
+      <div class="download-row">
+        <button type="button" class="link-btn" id="edBtnLimpar">Limpar quadro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PASSO 2 ===================== -->
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <p class="step-title">Lista de dados dos inscritos</p>
+    </div>
+    <p class="step-desc">Escolha o PDF da lista geral de inscritos. São aproveitados Nº, Modalidade da inscrição, CPF, Nome, Celular e E-mail; a descrição da necessidade (que ocupa várias linhas) é ignorada.</p>
+
+    <div class="upload-panel">
+      <input type="file" id="liArquivo" accept=".pdf,application/pdf">
+      <button type="button" class="file-btn" id="liBtnArquivo">Escolher PDF da lista</button>
+      <span class="file-name" id="liNomeArquivo">nenhum arquivo escolhido</span>
+    </div>
+
+    <div id="liStatus" class="notice-banner" style="display:none;"></div>
+
+    <p class="step-desc" style="margin-top:16px;">Quadro de conferência — uma linha por inscrito, no formato <code>Nº · MODALIDADE · CPF · NOME · CELULAR · E-MAIL</code>. Também aceita texto colado direto do PDF.</p>
+    <div class="step-content">
+      <textarea id="liTexto" style="min-height:200px;" placeholder="1&#9;Ampla Concorrência&#9;08945516980&#9;Ada Vidal Seabra&#9;(41) 98882-1293&#9;vidalada55@gmail.com"></textarea>
+      <div class="download-row">
+        <button type="button" class="link-btn" id="liBtnLimpar">Limpar quadro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PASSO 3 ===================== -->
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <p class="step-title">Cruzar e gerar</p>
+    </div>
+    <button class="run-btn" id="btnProcessar" disabled>Processar e gerar a classificação final</button>
+  </div>
+
+  <hr class="divider">
+
+  <div class="stamp-wrap" id="stampWrap">
+    <div class="stamp" id="stampBadge">OK</div>
+    <div class="stamp-text" id="stampText"></div>
+  </div>
+
+  <div id="areaResultado">
+    <p class="empty-hint">A tabela final aparecerá aqui após o processamento.</p>
+  </div>
+
+  <div class="download-row" id="linhaDownload" style="display:none;">
+    <button class="download-btn" id="btnBaixar">Baixar CSV (UTF-8)</button>
+    <span class="count-note" id="notaContagem"></span>
+  </div>
+
+</main>
+
+<footer>
+  <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+    <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+    É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+  </p>
+  <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+</footer>
+</div>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.worker.min.js"></script>
+<script src="core.js"></script>
+<script src="residencia_hercules_logic.js"></script>
+<script src="ferramentas.js"></script>
+<script src="layout.js"></script>
+</body></html>

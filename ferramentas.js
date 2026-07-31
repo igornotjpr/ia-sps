@@ -105,6 +105,17 @@ const FERRAMENTAS=[
     descricao:"Lê a relação de convocados enviada pela unidade (PDF do SEI ou tabela colada), permite conferir os dados e marcar as cotas, e gera o Edital de Convocação para Entrevista pronto para copiar ou salvar em PDF."
   },
   {
+    arquivo:"residencia_hercules.html",
+    secao:"residencia",
+    rotulo:"Arquivo do Hércules",
+    ordem:2,
+    emoji:"📥",
+    cor:"--gold",
+    eyebrow:"Importação da classificação",
+    titulo:"Gerar arquivo para importar no Hércules",
+    descricao:"Lê o Edital de Classificação Final e a Lista de dados dos inscritos (ambos em PDF), aplica a ordem de chamamento das vagas reservadas sem repetir nomes e gera o CSV de importação no Hércules."
+  },
+  {
     arquivo:"residencia_classificacao.html",
     secao:"residencia",
     rotulo:"Classificação Final",
