@@ -21,6 +21,17 @@ function navHtml(cur){
     const itens=ferramentasDaSecao(sec.id);
     if(!itens.length) return;
 
+    // Seção com uma ferramenta só vira link direto: um menu suspenso de um
+    // item é um clique a mais para chegar exatamente ao mesmo lugar. Volta a
+    // ser submenu sozinha quando a seção ganhar a segunda ferramenta.
+    if(itens.length===1){
+      const unica=itens[0];
+      h+=`<a class="tab-btn ${cur===unica.arquivo?'active':''}" href="${unica.arquivo}">`
+        +`<span class="tab-emoji" aria-hidden="true">${escHtml(sec.emoji||'🗂️')}</span>`
+        +`${escHtml(sec.rotulo)}</a>`;
+      return;
+    }
+
     const ativa=itens.some(t=>t.arquivo===cur);
     h+='<div class="tab-group">';
     h+=`<button type="button" class="tab-btn tab-parent ${ativa?'active':''}" aria-haspopup="true" aria-expanded="false">`

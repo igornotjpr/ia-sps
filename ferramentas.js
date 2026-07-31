@@ -11,9 +11,10 @@
 
    PARA ADICIONAR UMA SEÇÃO NOVA: acrescentar um objeto em SECOES.
 
-   `emBreve` é opcional: só quando presente a seção ganha o cartão "Próxima
-   ferramenta" no índice. Hoje só a de Processo Seletivo o tem (é a porta dos
-   jogos). */
+   Duas propriedades de seção mudam o desenho sozinhas:
+   - `emBreve` — só quando presente a seção ganha o cartão "Próxima ferramenta"
+     no índice. Hoje só a de Processo Seletivo o tem (é a porta dos jogos).
+   - uma seção com UMA ferramenta só vira link direto no menu, sem submenu. */
 
 const SECOES=[
   {
