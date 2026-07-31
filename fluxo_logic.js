@@ -235,24 +235,25 @@ function agendarGravacao(){
 
 /* ============ D) desenho da grade ============ */
 
-function campoTexto(classe, campo, valor, extra){
-  return '<textarea class="fluxo-campo' + (classe ? ' ' + classe : '') + '"'
-    + ' data-campo="' + escAttr(campo) + '" rows="1"'
-    + (extra || '') + '>' + esc(valor) + '</textarea>';
+function campoTexto(classe, campo, valor, vazio){
+  return '<div class="fluxo-campo' + (classe ? ' ' + classe : '') + '" contenteditable="true"'
+    + ' data-campo="' + escAttr(campo) + '" data-vazio="' + escAttr(vazio || '') + '"'
+    + ' role="textbox" aria-label="' + escAttr(vazio || campo) + '"'
+    + '>' + esc(valor) + '</div>';
 }
 
-/* O nome da fase é um <textarea>, e não um <input>: nomes como "Retificações,
-   assinaturas e exceções" não cabem numa linha e ficavam cortados no meio.
-   Digitar o nome exato de uma das fases padronizadas continua aplicando a cor
-   dela (ver ligarEventosDaGrade). */
+/* O nome da fase é um campo que quebra em várias linhas, e não um <input>:
+   nomes como "Retificações, assinaturas e exceções" não cabem numa linha e
+   ficavam cortados no meio. Digitar o nome exato de uma das fases padronizadas
+   continua aplicando a cor dela (ver ligarEventosDaGrade). */
 function celulaFase(linha){
   return '<td class="fluxo-fase" style="--fase:' + escAttr(linha.color) + ';">'
     + '<div class="fluxo-fase-linha">'
     + '<input type="color" class="fluxo-cor" value="' + escAttr(linha.color) + '"'
     + ' title="Alterar a cor desta fase" aria-label="Cor da fase">'
-    + '<textarea class="fluxo-fase-nome" rows="1" data-campo="phase"'
-    + ' placeholder="Digite a fase" title="Nome da fase — texto livre"'
-    + ' aria-label="Nome da fase">' + esc(linha.phase) + '</textarea>'
+    + '<div class="fluxo-fase-nome" contenteditable="true" data-campo="phase"'
+    + ' data-vazio="Digite a fase" title="Nome da fase — texto livre"'
+    + ' role="textbox" aria-label="Nome da fase">' + esc(linha.phase) + '</div>'
     + '</div></td>';
 }
 
@@ -293,9 +294,9 @@ function desenhar(){
     corpo.innerHTML = estado.linhas.map((linha,i)=>
       '<tr data-id="' + linha._id + '" draggable="false">'
       + celulaFase(linha)
-      + '<td>' + campoTexto('', 'activity', linha.activity) + '</td>'
-      + '<td>' + campoTexto('', 'owners', linha.owners) + '</td>'
-      + '<td>' + campoTexto('centro', 'stage', linha.stage) + '</td>'
+      + '<td>' + campoTexto('', 'activity', linha.activity, 'Descreva a atividade') + '</td>'
+      + '<td>' + campoTexto('', 'owners', linha.owners, 'Quem responde') + '</td>'
+      + '<td>' + campoTexto('centro', 'stage', linha.stage, '--') + '</td>'
       + celulaClassificacao(linha)
       + celulaAcoes(linha, i, total)
       + '</tr>'
@@ -306,39 +307,33 @@ function desenhar(){
   $('fxDesfazer').disabled = estado.excluidas.length === 0;
 
   ligarEventosDaGrade();
-  ajustarTodasAsAlturas();   // agora, para não haver salto visível
-  agendarAjusteDeAlturas();  // e de novo com a tabela já montada
 }
 
-/* Os campos crescem com o texto: a atividade pode ter uma linha ou cinco, e uma
-   barra de rolagem dentro da célula esconderia justamente o que se quer ler.
-   Zeramos a altura antes de medir, e não usamos 'auto', que dentro de uma
-   célula de tabela pode ser resolvido como a altura da própria célula. */
-function ajustarAltura(campo){
-  campo.style.height = '0px';
-  campo.style.height = (campo.scrollHeight + 2) + 'px';
-}
-
-/* Quantas linhas o texto ocupa depende da largura final da coluna, e essa
-   largura só existe depois de o navegador montar a tabela. Medir junto com o
-   desenho pegava uma coluna ainda estreita: o texto "quebrava" em muitas
-   linhas e a altura travava grande — era o que esticava o campo da fase até o
-   pé da linha. Por isso medimos de novo no quadro seguinte, já com a tabela
-   montada, e a cada redimensionamento da janela, porque a tabela é fluida e as
-   colunas mudam de largura junto com ela. */
-function ajustarTodasAsAlturas(){
-  const corpo = $('fxCorpo');
-  if(!corpo) return;
-  Array.prototype.forEach.call(
-    corpo.querySelectorAll('.fluxo-campo, .fluxo-fase-nome'), ajustarAltura);
-}
-
-function agendarAjusteDeAlturas(){
-  if(typeof requestAnimationFrame === 'function') requestAnimationFrame(ajustarTodasAsAlturas);
-  else ajustarTodasAsAlturas();
-}
+/* Leitura de um campo editável. contenteditable guarda HTML; textContent
+   devolve só o texto, que é o que vai para a nuvem. */
+function textoDoCampo(el){ return String(el.textContent == null ? '' : el.textContent); }
 
 /* ============ E) edição ============ */
+
+/* Um campo contenteditable aceita, por padrão, HTML colado de outra página e
+   quebras de linha que viram <div>/<br> — e essas quebras se perderiam ao
+   gravar, porque só o texto vai para a nuvem. Aqui a colagem é convertida em
+   texto puro e o Enter é recusado: são campos curtos de tabela, em que o texto
+   longo já quebra sozinho pela largura da coluna. */
+function prepararCampoEditavel(campo){
+  campo.addEventListener('keydown', function(ev){
+    if(ev.key === 'Enter'){ ev.preventDefault(); campo.blur(); }
+  });
+  campo.addEventListener('paste', function(ev){
+    ev.preventDefault();
+    let texto = '';
+    try{ texto = (ev.clipboardData || window.clipboardData).getData('text/plain'); }catch(e){}
+    texto = String(texto || '').replace(/\s+/g, ' ').trim();
+    if(!texto) return;
+    try{ document.execCommand('insertText', false, texto); }
+    catch(e){ campo.textContent = textoDoCampo(campo) + texto; }
+  });
+}
 
 function linhaDoElemento(el){
   const tr = el.closest('tr[data-id]');
@@ -354,29 +349,27 @@ function ligarEventosDaGrade(){
      Redesenhar tiraria o cursor do campo no meio da digitação. Só mudanças de
      estrutura (mover, excluir, acrescentar) redesenham. */
   Array.prototype.forEach.call(corpo.querySelectorAll('.fluxo-campo'), function(campo){
+    prepararCampoEditavel(campo);
     campo.addEventListener('input', function(){
       const linha = linhaDoElemento(campo);
       if(!linha) return;
-      linha[campo.dataset.campo] = campo.value;
-      ajustarAltura(campo);
+      linha[campo.dataset.campo] = textoDoCampo(campo);
       agendarGravacao();
     });
   });
 
   Array.prototype.forEach.call(corpo.querySelectorAll('.fluxo-fase-nome'), function(campo){
-    const aplicarCorSugerida = function(){
+    prepararCampoEditavel(campo);
+    campo.addEventListener('input', function(){
       const linha = linhaDoElemento(campo);
       if(!linha) return;
-      linha.phase = campo.value;
-      ajustarAltura(campo);
-      const sugerida = CORES_POR_FASE[limpar(campo.value)];
+      linha.phase = textoDoCampo(campo);
+      const sugerida = CORES_POR_FASE[limpar(linha.phase)];
       // a cor só é trocada quando o nome bate com uma fase conhecida; uma cor
       // escolhida à mão nunca é sobrescrita por causa de um nome novo
       if(sugerida){ linha.color = sugerida; pintarFase(campo, linha); }
       agendarGravacao();
-    };
-    campo.addEventListener('input', aplicarCorSugerida);
-    campo.addEventListener('change', aplicarCorSugerida);
+    });
   });
 
   Array.prototype.forEach.call(corpo.querySelectorAll('.fluxo-cor'), function(seletor){
@@ -719,14 +712,6 @@ document.addEventListener('DOMContentLoaded', function(){
   $('fxSalvar').addEventListener('click', function(){ gravar(true); });
   $('fxBaixarCopia').addEventListener('click', baixarCopia);
   $('fxPdf').addEventListener('click', salvarPdf);
-
-  // a tabela ocupa a largura da janela: mudou a janela, mudaram as colunas e
-  // com elas a quantidade de linhas que cada texto ocupa
-  let temporizadorLargura = null;
-  window.addEventListener('resize', function(){
-    clearTimeout(temporizadorLargura);
-    temporizadorLargura = setTimeout(ajustarTodasAsAlturas, 150);
-  });
 
   const arquivo = $('fxArquivoCopia');
   $('fxRestaurar').addEventListener('click', function(){ arquivo.click(); });
