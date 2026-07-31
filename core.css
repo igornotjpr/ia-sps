@@ -1268,23 +1268,20 @@ table.fluxo-table{
   font-size:12.5px;
 }
 table.fluxo-table tbody tr:nth-child(even){ background:none; }
-table.fluxo-table tbody td{ vertical-align:top; }
+/* Tudo centrado na vertical: as linhas têm alturas muito diferentes (a coluna
+   Atividade manda na altura) e conteúdo colado no topo deixava a linha com
+   cara de vazia. */
+table.fluxo-table tbody td{ vertical-align:middle; }
 
-/* Célula da fase: o fundo é a cor da fase e a letra é SEMPRE branca, como no
-   quadro original — é o que mantém a coluna com leitura uniforme de cima a
-   baixo, mesmo com as fases mudando de cor. */
-.fluxo-fase{
-  background:var(--fase, var(--navy));
-  color:var(--white);
-  padding:6px;
-}
-/* align-items:flex-start é o que impede o campo do nome de ser esticado até a
-   altura da linha (que é ditada pela coluna Atividade). */
-.fluxo-fase-linha{ display:flex; align-items:flex-start; gap:6px; }
+/* Célula da fase. A cor NÃO pinta a célula inteira: ela é o fundo do próprio
+   texto da fase, que cresce só o necessário — daí o bloco colorido acompanhar
+   o parágrafo em vez de varrer a linha toda. A letra é sempre branca. */
+.fluxo-fase{ padding:6px; }
+.fluxo-fase-linha{ display:flex; align-items:center; gap:7px; }
 .fluxo-cor{
   flex:0 0 auto;
-  width:30px; height:30px; padding:0;
-  border:1px solid rgba(255,255,255,0.6);
+  width:26px; height:26px; padding:0;
+  border:1px solid var(--line);
   background:transparent; cursor:pointer;
 }
 /* O nome da fase é textarea, e não input, justamente para exibir por inteiro
@@ -1295,31 +1292,36 @@ table.fluxo-table tbody td{ vertical-align:top; }
   width:100%; min-width:0;
   display:block;
   font-family:'Barlow', system-ui, sans-serif;
-  font-size:12.5px; font-weight:700; color:inherit;
+  font-size:12.5px; font-weight:700;
   line-height:1.35;
-  background:rgba(255,255,255,0.12);
+  background:var(--fase, var(--navy));
+  color:var(--white);
   border:1px solid transparent;
-  padding:6px 7px;
+  padding:7px 9px;
   resize:none; overflow:hidden;
 }
-.fluxo-fase-nome:hover{ background:rgba(255,255,255,0.22); border-color:rgba(255,255,255,0.45); }
-.fluxo-fase-nome:focus{ background:rgba(255,255,255,0.28); border-color:var(--white); outline:none; }
-.fluxo-fase-nome::placeholder{ color:var(--white); opacity:0.6; font-style:italic; font-weight:500; }
+.fluxo-fase-nome:focus{ border-color:var(--white); outline:2px solid var(--seal-light); outline-offset:1px; }
+.fluxo-fase-nome::placeholder{ color:var(--white); opacity:0.65; font-style:italic; font-weight:500; }
 
-/* Campos de texto da grade: crescem com o conteúdo (ver ajustarAltura), sem
-   barra de rolagem interna — a etapa inteira precisa ficar visível de relance. */
+/* Campos de texto da grade: sem caixa em repouso — o quadro se lê como uma
+   tabela, e não como um formulário. A borda só aparece ao passar o mouse ou ao
+   focar, que é quando ela informa alguma coisa (aqui dá para digitar). */
 .fluxo-campo{
   width:100%; min-width:0;
-  padding:6px 7px;
-  border:1px solid var(--line);
-  background:var(--white);
+  display:block;
+  padding:5px 6px;
+  border:1px solid transparent;
+  background:transparent;
   font-family:'Barlow', system-ui, sans-serif;
   font-size:12.5px; line-height:1.45; color:var(--ink);
   resize:none; overflow:hidden;
-  min-height:32px;
 }
 .fluxo-campo.centro{ text-align:center; font-weight:600; }
-.fluxo-campo:focus{ outline:2px solid var(--seal-light); outline-offset:-1px; }
+.fluxo-campo:hover{ border-color:var(--line); background:#fbfdfd; }
+.fluxo-campo:focus{
+  border-color:var(--teal); background:var(--white);
+  outline:2px solid var(--seal-light); outline-offset:-1px;
+}
 
 .fluxo-classe{
   display:flex; align-items:center; gap:6px;

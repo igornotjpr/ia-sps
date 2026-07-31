@@ -306,19 +306,36 @@ function desenhar(){
   $('fxDesfazer').disabled = estado.excluidas.length === 0;
 
   ligarEventosDaGrade();
-  Array.prototype.forEach.call(corpo.querySelectorAll('.fluxo-campo, .fluxo-fase-nome'), ajustarAltura);
+  ajustarTodasAsAlturas();   // agora, para não haver salto visível
+  agendarAjusteDeAlturas();  // e de novo com a tabela já montada
 }
 
 /* Os campos crescem com o texto: a atividade pode ter uma linha ou cinco, e uma
    barra de rolagem dentro da célula esconderia justamente o que se quer ler.
-
-   Zeramos a altura antes de medir, e não usamos 'auto': dentro de uma célula de
-   tabela, 'auto' pode ser resolvido como a altura da própria célula (ditada
-   pela coluna mais alta), e aí o scrollHeight devolveria a linha inteira — era
-   o que esticava o campo da fase até o pé da linha, sem nunca encolher. */
+   Zeramos a altura antes de medir, e não usamos 'auto', que dentro de uma
+   célula de tabela pode ser resolvido como a altura da própria célula. */
 function ajustarAltura(campo){
   campo.style.height = '0px';
   campo.style.height = (campo.scrollHeight + 2) + 'px';
+}
+
+/* Quantas linhas o texto ocupa depende da largura final da coluna, e essa
+   largura só existe depois de o navegador montar a tabela. Medir junto com o
+   desenho pegava uma coluna ainda estreita: o texto "quebrava" em muitas
+   linhas e a altura travava grande — era o que esticava o campo da fase até o
+   pé da linha. Por isso medimos de novo no quadro seguinte, já com a tabela
+   montada, e a cada redimensionamento da janela, porque a tabela é fluida e as
+   colunas mudam de largura junto com ela. */
+function ajustarTodasAsAlturas(){
+  const corpo = $('fxCorpo');
+  if(!corpo) return;
+  Array.prototype.forEach.call(
+    corpo.querySelectorAll('.fluxo-campo, .fluxo-fase-nome'), ajustarAltura);
+}
+
+function agendarAjusteDeAlturas(){
+  if(typeof requestAnimationFrame === 'function') requestAnimationFrame(ajustarTodasAsAlturas);
+  else ajustarTodasAsAlturas();
 }
 
 /* ============ E) edição ============ */
@@ -702,6 +719,14 @@ document.addEventListener('DOMContentLoaded', function(){
   $('fxSalvar').addEventListener('click', function(){ gravar(true); });
   $('fxBaixarCopia').addEventListener('click', baixarCopia);
   $('fxPdf').addEventListener('click', salvarPdf);
+
+  // a tabela ocupa a largura da janela: mudou a janela, mudaram as colunas e
+  // com elas a quantidade de linhas que cada texto ocupa
+  let temporizadorLargura = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(temporizadorLargura);
+    temporizadorLargura = setTimeout(ajustarTodasAsAlturas, 150);
+  });
 
   const arquivo = $('fxArquivoCopia');
   $('fxRestaurar').addEventListener('click', function(){ arquivo.click(); });
