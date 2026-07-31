@@ -1045,6 +1045,26 @@ table.cv-grade-table tbody tr.row-dragging{ opacity:0.4; }
 table.cv-grade-table tbody tr.drop-before td{ box-shadow:inset 0 3px 0 var(--teal); }
 table.cv-grade-table tbody tr.drop-after td{ box-shadow:inset 0 -3px 0 var(--teal); }
 
+/* Mesma grade remanejável na tabela de conferência do gerador do Hércules
+   (Residência). Aqui a marca de "sem cadastro" continua valendo, então as
+   regras de arraste vêm DEPOIS para vencer o box-shadow vermelho da 1ª célula
+   enquanto a linha está sendo apontada como destino. */
+table.rh-edit-table tbody tr.row-dragging{ opacity:0.4; }
+table.rh-edit-table tbody tr.drop-before td{ box-shadow:inset 0 3px 0 var(--teal); }
+table.rh-edit-table tbody tr.drop-after td{ box-shadow:inset 0 -3px 0 var(--teal); }
+
+/* Botão de excluir a linha, na última coluna da grade editável. */
+.row-del-btn{
+  border:1px solid transparent;
+  background:none;
+  color:var(--ink-soft);
+  font-size:13px; line-height:1;
+  padding:4px 7px;
+  cursor:pointer;
+  border-radius:2px;
+}
+.row-del-btn:hover{ color:var(--white); background:var(--stamp-red); border-color:var(--stamp-red); }
+
 /* ============================================================
    Quadro de alocação por dia (Ponto 18)
    O trabalho é: importar -> tudo cai em "A atribuir" -> criar datas e puxar

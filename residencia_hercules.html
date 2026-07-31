@@ -4,6 +4,18 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Residência — Gerar arquivo para importar no Hércules</title>
 <link rel="stylesheet" href="core.css">
+<style>
+  /* Sugestão de preenchimento: vale para TODOS os campos da página. Mais
+     esmaecida do que o padrão do core.css, para nunca ser confundida com dado
+     digitado — os quadros mostram apenas um MODELO, com nomes fictícios. */
+  input::placeholder,
+  textarea::placeholder,
+  .exemplo-input::placeholder{
+    color:var(--ink-soft);
+    opacity:0.42;
+    font-style:italic;
+  }
+</style>
 </head><body><div class="sheet">
 <div id="institutional-placeholder"></div>
 <div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
@@ -21,6 +33,7 @@
       <li><strong>Passo 3</strong> — cruzamento por nome, aplicação da ordem de chamamento e download do CSV.</li>
     </ul>
     <p class="step-desc">A <strong>Classificação</strong> gravada no CSV é a <strong>ordem de chamamento</strong> (Decisão 11697384), com o candidato cotista encaixado na posição que lhe for mais vantajosa e o nome aparecendo uma única vez. Na conferência em tela também é exibida a ordem original de cada tabela do edital.</p>
+    <p class="step-desc">Esse cálculo é um ponto de partida, não a palavra final: a tabela de conferência é <strong>editável</strong>. Em “Reordenar / editar linhas” você arrasta as linhas para a ordem desejada, corrige qualquer campo, exclui ou acrescenta linhas. Ao salvar, a <strong>Classificação</strong> é renumerada de 1 a N e o CSV baixado passa a refletir exatamente o que está na tela.</p>
     <p class="step-desc">As cotas do arquivo (PNE/AFRO/INDÍGENA) vêm da <strong>modalidade da inscrição</strong>, na Lista de dados. Se ela divergir das tabelas do edital, a ferramenta avisa — mas não corrige sozinha.</p>
     <p class="step-desc">Vagas de <strong>Vulnerabilidade Social (VS)</strong> só valem para editais de Ensino Médio; na Residência (pós-graduação) elas revertem para concorrência Geral.</p>
     <p class="step-desc"><strong>Atenção:</strong> alguns editais chegam como PDF-imagem (print colado), sem texto extraível. Nesse caso a leitura automática não funciona e você digita ou cola a tabela no quadro do Passo 1 — que é sempre editável.</p>
@@ -44,12 +57,14 @@
 
     <p class="step-desc" style="margin-top:16px;">Quadro de conferência — pode editar livremente. Cada linha de cota (<code>AMPLA CONCORRÊNCIA</code>, <code>PESSOA PRETA OU PARDA</code>, <code>PcD</code>, <code>INDÍGENA</code>) abre uma tabela; as linhas seguintes são <code>ORDEM · NOME · NOTA FINAL</code>.</p>
     <div class="step-content">
-      <textarea id="edTexto" style="min-height:200px;" placeholder="AMPLA CONCORRÊNCIA
-1&#9;CARLOS EDUARDO BRITTO WEISS&#9;9,30
-2&#9;ÉRIKA STREPPEL ROCHA PRATES&#9;9,20
+      <textarea id="edTexto" class="exemplo-input" style="min-height:200px;" placeholder="Ex: modelo de preenchimento — os nomes abaixo são fictícios
+
+AMPLA CONCORRÊNCIA
+1&#9;FULANA DE TAL EXEMPLO&#9;9,30
+2&#9;BELTRANO DE TAL EXEMPLO&#9;9,20
 
 PESSOA PRETA OU PARDA
-1&#9;MARIANA LIMA CAMARA&#9;8,40"></textarea>
+1&#9;CICLANA DE TAL EXEMPLO&#9;8,40"></textarea>
       <div class="download-row">
         <button type="button" class="link-btn" id="edBtnLimpar">Limpar quadro</button>
       </div>
@@ -74,7 +89,10 @@ PESSOA PRETA OU PARDA
 
     <p class="step-desc" style="margin-top:16px;">Quadro de conferência — uma linha por inscrito, no formato <code>Nº · MODALIDADE · CPF · NOME · CELULAR · E-MAIL</code>. Também aceita texto colado direto do PDF.</p>
     <div class="step-content">
-      <textarea id="liTexto" style="min-height:200px;" placeholder="1&#9;Ampla Concorrência&#9;08945516980&#9;Ada Vidal Seabra&#9;(41) 98882-1293&#9;vidalada55@gmail.com"></textarea>
+      <textarea id="liTexto" class="exemplo-input" style="min-height:200px;" placeholder="Ex: modelo de preenchimento — os dados abaixo são fictícios
+
+1&#9;Ampla Concorrência&#9;00000000000&#9;Fulana de Tal Exemplo&#9;(00) 00000-0000&#9;fulana@example.com
+2&#9;Pessoa Preta ou Parda&#9;00000000000&#9;Ciclana de Tal Exemplo&#9;(00) 00000-0000&#9;ciclana@example.com"></textarea>
       <div class="download-row">
         <button type="button" class="link-btn" id="liBtnLimpar">Limpar quadro</button>
       </div>
@@ -103,6 +121,7 @@ PESSOA PRETA OU PARDA
 
   <div class="download-row" id="linhaDownload" style="display:none;">
     <button class="download-btn" id="btnBaixar">Baixar CSV (UTF-8)</button>
+    <button type="button" class="link-btn" id="btnEditarOrdem">Reordenar / editar linhas</button>
     <span class="count-note" id="notaContagem"></span>
   </div>
 

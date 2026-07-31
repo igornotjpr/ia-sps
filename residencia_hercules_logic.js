@@ -21,6 +21,13 @@ function $(id){ return document.getElementById(id); }
 const esc = TJPRCore.escapeHtml;
 const csvEscape = TJPRCore.csvEscape;
 
+/* O escapeHtml do core trata &, < e > — o bastante para texto, mas não para
+   valor de atributo: um nome com aspas ("José 'Zé' da Silva", ou uma aspa
+   digitada por engano num campo) fecharia o value="…" e quebraria a linha
+   inteira da grade editável. Os campos de edição vão para atributos, então
+   usam esta versão. */
+function escAttr(s){ return esc(s==null?'':s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
 function semAcento(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 // chave de cruzamento: maiúsculas, sem acento, só letras e espaço simples
 function chaveNome(s){ return semAcento(s).toUpperCase().replace(/[^A-Z ]/g,' ').replace(/\s+/g,' ').trim(); }
@@ -701,6 +708,57 @@ function gerarCSV(linhas){
   return '\uFEFF' + out.join('\r\n');
 }
 
+/* ---- edi\u00E7\u00E3o manual da tabela de confer\u00EAncia (arrastar, excluir, incluir) ----
+
+   A ordem de chamamento calculada \u00E9 um ponto de partida, n\u00E3o um veredito: a
+   banca pode ter desempatado de outro jeito, um candidato pode ter desistido,
+   um nome pode ter ficado de fora do PDF. Por isso a tabela final \u00E9
+   remanej\u00E1vel, e \u00E9 ela \u2014 e n\u00E3o o c\u00E1lculo \u2014 que o CSV reproduz. */
+
+// A Classifica\u00E7\u00E3o \u00E9 a coluna que o H\u00E9rcules importa, ent\u00E3o ela acompanha
+// sempre a posi\u00E7\u00E3o da linha: renumeramos 1..N a cada grava\u00E7\u00E3o da edi\u00E7\u00E3o.
+function renumerarClassificacao(linhas){
+  linhas.forEach((r,i)=> r['Classifica\u00E7\u00E3o'] = String(i+1));
+  return linhas;
+}
+
+// Linha em branco acrescentada \u00E0 m\u00E3o. As colunas de confer\u00EAncia ficam com "\u2014":
+// n\u00E3o vieram de vaga nenhuma do c\u00E1lculo, e fingir o contr\u00E1rio esconderia do
+// usu\u00E1rio que aquela linha \u00E9 responsabilidade dele.
+function linhaManualVazia(){
+  const r = {};
+  COLS_CONF.forEach(c=> r[c] = '');
+  ['PNE','VS','AFRO','IND\u00CDGENA'].forEach(c=> r[c] = 'N');
+  r['Vaga (tipo)'] = '\u2014 (linha acrescentada \u00E0 m\u00E3o)';
+  r['Ordem no edital'] = '\u2014';
+  r._semCadastro = false;
+  r._semCadastroBase = false;
+  return r;
+}
+
+// Aplica na linha editada as mesmas normaliza\u00E7\u00F5es do cruzamento autom\u00E1tico,
+// para que uma linha digitada \u00E0 m\u00E3o chegue ao CSV no mesmo formato das outras.
+function normalizarLinhaEditada(r){
+  const cpf = limpar(r['CPF']);
+  r['CPF'] = cpf ? normalizarCPF(cpf).cpf : '';
+  r['Nome do candidato'] = limpar(r['Nome do candidato']).toUpperCase();
+  r['Nota final'] = fmtNota(r['Nota final']);
+  r['E-mail'] = limpar(r['E-mail']);
+  r['Telefone celular'] = limpar(r['Telefone celular']);
+  r['Telefone fixo'] = limpar(r['Telefone fixo']);
+  ['PNE','VS','AFRO','IND\u00CDGENA'].forEach(c=>{
+    r[c] = (String(r[c]||'').trim().toUpperCase()==='S') ? 'S' : 'N';
+  });
+  COLS_CONF.forEach(c=>{ if(r[c]==null) r[c]=''; });
+  return r;
+}
+
+// Assinatura do conte\u00FAdo que vai para o CSV \u2014 serve s\u00F3 para saber se a passagem
+// pelo modo de edi\u00E7\u00E3o mudou alguma coisa de fato.
+function assinaturaCSV(linhas){
+  return linhas.map(r=> COLS_CSV.map(c=>String(r[c]==null?'':r[c])).join('\u0001')).join('\u0002');
+}
+
 /* ============ H) ligação com a página ============ */
 
 if(typeof document !== 'undefined' && document.getElementById('btnProcessar')){
@@ -711,9 +769,18 @@ if(typeof document !== 'undefined' && document.getElementById('btnProcessar')){
         liStatus=$('liStatus'), liTexto=$('liTexto'), liBtnLimpar=$('liBtnLimpar');
   const btnProcessar=$('btnProcessar'), areaResultado=$('areaResultado'),
         linhaDownload=$('linhaDownload'), btnBaixar=$('btnBaixar'), notaContagem=$('notaContagem'),
+        btnEditarOrdem=$('btnEditarOrdem'),
         stampWrap=$('stampWrap'), stampBadge=$('stampBadge'), stampText=$('stampText');
 
+  // linhasSaida é a única fonte do CSV. Enquanto o usuário edita, mexemos numa
+  // cópia (trabalho) — cancelar tem de devolver a tabela intacta, e o download
+  // nunca pode sair de um estado que ainda está sendo mexido.
   let linhasSaida = [];
+  let editando = false;
+  let trabalho = [];
+  let ordemEditada = false;      // já houve edição salva? (muda o aviso na tela)
+  let assinaturaAoEntrar = '';
+  let seqId = 0;
 
   function status(el, html, tipo){
     el.className = 'notice-banner' + (tipo ? ' '+tipo : '');
@@ -727,6 +794,9 @@ if(typeof document !== 'undefined' && document.getElementById('btnProcessar')){
 
   function limparResultado(){
     linhasSaida = [];
+    trabalho = [];
+    editando = false;
+    ordemEditada = false;
     stampWrap.classList.remove('show');
     areaResultado.innerHTML = '<p class="empty-hint">A tabela final aparecerá aqui após o processamento.</p>';
     linhaDownload.style.display = 'none';
@@ -812,7 +882,15 @@ if(typeof document !== 'undefined' && document.getElementById('btnProcessar')){
 
     const chamada = montarChamamento(ed.tabelas);
     const res = cruzar(chamada, li.registros);
-    linhasSaida = res.linhas;
+    // reprocessar recomeça do zero: a edição anterior era sobre outros dados
+    editando = false;
+    trabalho = [];
+    ordemEditada = false;
+    linhasSaida = res.linhas.map(r=>{
+      r._id = ++seqId;
+      r._semCadastroBase = !!r._semCadastro;
+      return r;
+    });
     renderizar(res, ed, li);
   });
 
@@ -906,22 +984,283 @@ if(typeof document !== 'undefined' && document.getElementById('btnProcessar')){
       stampText.innerHTML = h;
     }
 
-    const confOnly = { 'Vaga (tipo)':1, 'Ordem no edital':1 };
-    let html = '<p class="step-desc" style="margin-left:0;">As duas colunas em cinza são apenas para conferência — <strong>não vão para o CSV</strong>. A coluna <strong>Classificação</strong> é a que será importada.</p>';
-    html += '<div class="table-scroll"><table><thead><tr>'
+    renderTabela();
+  }
+
+  /* ---------- desenho da tabela de conferência (leitura e edição) ---------- */
+
+  const confOnly = { 'Vaga (tipo)':1, 'Ordem no edital':1 };
+  const CAMPO_SN = { 'PNE':1, 'VS':1, 'AFRO':1, 'INDÍGENA':1 };
+  const LARGURA_EDICAO = {
+    'CPF':'104px', 'Nome do candidato':'230px', 'Nota final':'58px',
+    'E-mail':'200px', 'Telefone celular':'118px', 'Telefone fixo':'118px'
+  };
+
+  function tabelaConferencia(linhas){
+    let h = '<div class="table-scroll"><table><thead><tr>'
       + COLS_CONF.map(c=>'<th'+(confOnly[c]?' style="background:#e7edef;"':'')+'>'+esc(c)+'</th>').join('')
       + '</tr></thead><tbody>';
-    res.linhas.forEach(r=>{
-      html += '<tr'+(r._semCadastro?' class="unmatched"':'')+'>'
+    linhas.forEach(r=>{
+      h += '<tr'+(r._semCadastro?' class="unmatched"':'')+'>'
         + COLS_CONF.map(c=>'<td'+(confOnly[c]?' style="background:#f2f6f7;"':'')+'>'+esc(r[c]||'')+'</td>').join('')
         + '</tr>';
     });
-    html += '</tbody></table></div>';
-    areaResultado.innerHTML = html;
+    return h + '</tbody></table></div>';
+  }
+
+  function inputEdicao(coluna, valor){
+    return '<input class="rhIn" data-c="'+escAttr(coluna)+'" value="'+escAttr(valor)+'"'
+      + ' style="width:100%;min-width:'+(LARGURA_EDICAO[coluna]||'110px')+';padding:5px;border:1px solid var(--line);'
+      + 'font-family:\'IBM Plex Mono\',\'Consolas\',monospace;font-size:11.5px;">';
+  }
+
+  function selectSN(coluna, valor){
+    const v = (String(valor==null?'':valor).trim().toUpperCase()==='S') ? 'S' : 'N';
+    return '<select class="rhSel" data-c="'+escAttr(coluna)+'" style="padding:5px;border:1px solid var(--line);font-size:11.5px;">'
+      + '<option value="N"'+(v==='N'?' selected':'')+'>N</option>'
+      + '<option value="S"'+(v==='S'?' selected':'')+'>S</option>'
+      + '</select>';
+  }
+
+  function tabelaEdicao(linhas){
+    if(!linhas.length){
+      return '<p class="empty-hint">Nenhuma linha na tabela — use “Acrescentar linha” para incluir uma, ou cancele para recuperar a lista calculada.</p>';
+    }
+    let h = '<div class="table-scroll"><table class="rh-edit-table" style="white-space:normal;">'
+      + '<thead><tr><th style="width:30px;"></th>'
+      + COLS_CONF.map(c=>'<th'+(confOnly[c]?' style="background:#e7edef;"':'')+'>'+esc(c)+'</th>').join('')
+      + '<th style="width:52px;">Ações</th></tr></thead><tbody>';
+    linhas.forEach((r,i)=>{
+      h += '<tr data-id="'+r._id+'" draggable="false"'+(r._semCadastro?' class="unmatched"':'')+'>';
+      h += '<td style="text-align:center;"><button type="button" class="drag-handle" data-id="'+r._id+'" tabindex="0"'
+        + ' title="Arrastar para mudar a ordem (ou Alt+↑ / Alt+↓)"'
+        + ' aria-label="Remanejar '+escAttr(r['Nome do candidato']||'linha em branco')+'">⠿</button></td>';
+      COLS_CONF.forEach(c=>{
+        // a Classificação não é digitável: ela É a posição da linha na tabela
+        if(c==='Classificação')  h += '<td style="text-align:center;color:var(--ink-soft);">'+(i+1)+'</td>';
+        else if(confOnly[c])     h += '<td style="background:#f2f6f7;">'+esc(r[c]||'')+'</td>';
+        else if(CAMPO_SN[c])     h += '<td style="text-align:center;">'+selectSN(c, r[c])+'</td>';
+        else                     h += '<td>'+inputEdicao(c, r[c])+'</td>';
+      });
+      h += '<td style="text-align:center;"><button type="button" class="row-del-btn" data-id="'+r._id+'"'
+        + ' tabindex="-1" title="Excluir esta linha">✕</button></td>';
+      h += '</tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function renderTabela(){
+    const linhas = editando ? trabalho : linhasSaida;
+    let h = '';
+
+    if(editando){
+      h += '<div class="notice-banner" style="margin-left:0;"><strong>Modo de edição.</strong> '
+        + 'Arraste a linha pela alça <strong>⠿</strong> — ou, com a alça em foco, use <strong>Alt+↑</strong> e <strong>Alt+↓</strong> — para mudar a ordem. '
+        + 'Os campos brancos podem ser corrigidos, <strong>✕</strong> exclui a linha e “Acrescentar linha” inclui uma em branco no fim. '
+        + 'A <strong>Classificação</strong> se renumera sozinha, conforme a posição. '
+        + 'Nada disso chega ao CSV enquanto você não clicar em <strong>Salvar alterações</strong>.</div>';
+      h += '<div class="download-row" style="margin-top:14px;">'
+        + '<button type="button" class="link-btn" id="rhSalvar" style="background:var(--teal);color:var(--white);">Salvar alterações</button>'
+        + '<button type="button" class="link-btn" id="rhCancelar">Cancelar</button>'
+        + '<button type="button" class="link-btn" id="rhAcrescentar">Acrescentar linha</button>'
+        + '<span class="count-note">'+linhas.length+' linha(s) na tabela</span>'
+        + '</div>';
+    } else if(ordemEditada){
+      h += '<div class="notice-banner warn" style="margin-left:0;"><strong>Esta tabela foi editada à mão.</strong> '
+        + 'A coluna <strong>Classificação</strong> foi renumerada de 1 a '+linhas.length+' e é ela que vai para o CSV. '
+        + 'As colunas de conferência <strong>Vaga (tipo)</strong> e <strong>Ordem no edital</strong> continuam mostrando o resultado do '
+        + 'cálculo automático e podem já não corresponder à posição da linha. Os avisos acima também são do cálculo, e não da tabela editada.</div>';
+    }
+
+    h += '<p class="step-desc" style="margin-left:0;">As duas colunas em cinza são apenas para conferência — <strong>não vão para o CSV</strong>. A coluna <strong>Classificação</strong> é a que será importada.</p>';
+    h += editando ? tabelaEdicao(linhas) : tabelaConferencia(linhas);
+    areaResultado.innerHTML = h;
+    if(editando) ligarEventosEdicao();
 
     linhaDownload.style.display = 'flex';
-    notaContagem.textContent = res.linhas.length + ' linha(s) — CSV separado por ";" (abre em colunas automaticamente no Excel PT-BR).';
+    btnBaixar.disabled = editando || !linhasSaida.length;
+    btnEditarOrdem.style.display = editando ? 'none' : '';
+    notaContagem.textContent = editando
+      ? 'Salve as alterações para liberar o download.'
+      : (linhasSaida.length
+          ? linhasSaida.length + ' linha(s) — CSV separado por ";" (abre em colunas automaticamente no Excel PT-BR).'
+          : 'Nenhuma linha na tabela — não há o que baixar.');
   }
+
+  /* ---------- edição: entrar, gravar, desistir ---------- */
+
+  function entrarEdicao(){
+    trabalho = linhasSaida.map(r=>{
+      const c = Object.assign({}, r);
+      if(c._id == null) c._id = ++seqId;
+      if(c._semCadastroBase === undefined) c._semCadastroBase = !!c._semCadastro;
+      return c;
+    });
+    assinaturaAoEntrar = assinaturaCSV(linhasSaida);
+    editando = true;
+    renderTabela();
+  }
+
+  function cancelarEdicao(){
+    editando = false;
+    trabalho = [];
+    renderTabela();
+  }
+
+  function salvarEdicao(){
+    linhasSaida = trabalho.map(normalizarLinhaEditada);
+    renumerarClassificacao(linhasSaida);
+    // o aviso de "editada à mão" só aparece se algo realmente mudou; passar
+    // pelo modo de edição e sair sem mexer não deve sujar a tela
+    if(assinaturaCSV(linhasSaida) !== assinaturaAoEntrar) ordemEditada = true;
+    editando = false;
+    trabalho = [];
+    renderTabela();
+  }
+
+  function idxNoTrabalho(id){
+    for(let i=0;i<trabalho.length;i++){ if(trabalho[i]._id === id) return i; }
+    return -1;
+  }
+
+  function ligarEventosEdicao(){
+    const q = areaResultado;
+
+    $('rhSalvar').addEventListener('click', salvarEdicao);
+    $('rhCancelar').addEventListener('click', cancelarEdicao);
+    $('rhAcrescentar').addEventListener('click', ()=>{
+      const nova = linhaManualVazia();
+      nova._id = ++seqId;
+      trabalho.push(nova);
+      renderTabela();
+      const tr = q.querySelector('tr[data-id="'+nova._id+'"]');
+      const alvo = tr && tr.querySelector('.rhIn[data-c="Nome do candidato"]');
+      if(alvo) alvo.focus();
+    });
+
+    // A tabela NÃO é redesenhada a cada tecla: só o objeto da linha é atualizado.
+    // Assim o Tab nativo continua funcionando e o foco não se perde na digitação.
+    Array.prototype.forEach.call(q.querySelectorAll('.rhIn, .rhSel'), function(el){
+      const commit = function(){ commitCampo(el); };
+      el.addEventListener('input', commit);
+      el.addEventListener('change', commit);
+    });
+
+    Array.prototype.forEach.call(q.querySelectorAll('.row-del-btn'), function(b){
+      b.addEventListener('click', function(){
+        const i = idxNoTrabalho(Number(b.dataset.id));
+        if(i>=0) trabalho.splice(i,1);
+        renderTabela();
+      });
+    });
+
+    ligarArrastarSoltar(q);
+  }
+
+  function commitCampo(el){
+    const tr = el.closest('tr');
+    if(!tr) return;
+    const r = trabalho[idxNoTrabalho(Number(tr.dataset.id))];
+    if(!r) return;
+    const col = el.dataset.c;
+    r[col] = el.value;
+    // o destaque vermelho quer dizer "faltam os dados do cadastro"; se o usuário
+    // digitar o CPF que faltava, ele sai — e volta se o campo for esvaziado
+    if(col==='CPF'){
+      r._semCadastro = r._semCadastroBase && !limpar(el.value);
+      tr.classList.toggle('unmatched', !!r._semCadastro);
+    }
+  }
+
+  /* ---------- arrastar e soltar ----------
+
+     Mesmo comportamento da grade do Ponto 18: o <tr> só vira "draggable"
+     enquanto o ponteiro está sobre a alça. Sem isso, arrastar para selecionar o
+     texto de um campo começaria um arraste de linha por engano. */
+  function ligarArrastarSoltar(q){
+    let origemId = null;
+
+    function limparMarcas(manterArrastada){
+      Array.prototype.forEach.call(q.querySelectorAll('tr'), function(t){
+        t.classList.remove('drop-before','drop-after');
+        if(!manterArrastada) t.classList.remove('row-dragging');
+      });
+    }
+
+    Array.prototype.forEach.call(q.querySelectorAll('.drag-handle'), function(h){
+      const tr = h.closest('tr');
+      h.addEventListener('mousedown', function(){ tr.setAttribute('draggable','true'); });
+      h.addEventListener('mouseup',   function(){ tr.setAttribute('draggable','false'); });
+      h.addEventListener('keydown', function(ev){
+        if(!ev.altKey || (ev.key!=='ArrowUp' && ev.key!=='ArrowDown')) return;
+        ev.preventDefault();
+        moverPorTeclado(Number(h.dataset.id), ev.key==='ArrowUp' ? -1 : 1);
+      });
+    });
+
+    Array.prototype.forEach.call(q.querySelectorAll('tbody tr[data-id]'), function(tr){
+      tr.addEventListener('dragstart', function(ev){
+        origemId = Number(tr.dataset.id);
+        tr.classList.add('row-dragging');
+        try{
+          ev.dataTransfer.effectAllowed = 'move';
+          ev.dataTransfer.setData('text/plain', String(origemId));
+        }catch(e){}
+      });
+      tr.addEventListener('dragend', function(){
+        tr.setAttribute('draggable','false');
+        origemId = null;
+        limparMarcas();
+      });
+      tr.addEventListener('dragover', function(ev){
+        if(origemId===null) return;
+        ev.preventDefault();
+        try{ ev.dataTransfer.dropEffect = 'move'; }catch(e){}
+        limparMarcas(true);
+        const r = tr.getBoundingClientRect();
+        tr.classList.add(((ev.clientY - r.top) > r.height/2) ? 'drop-after' : 'drop-before');
+      });
+      tr.addEventListener('drop', function(ev){
+        ev.preventDefault();
+        if(origemId===null) return;
+        const de = idxNoTrabalho(origemId);
+        const alvo = idxNoTrabalho(Number(tr.dataset.id));
+        origemId = null;
+        limparMarcas();
+        if(de<0 || alvo<0) return;
+        const r = tr.getBoundingClientRect();
+        const depois = (ev.clientY - r.top) > r.height/2;
+        moverLinha(de, alvo + (depois?1:0));
+      });
+    });
+  }
+
+  // Move a linha de `de` para `destino` (índice medido ANTES da remoção).
+  function moverLinha(de, destino){
+    const mov = trabalho[de];
+    if(!mov) return;
+    if(de < destino) destino--;
+    trabalho.splice(de,1);
+    destino = Math.max(0, Math.min(destino, trabalho.length));
+    trabalho.splice(destino, 0, mov);
+    renderTabela();
+  }
+
+  // Alt+↑ / Alt+↓ na alça: um passo por vez, sem tirar o foco da linha movida.
+  function moverPorTeclado(id, passo){
+    const i = idxNoTrabalho(id);
+    if(i<0) return;
+    const j = i + passo;
+    if(j<0 || j>=trabalho.length) return;
+    const c = trabalho[i];
+    trabalho.splice(i,1);
+    trabalho.splice(j,0,c);
+    renderTabela();
+    const novo = areaResultado.querySelector('.drag-handle[data-id="'+id+'"]');
+    if(novo) novo.focus();
+  }
+
+  btnEditarOrdem.addEventListener('click', ()=>{ if(!editando) entrarEdicao(); });
 
   btnBaixar.addEventListener('click', ()=>{
     if(!linhasSaida.length) return;
@@ -943,7 +1282,8 @@ window.RH = {
   reconhecerEdital, editalParaTexto, reconhecerLista, listaParaTexto,
   lerQuadroEdital, lerQuadroLista, registroDaLinhaLista, extrairTelefone,
   ORDEM_VAGAS, tipoDaVaga, montarChamamento, modalidadeParaCotas,
-  cruzar, gerarCSV, COLS_CSV, COLS_CONF
+  cruzar, gerarCSV, COLS_CSV, COLS_CONF,
+  renumerarClassificacao, linhaManualVazia, normalizarLinhaEditada, assinaturaCSV
 };
 
 })();
