@@ -20,6 +20,7 @@ function navHtml(cur){
   SECOES.forEach(sec=>{
     const itens=ferramentasDaSecao(sec.id);
     if(!itens.length) return;
+
     const ativa=itens.some(t=>t.arquivo===cur);
     h+='<div class="tab-group">';
     h+=`<button type="button" class="tab-btn tab-parent ${ativa?'active':''}" aria-haspopup="true" aria-expanded="false">`
@@ -117,8 +118,12 @@ function secaoHtml(sec){
   if(sec.descricao) h+=`<p class="section-desc">${escHtml(sec.descricao)}</p>`;
   h+='<div class="tool-grid">';
   itens.forEach(t=>{ h+=cardHtml(t,rotuloFerramenta(t)); });
-  const idSecreto=(sec.id==='sps')?'ferramentasEmBreveCard':'';
-  h+=placeholderCardHtml(idSecreto,'Próxima ferramenta',sec.emBreve||'Novas ferramentas aparecerão aqui conforme forem desenvolvidas.');
+  // O cartão "Próxima ferramenta" só aparece nas seções que declaram `emBreve`.
+  // Hoje é só a de Processo Seletivo — que é, também, a porta dos jogos.
+  if(sec.emBreve){
+    const idSecreto=(sec.id==='sps')?'ferramentasEmBreveCard':'';
+    h+=placeholderCardHtml(idSecreto,'Próxima ferramenta',sec.emBreve);
+  }
   h+='</div></section>';
   return h;
 }

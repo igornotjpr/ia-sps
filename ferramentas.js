@@ -9,7 +9,11 @@
    3. pronto — o menu suspenso e o cartão do índice aparecem sozinhos, na
       posição correta.
 
-   PARA ADICIONAR UMA SEÇÃO NOVA: acrescentar um objeto em SECOES. */
+   PARA ADICIONAR UMA SEÇÃO NOVA: acrescentar um objeto em SECOES.
+
+   `emBreve` é opcional: só quando presente a seção ganha o cartão "Próxima
+   ferramenta" no índice. Hoje só a de Processo Seletivo o tem (é a porta dos
+   jogos). */
 
 const SECOES=[
   {
@@ -33,8 +37,7 @@ const SECOES=[
     eyebrow:"Divisão de Residência",
     titulo:"Ferramentas da Residência",
     descricao:"Apoio operacional à residência jurídica: leitura dos PDFs e relatórios da Fábrica de Provas para gerar editais prontos para copiar ou baixar.",
-    sufixoTitulo:" — Divisão de Residência (TJPR)",
-    emBreve:"Novas ferramentas da residência aparecerão aqui conforme forem desenvolvidas."
+    sufixoTitulo:" — Divisão de Residência (TJPR)"
   },
   {
     id:"fluxo",
@@ -45,8 +48,7 @@ const SECOES=[
     eyebrow:"Mapa do processo seletivo",
     titulo:"Fluxo de Processo Seletivo",
     descricao:"Visão do processo seletivo de ponta a ponta: em que fase cada atividade acontece, quem responde por ela e como é classificada em Ponto, Tag e Vinculação.",
-    sufixoTitulo:" — Fluxo do Processo Seletivo (TJPR)",
-    emBreve:"Novas ferramentas de fluxo aparecerão aqui conforme forem desenvolvidas."
+    sufixoTitulo:" — Fluxo do Processo Seletivo (TJPR)"
   }
 ].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 
