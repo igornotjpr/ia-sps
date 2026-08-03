@@ -72,7 +72,7 @@ const FERRAMENTAS=[
     ponto:"14",
     emoji:"🪑",
     cor:"--navy",
-    eyebrow:"Ensalamento dos candidatos",
+    eyebrow:"Ponto 14",
     titulo:"Gerador do Edital de Ensalamento",
     descricao:"Lê o formulário de abertura (PDF do SEI) e o Relatório de inscritos da Fábrica de Provas, monta a tabela dos candidatos com inscrição deferida e gera o Edital de Ensalamento em blocos, prontos para colar no Athos."
   },
@@ -82,7 +82,7 @@ const FERRAMENTAS=[
     ponto:"18",
     emoji:"📣",
     cor:"--teal",
-    eyebrow:"Divulgação do edital de entrevista",
+    eyebrow:"Ponto 18",
     titulo:"Convocação para Entrevista",
     descricao:"Lê o Relatório de convocação para entrevistas da Fábrica de Provas, monta a tabela dos convocados (com reserva, datas, horários e links), gera a convocação pronta para salvar em PDF, os blocos para publicar no Athos e a lista de e-mails para envio pelo SEI."
   },
@@ -92,7 +92,7 @@ const FERRAMENTAS=[
     ponto:"20",
     emoji:"🏅",
     cor:"--mint",
-    eyebrow:"Cruzamento de classificação e inscritos",
+    eyebrow:"Ponto 20",
     titulo:"Elaboração do Edital de classificação final",
     descricao:"Cruza o Relatório de Classificação Final com o Relatório de Inscritos (planilhas da Fábrica de Provas), aplicando cotas de reserva e limite de aprovados."
   },
@@ -102,7 +102,7 @@ const FERRAMENTAS=[
     ponto:"26",
     emoji:"📥",
     cor:"--gold",
-    eyebrow:"Processamento de classificação",
+    eyebrow:"Ponto 26",
     titulo:"Gerar arquivo para importar no Hércules",
     descricao:"Cruza a classificação final (extraída do PDF do edital) com os dados cadastrais dos candidatos (CSV), gerando a tabela para importação no Hércules."
   },
