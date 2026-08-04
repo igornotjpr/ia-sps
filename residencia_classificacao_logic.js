@@ -551,7 +551,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         + 'Preencher <strong>Nota Prova</strong> e <strong>Nota Entrevista</strong> calcula a <strong>Nota Final</strong> pela média automaticamente; '
         + 'editar a Nota Final à mão continua permitido, mas fica sinalizado se não bater com a média. '
         + '<strong>✕</strong> na tabela <strong>AMPLA CONCORRÊNCIA</strong> exclui o candidato por completo; nas demais, só tira daquela cota. '
-        + 'Nada é salvo até clicar em <strong>Salvar alterações</strong>.</div>';
+        + 'Clique em <strong>Salvar alterações</strong> quando terminar — ou simplesmente saia do quadro (clique ou dê Tab para fora dele) que a edição é salva sozinha, sem risco de o edital sair com um valor digitado e nunca confirmado.</div>';
       h += '<div class="download-row" style="margin-top:14px;">'
         + '<button type="button" class="link-btn" id="cfBtnSalvarTabelas" style="background:var(--teal);color:var(--white);">Salvar alterações</button>'
         + '<button type="button" class="link-btn" id="cfBtnCancelarTabelas">Cancelar</button>'
@@ -619,8 +619,13 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
   }
 
   // Move `idOrigem` para o lado de `idAlvo` na ordem única (trabalho) —
-  // usado tanto pelo soltar do arrasto quanto pelo Alt+↑/↓.
-  function moverParaAoLadoDe(idOrigem, idAlvo, depois){
+  // usado tanto pelo soltar do arrasto quanto pelo Alt+↑/↓. `grupoK`, quando
+  // informado, devolve o foco pra alça da linha movida: renderTabelas()
+  // recria a linha (e o que estivesse com foco nela se perde); sem
+  // devolver o foco pra dentro do quadro, o "sair do bloco salva sozinho"
+  // (ver o listener de focusout mais abaixo) fecharia o modo de edição a
+  // cada arrasto ou tecla de mover — o oposto do que se quer aqui.
+  function moverParaAoLadoDe(idOrigem, idAlvo, depois, grupoK){
     const de = idxTrabalho(idOrigem);
     let destino = idxTrabalho(idAlvo);
     if(de<0 || destino<0) return;
@@ -631,6 +636,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     destino = Math.max(0, Math.min(destino, estado.trabalho.length));
     estado.trabalho.splice(destino, 0, mov);
     renderTabelas();
+    if(grupoK){
+      const novo = cfTabelas.querySelector('.drag-handle[data-id="'+idOrigem+'"][data-grupo="'+grupoK+'"]');
+      if(novo) novo.focus();
+    }
   }
 
   function moverPorTecladoGrupo(id, grupoK, passo){
@@ -639,9 +648,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     if(i<0) return;
     const viz = listaGrupo[i+passo];
     if(!viz) return;
-    moverParaAoLadoDe(id, viz.id, passo>0);
-    const novo = cfTabelas.querySelector('.drag-handle[data-id="'+id+'"][data-grupo="'+grupoK+'"]');
-    if(novo) novo.focus();
+    moverParaAoLadoDe(id, viz.id, passo>0, grupoK);
   }
 
   // Sorteia por NOTA FINAL, decrescente, estável — afeta a ordem única, então
@@ -656,6 +663,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     });
     estado.trabalho = comIdx.map(x=>x.c);
     renderTabelas();
+    // devolve o foco pro próprio botão — sem isso, o "sair do bloco salva
+    // sozinho" fecharia o modo de edição a cada reordenação
+    const btn = $('cfBtnReordenarNota');
+    if(btn) btn.focus();
   }
 
   function ligarEventosEdicaoTabelas(){
@@ -697,6 +708,11 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         if(grupo==='ac') estado.trabalho.splice(i,1);
         else estado.trabalho[i][grupo] = false;
         renderTabelas();
+        // devolve o foco pra dentro do quadro (a linha excluída não existe
+        // mais) — sem isso, o "sair do bloco salva sozinho" fecharia o modo
+        // de edição a cada exclusão
+        const salvar = $('cfBtnSalvarTabelas');
+        if(salvar) salvar.focus();
       });
     });
 
@@ -771,16 +787,35 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         const alvoId = Number(tr.dataset.id);
         const r = tr.getBoundingClientRect();
         const depois = (ev.clientY - r.top) > r.height/2;
-        const deId = origemId;
+        const deId = origemId, deGrupo = origemGrupo;
         origemId = null; origemGrupo = null;
         limparMarcas();
         if(deId===alvoId) return;
-        moverParaAoLadoDe(deId, alvoId, depois);
+        moverParaAoLadoDe(deId, alvoId, depois, deGrupo);
       });
     });
   }
 
   cfBtnEditarTabelas.addEventListener('click', ()=>{ if(!estado.editando) entrarEdicaoTabelas(); });
+
+  /* Sair do bloco de edição sem clicar em "Salvar alterações" não pode
+     deixar a mudança perdida — é o que faria o edital sair com valores
+     antigos, sem o usuário perceber. Então tirar o foco do bloco INTEIRO
+     (não de campo pra campo dentro dele, que é navegação normal) salva
+     sozinho, como se tivesse clicado em "Salvar alterações".
+
+     cfTabelas nunca é recriado (só o conteúdo dele, via innerHTML), então
+     este único listener, ligado uma vez, continua valendo depois de cada
+     redesenho. O setTimeout é necessário porque relatedTarget não é
+     confiável em todo navegador/interação (ex.: clique em algo não-focável
+     fora do bloco) — o próximo ciclo confere onde o foco realmente parou. */
+  cfTabelas.addEventListener('focusout', (ev)=>{
+    if(!estado.editando) return;
+    if(ev.relatedTarget && cfTabelas.contains(ev.relatedTarget)) return;
+    setTimeout(()=>{
+      if(estado.editando && !cfTabelas.contains(document.activeElement)) salvarEdicaoTabelas();
+    }, 0);
+  });
 
   /* ---------------- passo 4 — dados do edital ---------------- */
 
