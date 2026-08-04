@@ -556,8 +556,8 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         + 'Preencher <strong>Nota Prova</strong> e <strong>Nota Entrevista</strong> calcula a <strong>Nota Final</strong> pela média automaticamente; '
         + 'editar a Nota Final à mão continua permitido, mas fica sinalizado se não bater com a média. '
         + '<strong>✕</strong> na tabela <strong>AMPLA CONCORRÊNCIA</strong> exclui o candidato por completo; nas demais, só tira daquela cota. '
-        + 'Clique em <strong>Salvar alterações</strong> quando terminar — ou simplesmente saia do quadro (clique ou dê Tab para fora dele) que a edição é salva sozinha, sem risco de o edital sair com um valor digitado e nunca confirmado.</div>';
-      h += '<div class="download-row" style="margin-top:14px;">'
+        + '<strong>Nada é salvo até clicar em "Salvar alterações"</strong> — o botão "Gerar edital" avisa e não deixa prosseguir se as tabelas ainda estiverem em edição.</div>';
+      h += '<div class="download-row" style="margin:14px 0 22px;">'
         + '<button type="button" class="link-btn" id="cfBtnSalvarTabelas" style="background:var(--teal);color:var(--white);">Salvar alterações</button>'
         + '<button type="button" class="link-btn" id="cfBtnCancelarTabelas">Cancelar</button>'
         + '<button type="button" class="link-btn" id="cfBtnReordenarNota">Reordenar por nota final</button>'
@@ -582,9 +582,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
   }
   let statusSalvoTimer = null;
   // Confirmação visível do salvamento — sem isso, não tem como o usuário
-  // saber se sair do bloco (ou clicar em "Salvar alterações") realmente
-  // gravou as edições, principalmente no salvamento automático, que não
-  // tem um clique explícito pra se apoiar.
+  // ter certeza de que o clique em "Salvar alterações" realmente gravou.
   function avisarSalvo(){
     if(!cfStatusSalvo) return;
     const hora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
@@ -639,11 +637,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
 
   // Move `idOrigem` para o lado de `idAlvo` na ordem única (trabalho) —
   // usado tanto pelo soltar do arrasto quanto pelo Alt+↑/↓. `grupoK`, quando
-  // informado, devolve o foco pra alça da linha movida: renderTabelas()
-  // recria a linha (e o que estivesse com foco nela se perde); sem
-  // devolver o foco pra dentro do quadro, o "sair do bloco salva sozinho"
-  // (ver o listener de focusout mais abaixo) fecharia o modo de edição a
-  // cada arrasto ou tecla de mover — o oposto do que se quer aqui.
+  // informado, devolve o foco pra alça da linha movida (renderTabelas()
+  // recria a linha, e junto o que estivesse com foco nela) — sem isso, um
+  // Alt+↑ repetido perderia o foco a cada passo em vez de mover a fileira
+  // inteira de uma vez.
   function moverParaAoLadoDe(idOrigem, idAlvo, depois, grupoK){
     const de = idxTrabalho(idOrigem);
     let destino = idxTrabalho(idAlvo);
@@ -682,10 +679,6 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     });
     estado.trabalho = comIdx.map(x=>x.c);
     renderTabelas();
-    // devolve o foco pro próprio botão — sem isso, o "sair do bloco salva
-    // sozinho" fecharia o modo de edição a cada reordenação
-    const btn = $('cfBtnReordenarNota');
-    if(btn) btn.focus();
   }
 
   function ligarEventosEdicaoTabelas(){
@@ -730,11 +723,6 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         if(grupo==='ac') estado.trabalho.splice(i,1);
         else estado.trabalho[i][grupo] = false;
         renderTabelas();
-        // devolve o foco pra dentro do quadro (a linha excluída não existe
-        // mais) — sem isso, o "sair do bloco salva sozinho" fecharia o modo
-        // de edição a cada exclusão
-        const salvar = $('cfBtnSalvarTabelas');
-        if(salvar) salvar.focus();
       });
     });
 
@@ -819,25 +807,14 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
   }
 
   cfBtnEditarTabelas.addEventListener('click', ()=>{ if(!estado.editando) entrarEdicaoTabelas(); });
-
-  /* Sair do bloco de edição sem clicar em "Salvar alterações" não pode
-     deixar a mudança perdida — é o que faria o edital sair com valores
-     antigos, sem o usuário perceber. Então tirar o foco do bloco INTEIRO
-     (não de campo pra campo dentro dele, que é navegação normal) salva
-     sozinho, como se tivesse clicado em "Salvar alterações".
-
-     cfTabelas nunca é recriado (só o conteúdo dele, via innerHTML), então
-     este único listener, ligado uma vez, continua valendo depois de cada
-     redesenho. O setTimeout é necessário porque relatedTarget não é
-     confiável em todo navegador/interação (ex.: clique em algo não-focável
-     fora do bloco) — o próximo ciclo confere onde o foco realmente parou. */
-  cfTabelas.addEventListener('focusout', (ev)=>{
-    if(!estado.editando) return;
-    if(ev.relatedTarget && cfTabelas.contains(ev.relatedTarget)) return;
-    setTimeout(()=>{
-      if(estado.editando && !cfTabelas.contains(document.activeElement)) salvarEdicaoTabelas();
-    }, 0);
-  });
+  /* Removido: salvar sozinho ao tirar o foco do bloco (versão 3.10.3).
+     Na prática atrapalhava mais do que ajudava — cliques em botões do
+     próprio quadro de edição (Reordenar, sobretudo) ficavam difíceis de
+     acertar por causa da lógica de "saiu ou não saiu do bloco". Voltou a
+     ser só manual: "Salvar alterações" ou "Cancelar". Em troca, "Gerar
+     edital" (mais abaixo) barra a geração e avisa se as tabelas ainda
+     estiverem em modo de edição — é o que evita gerar com dado
+     desatualizado sem precisar adivinhar a intenção do usuário pelo foco. */
 
   /* ---------------- passo 4 — dados do edital ---------------- */
 
@@ -927,7 +904,9 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
   // Espaçamento simples entre parágrafos (sem os 10pt de folga do P/C acima) —
   // usado só no bloco da assinatura, a pedido: nome, cargo e unidade colados.
   const P0 = "margin:0;font-family:'Times New Roman',Times,serif;font-size:11pt;";
-  const C0 = P0+'text-align:center;font-weight:bold;';
+  // negrito, alinhado à esquerda, espaçamento simples — usado no Preâmbulo
+  // (Bloco 2) e na assinatura (Bloco 6)
+  const E0 = P0+'text-align:left;font-weight:bold;';
   const LARGURA_COL_CF = { ordem:'56pt', notaProva:'80pt', notaEntrevista:'92pt', notaFinal:'75pt' };
 
   function tabelaImpressa(grupo){
@@ -947,7 +926,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
       if(cabecalho) s += 'font-weight:bold;';
       return 'style="'+s+'"';
     };
-    let h = '<table style="border:1pt solid #000;border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;margin:0 0 12pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;">';
+    // border="1" (atributo HTML, não só CSS) é o que faz a borda sobreviver
+    // ao colar no Word/Athos de forma confiável — mesmo recurso já usado no
+    // Hércules da Residência e no buildCleanTableHTML do core.js.
+    let h = '<table border="1" cellspacing="0" style="border:1pt solid #000;border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;margin:0 0 12pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;">';
     h += '<colgroup>'+cols.map(c=>'<col'+(LARGURA_COL_CF[c.k]?(' style="width:'+LARGURA_COL_CF[c.k]+';"'):'')+'>').join('')+'</colgroup>';
     // título da cota primeiro, cabeçalho das colunas embaixo — lido de cima
     // pra baixo, isso lê "que tabela é essa" antes de "que coluna é essa"
@@ -975,6 +957,13 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
   // Os 6 blocos, um por campo do modelo de blocos do Athos — mesma estrutura
   // usada no Ensalamento e na Convocação para Entrevista da Residência.
   function gerarEdital(){
+    // As tabelas de classificação ainda estão em edição: gerar agora usaria
+    // estado.cands, que só é atualizado ao clicar em "Salvar alterações" —
+    // ou seja, sairia com dado desatualizado, sem o usuário perceber.
+    if(estado.editando){
+      alert('As tabelas de classificação ainda estão em edição. Clique em "Salvar alterações" (ou "Cancelar") no Passo 3 antes de gerar o edital.');
+      return;
+    }
     lerCamposDoc();
     const d = estado.doc;
 
@@ -983,26 +972,34 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
 
     // Bloco 2 — Preâmbulo. Sem a linha do Tribunal: o modelo do Athos já a
     // imprime sozinho — repeti-la aqui duplicaria no documento final.
-    let b2 = '<p style="'+C+'">EDITAL DE CLASSIFICAÇÃO FINAL</p>';
-    b2 += '<p style="'+C+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
+    // Negrito, alinhado à esquerda, espaçamento simples entre as duas linhas.
+    let b2 = '<p style="'+E0+'">EDITAL DE CLASSIFICAÇÃO FINAL</p>';
+    b2 += '<p style="'+E0+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
 
-    // Bloco 3 — Numeração
-    let b3 = '<p style="'+C+'">EDITAL N° '+esc(d.numEdital||'____/____')+'</p>';
-    b3 += '<p style="'+C+'">SEI!TJPR N° '+esc(d.sei||'____________')+'</p>';
+    // Bloco 3 — Numeração: só o SEI para copiar.
+    const b3 = '<p style="'+C+'">SEI!TJPR N° '+esc(d.sei||'____________')+'</p>';
 
     // Bloco 4 — Conteúdo: direto as tabelas, sem parágrafo introdutório —
-    // é assim que sai nos editais publicados.
+    // é assim que sai nos editais publicados. Uma tabela por cota, com um
+    // parágrafo vazio de espaçamento simples entre elas — margin no <table>
+    // não sobrevive de forma confiável a colar no Word/Athos, um <p> entre
+    // elas sim.
     let b4 = '';
-    GRUPOS_CF.forEach(g=>{ b4 += tabelaImpressa(g); });
+    GRUPOS_CF.forEach(g=>{
+      const t = tabelaImpressa(g);
+      if(!t) return;
+      if(b4) b4 += '<p style="'+P0+'">&nbsp;</p>';
+      b4 += t;
+    });
 
     // Bloco 5 — Data
     const b5 = '<p style="'+P+'text-align:center;">'+esc(d.cidade||'Curitiba')+', '+esc(d.dataAss||'____ de __________ de ____')+'.</p>';
 
-    // Bloco 6 — Quem assina. Espaçamento simples entre as linhas (P0/C0) —
-    // nome, cargo e unidade ficam colados, sem a folga de 10pt do resto do documento.
-    let b6 = '<p style="'+C0+'">'+esc((d.assinante||'').toUpperCase())+'</p>';
-    if(d.cargo) b6 += '<p style="'+P0+'text-align:center;">'+esc(d.cargo)+'</p>';
-    if(d.unidade) b6 += '<p style="'+P0+'text-align:center;">'+esc(d.unidade)+'</p>';
+    // Bloco 6 — Quem assina. Negrito, alinhado à esquerda, espaçamento
+    // simples entre as três linhas.
+    let b6 = '<p style="'+E0+'">'+esc((d.assinante||'').toUpperCase())+'</p>';
+    if(d.cargo) b6 += '<p style="'+E0+'">'+esc(d.cargo)+'</p>';
+    if(d.unidade) b6 += '<p style="'+E0+'">'+esc(d.unidade)+'</p>';
 
     [bTitulo,b2,b3,b4,b5,b6].forEach((b,i)=>{
       $('cfBloco'+(i+1)).innerHTML = '<div style="font-family:\'Times New Roman\',Times,serif;font-size:11pt;color:#000;">'+b+'</div>';
