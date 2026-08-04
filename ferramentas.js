@@ -9,7 +9,12 @@
    3. pronto — o menu suspenso e o cartão do índice aparecem sozinhos, na
       posição correta.
 
-   PARA ADICIONAR UMA SEÇÃO NOVA: acrescentar um objeto em SECOES. */
+   PARA ADICIONAR UMA SEÇÃO NOVA: acrescentar um objeto em SECOES.
+
+   Duas propriedades de seção mudam o desenho sozinhas:
+   - `emBreve` — só quando presente a seção ganha o cartão "Próxima ferramenta"
+     no índice. Hoje só a de Processo Seletivo o tem (é a porta dos jogos).
+   - uma seção com UMA ferramenta só vira link direto no menu, sem submenu. */
 
 const SECOES=[
   {
@@ -33,8 +38,18 @@ const SECOES=[
     eyebrow:"Divisão de Residência",
     titulo:"Ferramentas da Residência",
     descricao:"Apoio operacional à residência jurídica: leitura dos PDFs e relatórios da Fábrica de Provas para gerar editais prontos para copiar ou baixar.",
-    sufixoTitulo:" — Divisão de Residência (TJPR)",
-    emBreve:"Novas ferramentas da residência aparecerão aqui conforme forem desenvolvidas."
+    sufixoTitulo:" — Divisão de Residência (TJPR)"
+  },
+  {
+    id:"fluxo",
+    ordem:2,
+    rotulo:"Fluxo",
+    emoji:"🧭",
+    cor:"--coral",
+    eyebrow:"Mapa do processo seletivo",
+    titulo:"Fluxo de Processo Seletivo",
+    descricao:"Visão do processo seletivo de ponta a ponta: em que fase cada atividade acontece, quem responde por ela e como é classificada em Ponto, Tag e Vinculação.",
+    sufixoTitulo:" — Fluxo do Processo Seletivo (TJPR)"
   }
 ].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 
@@ -57,7 +72,7 @@ const FERRAMENTAS=[
     ponto:"14",
     emoji:"🪑",
     cor:"--navy",
-    eyebrow:"Ensalamento dos candidatos",
+    eyebrow:"Ponto 14",
     titulo:"Gerador do Edital de Ensalamento",
     descricao:"Lê o formulário de abertura (PDF do SEI) e o Relatório de inscritos da Fábrica de Provas, monta a tabela dos candidatos com inscrição deferida e gera o Edital de Ensalamento em blocos, prontos para colar no Athos."
   },
@@ -67,7 +82,7 @@ const FERRAMENTAS=[
     ponto:"18",
     emoji:"📣",
     cor:"--teal",
-    eyebrow:"Divulgação do edital de entrevista",
+    eyebrow:"Ponto 18",
     titulo:"Convocação para Entrevista",
     descricao:"Lê o Relatório de convocação para entrevistas da Fábrica de Provas, monta a tabela dos convocados (com reserva, datas, horários e links), gera a convocação pronta para salvar em PDF, os blocos para publicar no Athos e a lista de e-mails para envio pelo SEI."
   },
@@ -77,7 +92,7 @@ const FERRAMENTAS=[
     ponto:"20",
     emoji:"🏅",
     cor:"--mint",
-    eyebrow:"Cruzamento de classificação e inscritos",
+    eyebrow:"Ponto 20",
     titulo:"Elaboração do Edital de classificação final",
     descricao:"Cruza o Relatório de Classificação Final com o Relatório de Inscritos (planilhas da Fábrica de Provas), aplicando cotas de reserva e limite de aprovados."
   },
@@ -87,7 +102,7 @@ const FERRAMENTAS=[
     ponto:"26",
     emoji:"📥",
     cor:"--gold",
-    eyebrow:"Processamento de classificação",
+    eyebrow:"Ponto 26",
     titulo:"Gerar arquivo para importar no Hércules",
     descricao:"Cruza a classificação final (extraída do PDF do edital) com os dados cadastrais dos candidatos (CSV), gerando a tabela para importação no Hércules."
   },
@@ -105,6 +120,17 @@ const FERRAMENTAS=[
     descricao:"Lê a relação de convocados enviada pela unidade (PDF do SEI ou tabela colada), permite conferir os dados e marcar as cotas, e gera o Edital de Convocação para Entrevista pronto para copiar ou salvar em PDF."
   },
   {
+    arquivo:"residencia_hercules.html",
+    secao:"residencia",
+    rotulo:"Arquivo do Hércules",
+    ordem:2,
+    emoji:"📥",
+    cor:"--gold",
+    eyebrow:"Importação da classificação",
+    titulo:"Gerar arquivo para importar no Hércules",
+    descricao:"Lê o Edital de Classificação Final e a Lista de dados dos inscritos (ambos em PDF), aplica a ordem de chamamento das vagas reservadas sem repetir nomes e gera o CSV de importação no Hércules."
+  },
+  {
     arquivo:"residencia_classificacao.html",
     secao:"residencia",
     rotulo:"Classificação Final",
@@ -113,7 +139,20 @@ const FERRAMENTAS=[
     cor:"--mint",
     eyebrow:"Resultado do certame",
     titulo:"Gerador do Edital de Classificação Final",
-    descricao:"Cruzará o relatório de classificação da Fábrica de Provas com os dados dos inscritos para gerar o Edital de Classificação Final. (Em desenvolvimento.)"
+    descricao:"Lê a Lista de dados dos inscritos, separa os candidatos marcados por cota de reserva em tabelas editáveis por arrastar e soltar, com nota da prova, da entrevista e final digitadas à mão, e gera o Edital de Classificação Final pronto para copiar no Athos."
+  },
+
+  /* ---------- Fluxo de Processo Seletivo ---------- */
+  {
+    arquivo:"fluxo.html",
+    secao:"fluxo",
+    rotulo:"Editor do Fluxo",
+    ordem:0,
+    emoji:"🗺️",
+    cor:"--coral",
+    eyebrow:"Ponto, Tag e Vinculação",
+    titulo:"Editor do Fluxo do Processo Seletivo",
+    descricao:"Quadro compartilhado com as etapas do processo seletivo — fase, atividade, responsáveis, número da etapa e a marcação de Ponto, Tag e Vinculação. Permite reordenar as etapas arrastando, salvar para todos de uma vez, baixar uma cópia de segurança e gerar o PDF do fluxo."
   }
 ];
 

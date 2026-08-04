@@ -1041,9 +1041,33 @@ footer{
 .drag-handle:focus-visible{ outline:2px solid var(--teal); outline-offset:1px; }
 .drag-handle:active{ cursor:grabbing; }
 
-table.cv-grade-table tbody tr.row-dragging{ opacity:0.4; }
-table.cv-grade-table tbody tr.drop-before td{ box-shadow:inset 0 3px 0 var(--teal); }
-table.cv-grade-table tbody tr.drop-after td{ box-shadow:inset 0 -3px 0 var(--teal); }
+/* As três grades remanejáveis do portal compartilham exatamente estas marcas:
+   a linha em trânsito esmaece e a linha de destino ganha um filete no lado por
+   onde a solta vai entrar. Vêm DEPOIS de tbody tr.unmatched para que, na grade
+   do Hércules, o filete de destino vença o traço vermelho da 1ª célula. */
+table.cv-grade-table tbody tr.row-dragging,
+table.rh-edit-table tbody tr.row-dragging,
+table.fluxo-table tbody tr.row-dragging{ opacity:0.4; }
+
+table.cv-grade-table tbody tr.drop-before td,
+table.rh-edit-table tbody tr.drop-before td,
+table.fluxo-table tbody tr.drop-before td{ box-shadow:inset 0 3px 0 var(--teal); }
+
+table.cv-grade-table tbody tr.drop-after td,
+table.rh-edit-table tbody tr.drop-after td,
+table.fluxo-table tbody tr.drop-after td{ box-shadow:inset 0 -3px 0 var(--teal); }
+
+/* Botão de excluir a linha, na última coluna da grade editável. */
+.row-del-btn{
+  border:1px solid transparent;
+  background:none;
+  color:var(--ink-soft);
+  font-size:13px; line-height:1;
+  padding:4px 7px;
+  cursor:pointer;
+  border-radius:2px;
+}
+.row-del-btn:hover{ color:var(--white); background:var(--stamp-red); border-color:var(--stamp-red); }
 
 /* ============================================================
    Quadro de alocação por dia (Ponto 18)
@@ -1209,6 +1233,153 @@ table.cv-grade-table tbody tr.drop-after td{ box-shadow:inset 0 -3px 0 var(--tea
   main{ padding:24px 20px 32px; }
   h1{ font-size:24px; }
   .step-desc{ margin-left:0; }
+}
+
+/* ============================================================
+   Editor do Fluxo do Processo Seletivo
+   Quadro vivo, e não um relatório gerado: cada célula é um campo, a ordem é
+   remanejável e o resultado é gravado na nuvem para toda a equipe. Por isso a
+   grade segue a linguagem da grade do Ponto 18 (Barlow, texto que quebra em
+   várias linhas) e não a das tabelas de conferência (monoespaçada, uma linha
+   por registro).
+   ============================================================ */
+/* Página de folha larga. A grade tem seis colunas e textos longos: presa aos
+   980px da folha padrão, a coluna da fase e a da atividade ficavam espremidas.
+   Aqui a folha acompanha a janela e só a prosa continua na medida de leitura
+   confortável — texto corrido em 1600px não se lê. */
+body.pagina-larga .sheet{ max-width:none; }
+body.pagina-larga .mini-header-inner{ max-width:none; }
+body.pagina-larga main > .step-info,
+body.pagina-larga main > .step-desc{ max-width:980px; }
+
+.fluxo-barra{
+  display:flex; align-items:center; flex-wrap:wrap; gap:10px 12px;
+  margin-bottom:12px;
+}
+/* ação principal da barra (gravar para todos): mesmo desenho do link-btn,
+   preenchido — a barra tem vários botões e um deles precisa liderar */
+.link-btn.forte{ background:var(--teal); color:var(--white); }
+.link-btn.forte:hover{ background:var(--navy); border-color:var(--navy); }
+
+table.fluxo-table{
+  white-space:normal;
+  table-layout:fixed;
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:12.5px;
+}
+table.fluxo-table tbody tr:nth-child(even){ background:none; }
+/* Tudo centrado na vertical: as linhas têm alturas muito diferentes (a coluna
+   Atividade manda na altura) e conteúdo colado no topo deixava a linha com
+   cara de vazia. */
+table.fluxo-table tbody td{ vertical-align:middle; }
+
+/* Célula da fase. A cor NÃO pinta a célula inteira: ela é o fundo do próprio
+   texto da fase, que cresce só o necessário — daí o bloco colorido acompanhar
+   o parágrafo em vez de varrer a linha toda. A letra é sempre branca. */
+.fluxo-fase{ padding:6px; }
+.fluxo-fase-linha{ display:flex; align-items:center; gap:7px; }
+.fluxo-cor{
+  flex:0 0 auto;
+  width:26px; height:26px; padding:0;
+  border:1px solid var(--line);
+  background:transparent; cursor:pointer;
+}
+/* Os campos editáveis da grade são divs com contenteditable, e não <textarea>.
+   Um textarea tem altura própria, que precisa ser medida e reaplicada a cada
+   mudança de largura da coluna; dentro de uma célula de tabela essa medição
+   não é confiável, e o campo acabava esticado até o pé da linha. Uma div se
+   dimensiona sozinha pelo conteúdo — sem medir nada — e é isso que faz o
+   vertical-align:middle da célula funcionar. */
+.fluxo-fase-nome{
+  flex:1 1 auto; min-width:0;
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:12.5px; font-weight:700;
+  line-height:1.35;
+  background:var(--fase, var(--navy));
+  color:var(--white);
+  border:1px solid transparent;
+  padding:7px 9px;
+  white-space:pre-wrap; overflow-wrap:anywhere;
+  cursor:text;
+}
+.fluxo-fase-nome:focus{ border-color:var(--white); outline:2px solid var(--seal-light); outline-offset:1px; }
+
+/* Campos de texto da grade: sem caixa em repouso — o quadro se lê como uma
+   tabela, e não como um formulário. A borda só aparece ao passar o mouse ou ao
+   focar, que é quando ela informa alguma coisa (aqui dá para digitar). */
+.fluxo-campo{
+  padding:5px 6px;
+  border:1px solid transparent;
+  background:transparent;
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:12.5px; line-height:1.45; color:var(--ink);
+  white-space:pre-wrap; overflow-wrap:anywhere;
+  cursor:text;
+}
+.fluxo-campo.centro{ text-align:center; font-weight:600; }
+.fluxo-campo:hover{ border-color:var(--line); background:#fbfdfd; }
+.fluxo-campo:focus{
+  border-color:var(--teal); background:var(--white);
+  outline:2px solid var(--seal-light); outline-offset:-1px;
+}
+
+/* contenteditable não tem placeholder: o texto de exemplo vem do data-vazio. */
+.fluxo-campo:empty::before,
+.fluxo-fase-nome:empty::before{
+  content:attr(data-vazio);
+  opacity:0.55; font-style:italic; font-weight:500;
+}
+
+.fluxo-classe{
+  display:flex; align-items:center; gap:6px;
+  padding:2px 4px; border-radius:3px;
+  cursor:pointer; white-space:nowrap;
+  font-size:12px; font-weight:600; color:var(--ink-soft);
+}
+.fluxo-classe:hover{ background:#eef7f7; color:var(--ink); }
+.fluxo-classe input{ width:16px; height:16px; accent-color:var(--teal); cursor:pointer; flex:0 0 auto; }
+
+.fluxo-acoes{ display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap; }
+.fluxo-mover{
+  width:28px; height:28px; padding:0;
+  border:1px solid var(--line); background:var(--white);
+  color:var(--navy); font-size:14px; line-height:1; cursor:pointer;
+}
+.fluxo-mover:hover:not(:disabled){ border-color:var(--teal); color:var(--teal); background:#f4fafa; }
+.fluxo-mover:disabled{ opacity:0.35; cursor:not-allowed; }
+
+/* Aviso flutuante de gravação. Fica fixo porque o salvamento é automático e
+   acontece enquanto a pessoa está rolando a tabela — um aviso no topo da
+   página passaria despercebido justamente quando falhasse. Vai à ESQUERDA
+   porque a direita é da caixa de cópia de segurança. */
+.fluxo-aviso{
+  position:fixed; left:18px; bottom:18px; z-index:70;
+  max-width:340px; padding:11px 15px;
+  background:var(--navy); color:var(--white);
+  border-left:4px solid var(--mint);
+  box-shadow:0 12px 30px -14px rgba(0,42,58,0.75);
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:12.5px; line-height:1.45;
+  opacity:0; transform:translateY(8px);
+  pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+}
+.fluxo-aviso.aparece{ opacity:1; transform:translateY(0); }
+.fluxo-aviso.erro{ border-left-color:var(--coral); }
+
+@media print{
+  .fluxo-aviso, .fluxo-barra{ display:none !important; }
+}
+
+@media (max-width:600px){
+  /* em tela estreita o aviso e a caixa de cópia disputariam o mesmo canto:
+     o aviso sobe para o topo, onde nada mais flutua */
+  .fluxo-aviso{ left:10px; right:10px; top:10px; bottom:auto; max-width:none; }
+}
+
+@media (max-width:850px){
+  /* a grade tem seis colunas e não comprime bem: rola na horizontal em vez de
+     espremer a atividade numa coluna de poucos caracteres */
+  table.fluxo-table{ min-width:900px; }
 }
 
 @media (prefers-reduced-motion: reduce){

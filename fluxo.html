@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor do Fluxo do Processo Seletivo — TJPR</title>
+<link rel="stylesheet" href="core.css">
+</head>
+<body class="pagina-larga"><!-- a folha abre até a largura da janela: ver core.css -->
+
+<div class="sheet">
+
+  <div id="institutional-placeholder"></div>
+
+  <div class="app-header">
+    <div id="menu-placeholder"></div>
+    <div id="header-title"></div>
+  </div>
+
+  <main>
+
+    <div class="step step-info">
+      <div class="step-head">
+        <span class="step-num">i</span>
+        <p class="step-title">Como funciona</p>
+      </div>
+      <p class="step-desc">Este quadro reúne as etapas do processo seletivo na ordem em que acontecem, com o(s) responsável(is) de cada uma e a classificação em <strong>Ponto</strong>, <strong>Tag</strong> e <strong>Vinculação</strong>.</p>
+      <ul class="step-list">
+        <li>Clique em qualquer campo para alterá-lo. O nome da fase é texto livre e quebra em várias linhas quando for longo; digitar o nome exato de uma fase padronizada já aplica a cor dela, e a cor também pode ser trocada à mão no quadradinho ao lado.</li>
+        <li><strong>Ponto</strong>, <strong>Tag</strong> e <strong>Vinculação</strong> são independentes: marque quantos couberem em cada etapa.</li>
+        <li>Para mudar a ordem, arraste a etapa pela alça <strong>⠿</strong> — ou use as setas <strong>↑</strong> e <strong>↓</strong>. Com a alça em foco, <strong>Alt+↑</strong> e <strong>Alt+↓</strong> fazem o mesmo pelo teclado.</li>
+      </ul>
+      <p class="step-desc">O quadro é <strong>compartilhado</strong>: as alterações são gravadas sozinhas e ficam visíveis para todo mundo que abrir esta página. Uma cópia fica também neste navegador, para o caso de a rede falhar.</p>
+      <p class="step-desc">Antes de uma mexida grande, vale usar <strong>Baixar cópia</strong>, na caixa do canto inferior direito — o arquivo gerado devolve o quadro exatamente como estava, pelo botão <strong>Restaurar cópia</strong>.</p>
+    </div>
+
+    <div class="fluxo-barra">
+      <button type="button" class="link-btn" id="fxAdicionar">Adicionar etapa</button>
+      <button type="button" class="link-btn" id="fxDesfazer" disabled>Desfazer exclusão</button>
+      <button type="button" class="link-btn forte" id="fxSalvar">Salvar alterações</button>
+      <span class="count-note" id="fxContagem"></span>
+    </div>
+
+    <div class="table-scroll" style="max-height:none;">
+      <table class="fluxo-table">
+        <thead>
+          <tr>
+            <th style="width:19%;">Fase</th>
+            <th style="width:28%;">Atividade</th>
+            <th style="width:14%;">Responsável(is)</th>
+            <th style="width:7%;text-align:center;">Etapa</th>
+            <th style="width:16%;">Classificação</th>
+            <th style="width:16%;text-align:center;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="fxCorpo"></tbody>
+      </table>
+    </div>
+
+    <div class="download-row">
+      <button type="button" class="download-btn" id="fxPdf">Salvar PDF</button>
+      <span class="count-note">O PDF sai em paisagem, com a versão atual do fluxo e as classificações marcadas.</span>
+    </div>
+
+    <p class="step-desc" style="margin:18px 0 0;">As opções <strong>Ponto</strong>, <strong>Tag</strong> e <strong>Vinculação</strong> podem ser combinadas livremente e alteradas depois.</p>
+
+  </main>
+
+  <footer>
+    <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+      <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+      O fluxo aqui registrado é um apoio de trabalho da unidade, não substitui o edital nem os normativos aplicáveis.
+    </p>
+    <p style="max-width:640px;margin:0 auto 12px;font-family:'Barlow',system-ui,sans-serif;font-size:11px;line-height:1.6;color:var(--ink-soft);opacity:0.72;">
+      Fluxo elaborado por <strong style="font-weight:600;">João Pedro de Paula Soares Valente</strong>, Chefe da Divisão.
+    </p>
+    <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+  </footer>
+</div>
+
+<!-- começa recolhida: é uma ação ocasional e, aberta, cobriria o pé da tabela -->
+<aside class="float-draft collapsed" id="fxCaixa">
+  <div class="float-draft-head">
+    <p class="float-draft-tit">Cópia de segurança</p>
+    <button type="button" class="float-draft-toggle" id="fxCaixaToggle" title="Abrir" aria-expanded="false">+</button>
+  </div>
+  <div class="float-draft-body">
+    <input type="file" id="fxArquivoCopia" accept=".json,application/json" style="display:none;">
+    <button type="button" class="link-btn" id="fxBaixarCopia">Baixar cópia (.json)</button>
+    <button type="button" class="link-btn" id="fxRestaurar">Restaurar cópia</button>
+    <p class="float-draft-nota" id="fxCaixaNota">nada gravado nesta sessão</p>
+  </div>
+</aside>
+
+<div class="fluxo-aviso" id="fxAviso" role="status" aria-live="polite"></div>
+
+<script src="ferramentas.js"></script>
+<script src="fluxo_logic.js"></script>
+<script src="layout.js"></script>
+</body>
+</html>

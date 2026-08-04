@@ -43,6 +43,13 @@ function norm(s){
 }
 function colapsa(s){ return String(s == null ? '' : s).replace(/\s+/g,' ').trim(); }
 
+// Fecha o texto com ponto final, sem duplicar quando o usuário já digitou um
+// (ou vários, com espaço depois) no fim do campo.
+function comPontoFinal(s){
+  var t = colapsa(s).replace(/\.+\s*$/,'');
+  return t ? t + '.' : '';
+}
+
 var MESES = ['janeiro','fevereiro','março','abril','maio','junho',
              'julho','agosto','setembro','outubro','novembro','dezembro'];
 
@@ -702,7 +709,7 @@ function lerListaColada(txt){
 var est = {
   sei:'', unidade:'', modalidade:'Presencial',
   dataIni:'', horaIni:'', dataFim:'', horaFim:'',
-  duracao:'', local:'', endereco:'',
+  duracao:'', local:'', endereco:'', observacoes:'',
   dataAss:'', assinanteNome:'', assinanteCargo:'',
   cands:[], seqId:1,
   editando:false,
@@ -738,6 +745,7 @@ var CAMPOS = [
   ['dataIni','p14DataIni'], ['horaIni','p14HoraIni'],
   ['dataFim','p14DataFim'], ['horaFim','p14HoraFim'],
   ['duracao','p14Duracao'], ['local','p14Local'], ['endereco','p14Endereco'],
+  ['observacoes','p14Observacoes'],
   ['dataAss','p14DataAss'], ['assinanteNome','p14Assinante'], ['assinanteCargo','p14Cargo']
 ];
 
@@ -864,8 +872,8 @@ function linhasDataHora(){
   if(ehOnline()){
     out.push({ rot:'OBSERVAÇÕES', val:'Prova on-line: ' + LINK_PROVA + '.' });
   } else {
-    out.push({ rot:'LOCAL', val: est.local ? est.local.replace(/\.\s*$/,'') + '.' : '' });
-    out.push({ rot:'ENDEREÇO', val: est.endereco ? est.endereco.replace(/\.\s*$/,'') + '.' : '' });
+    out.push({ rot:'LOCAL', val: comPontoFinal(est.local) });
+    out.push({ rot:'ENDEREÇO', val: comPontoFinal(est.endereco) });
   }
   return out.filter(function(x){ return x.val && x.val !== '.'; });
 }
@@ -898,6 +906,11 @@ function corpoEditalHTML(){
   });
   p.push('<p class="ed-j">&nbsp;</p>');
   p.push(tabelaCandidatosHTML());
+  var obs = comPontoFinal(est.observacoes);
+  if(obs){
+    p.push('<p class="ed-j">&nbsp;</p>');
+    p.push('<p class="ed-j"><b>OBSERVAÇÕES:</b> ' + esc(obs) + '</p>');
+  }
   return p.join('\n');
 }
 
@@ -1391,7 +1404,7 @@ function estadoParaJson(){
     campos:{
       sei:est.sei, unidade:est.unidade, modalidade:est.modalidade,
       dataIni:est.dataIni, horaIni:est.horaIni, dataFim:est.dataFim, horaFim:est.horaFim,
-      duracao:est.duracao, local:est.local, endereco:est.endereco,
+      duracao:est.duracao, local:est.local, endereco:est.endereco, observacoes:est.observacoes,
       dataAss:est.dataAss, assinanteNome:est.assinanteNome, assinanteCargo:est.assinanteCargo
     },
     candidatos: est.cands.map(function(c){ return {inscricao:c.inscricao, nome:c.nome}; }),

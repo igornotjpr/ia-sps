@@ -20,6 +20,18 @@ function navHtml(cur){
   SECOES.forEach(sec=>{
     const itens=ferramentasDaSecao(sec.id);
     if(!itens.length) return;
+
+    // Seção com uma ferramenta só vira link direto: um menu suspenso de um
+    // item é um clique a mais para chegar exatamente ao mesmo lugar. Volta a
+    // ser submenu sozinha quando a seção ganhar a segunda ferramenta.
+    if(itens.length===1){
+      const unica=itens[0];
+      h+=`<a class="tab-btn ${cur===unica.arquivo?'active':''}" href="${unica.arquivo}">`
+        +`<span class="tab-emoji" aria-hidden="true">${escHtml(sec.emoji||'🗂️')}</span>`
+        +`${escHtml(sec.rotulo)}</a>`;
+      return;
+    }
+
     const ativa=itens.some(t=>t.arquivo===cur);
     h+='<div class="tab-group">';
     h+=`<button type="button" class="tab-btn tab-parent ${ativa?'active':''}" aria-haspopup="true" aria-expanded="false">`
@@ -117,8 +129,12 @@ function secaoHtml(sec){
   if(sec.descricao) h+=`<p class="section-desc">${escHtml(sec.descricao)}</p>`;
   h+='<div class="tool-grid">';
   itens.forEach(t=>{ h+=cardHtml(t,rotuloFerramenta(t)); });
-  const idSecreto=(sec.id==='sps')?'ferramentasEmBreveCard':'';
-  h+=placeholderCardHtml(idSecreto,'Próxima ferramenta',sec.emBreve||'Novas ferramentas aparecerão aqui conforme forem desenvolvidas.');
+  // O cartão "Próxima ferramenta" só aparece nas seções que declaram `emBreve`.
+  // Hoje é só a de Processo Seletivo — que é, também, a porta dos jogos.
+  if(sec.emBreve){
+    const idSecreto=(sec.id==='sps')?'ferramentasEmBreveCard':'';
+    h+=placeholderCardHtml(idSecreto,'Próxima ferramenta',sec.emBreve);
+  }
   h+='</div></section>';
   return h;
 }
