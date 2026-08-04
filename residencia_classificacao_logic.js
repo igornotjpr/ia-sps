@@ -892,8 +892,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     };
     let h = '<table style="border:1pt solid #000;border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;margin:0 0 12pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;">';
     h += '<colgroup>'+cols.map(c=>'<col'+(LARGURA_COL_CF[c.k]?(' style="width:'+LARGURA_COL_CF[c.k]+';"'):'')+'>').join('')+'</colgroup>';
+    // título da cota primeiro, cabeçalho das colunas embaixo — lido de cima
+    // pra baixo, isso lê "que tabela é essa" antes de "que coluna é essa"
+    h += '<tr><td colspan="'+cols.length+'" style="border:1pt solid #000;padding:3pt 5pt;font-weight:bold;text-align:center;">'+esc(grupo.rot)+'</td></tr>';
     h += '<tr>'+cols.map(c=>'<td '+td(c.k,true)+'>'+esc(c.t)+'</td>').join('')+'</tr>';
-    h += '<tr><td colspan="'+cols.length+'" style="border:1pt solid #000;padding:3pt 5pt;font-weight:bold;">'+esc(grupo.rot)+'</td></tr>';
     lista_.forEach((c,i)=>{
       h += '<tr>'+cols.map(col=>{
         const v = (col.k==='ordem') ? String(i+1)
