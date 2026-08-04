@@ -4,6 +4,26 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Residência — Gerador do Edital de Classificação Final</title>
 <link rel="stylesheet" href="core.css">
+<style>
+  /* Sugestão de preenchimento: vale para TODOS os campos da página. Mais
+     esmaecida do que o padrão do core.css, para nunca ser confundida com dado
+     digitado — os quadros mostram apenas um MODELO, com nomes fictícios. */
+  input::placeholder,
+  textarea::placeholder,
+  .exemplo-input::placeholder{
+    color:var(--ink-soft);
+    opacity:0.42;
+    font-style:italic;
+  }
+  /* título de cada tabela de cota, no quadro de rascunho (Passo 3) */
+  .cf-grupo-bloco{ margin-bottom:22px; }
+  .cf-grupo-tit{
+    font-family:'Barlow Semi Condensed', system-ui, sans-serif;
+    font-weight:700; font-size:14px; color:var(--navy);
+    letter-spacing:0.02em; margin:0 0 8px;
+  }
+  .cf-grupo-qtd{ font-weight:400; color:var(--ink-soft); font-size:12.5px; }
+</style>
 </head><body><div class="sheet">
 <div id="institutional-placeholder"></div>
 <div class="app-header"><div id="menu-placeholder"></div><div id="header-title"></div></div>
@@ -12,21 +32,151 @@
   <div class="step step-info">
     <div class="step-head">
       <span class="step-num">i</span>
-      <p class="step-title">Como vai funcionar</p>
+      <p class="step-title">Como funciona</p>
     </div>
-    <p class="step-desc">Esta ferramenta lerá o relatório de classificação da Fábrica de Provas e o relatório de inscritos, cruzará os dados por nome e gerará o texto do <strong>Edital de Classificação Final</strong> da Residência, pronto para copiar ou baixar.</p>
+    <p class="step-desc">Esta ferramenta monta as tabelas de <strong>Classificação Final</strong> da Residência, separadas por cota de reserva, e gera o texto pronto para colar no Athos.</p>
     <ul class="step-list">
-      <li>Leitura do relatório de classificação (PDF ou planilha da Fábrica de Provas)</li>
-      <li>Cruzamento com o relatório de inscritos, por nome normalizado</li>
-      <li>Sinalização de qualquer candidato sem correspondência — nunca falha em silêncio</li>
-      <li>Geração da tabela de classificação e do texto do edital</li>
+      <li><strong>Passo 1</strong> — Lista de dados dos inscritos (mesmo formato do Hércules): traz nome e modalidade da inscrição.</li>
+      <li><strong>Passo 2</strong> — conferência com checkbox: marque quem participa da classificação final.</li>
+      <li><strong>Passo 3</strong> — tabelas de rascunho, uma por cota, com Nota da Prova, Nota da Entrevista e Nota Final digitadas à mão; reordene por arrastar e soltar ou pela Nota Final.</li>
+      <li><strong>Passo 4</strong> — dados do edital (número, SEI, assinatura) e geração dos blocos para o Athos.</li>
     </ul>
+    <p class="step-desc">Um candidato cotista concorre em <strong>mais de uma tabela</strong>: sempre na Ampla Concorrência, mais a(s) cota(s) da modalidade da inscrição. É a mesma pessoa em todas — corrigir o nome ou uma nota em qualquer tabela atualiza automaticamente as demais em que ela aparece.</p>
+    <p class="step-desc">Vagas de <strong>Vulnerabilidade Social (VS)</strong> só valem para editais de Ensino Médio; na Residência (pós-graduação) elas revertem para concorrência Geral e não marcam nenhuma cota aqui.</p>
   </div>
 
-  <div class="placeholder-panel">
-    <span class="placeholder-tag">Em desenvolvimento</span>
-    <h2>Ferramenta ainda não disponível</h2>
-    <p>Esta página é um espaço reservado. A ferramenta será construída aqui, seguindo o mesmo padrão das demais: leitura de arquivos direto no navegador, sem enviar nada para fora da máquina.</p>
+  <!-- ===================== PASSO 1 ===================== -->
+  <div class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <p class="step-title">Lista de dados dos inscritos</p>
+    </div>
+    <p class="step-desc">Escolha o PDF da lista geral de inscritos — o mesmo arquivo usado no gerador do arquivo do Hércules. São aproveitados o Nome e a Modalidade da inscrição.</p>
+
+    <div class="upload-panel">
+      <input type="file" id="cfArquivo" accept=".pdf,application/pdf">
+      <button type="button" class="file-btn" id="cfBtnArquivo">Escolher PDF da lista</button>
+      <span class="file-name" id="cfNomeArquivo">nenhum arquivo escolhido</span>
+    </div>
+
+    <div id="cfStatus" class="notice-banner" style="display:none;"></div>
+
+    <p class="step-desc" style="margin-top:16px;">Quadro de conferência — uma linha por inscrito, no formato <code>Nº · MODALIDADE · CPF · NOME · CELULAR · E-MAIL</code>. Também aceita texto colado direto do PDF.</p>
+    <div class="step-content">
+      <textarea id="cfTexto" class="exemplo-input" style="min-height:200px;" placeholder="Ex: modelo de preenchimento — os dados abaixo são fictícios
+
+1&#9;Ampla Concorrência&#9;00000000000&#9;Fulana de Tal Exemplo&#9;(00) 00000-0000&#9;fulana@example.com
+2&#9;Pessoa Preta ou Parda&#9;00000000000&#9;Ciclana de Tal Exemplo&#9;(00) 00000-0000&#9;ciclana@example.com"></textarea>
+      <div class="download-row">
+        <button type="button" class="run-btn" id="cfBtnProcessar" style="width:auto;" disabled>Processar lista</button>
+        <button type="button" class="link-btn" id="cfBtnLimpar">Limpar quadro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PASSO 2 ===================== -->
+  <div class="step" id="cfPasso2" style="display:none;">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <p class="step-title">Selecionar candidatos</p>
+    </div>
+    <p class="step-desc">Marque quem participa da classificação final. A <strong>Reserva de vaga</strong> vem da modalidade da inscrição — confira antes de gerar as tabelas.</p>
+
+    <div class="upload-panel">
+      <input type="text" id="cfBuscaNome" autocomplete="off" placeholder="Filtrar pelo nome…" style="width:220px;padding:8px 10px;border:1px solid var(--line);font-size:13px;">
+      <button type="button" class="link-btn" id="cfBtnMarcarTodos">Marcar todos</button>
+      <button type="button" class="link-btn" id="cfBtnDesmarcarTodos">Desmarcar todos</button>
+      <span class="count-note" id="cfResumoSelecao"></span>
+    </div>
+
+    <div class="step-content" style="margin-top:12px;">
+      <div id="cfChecklist"></div>
+    </div>
+
+    <div class="step-content" style="margin-top:16px;">
+      <button type="button" class="run-btn" id="cfBtnGerarTabelas">Gerar tabelas de classificação de rascunho</button>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ===================== PASSO 3 ===================== -->
+  <div class="step" id="cfPasso3" style="display:none;">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <p class="step-title">Tabelas de classificação (rascunho)</p>
+    </div>
+    <p class="step-desc">Uma tabela por cota — só aparecem as que têm candidato marcado. Clique em <strong>Editar tabelas</strong> para digitar as notas, arrastar para reordenar e adicionar ou excluir linhas.</p>
+
+    <div class="step-content">
+      <button type="button" class="link-btn" id="cfBtnEditarTabelas">Editar tabelas</button>
+    </div>
+
+    <div class="step-content" style="margin-top:12px;">
+      <div id="cfTabelas"></div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ===================== PASSO 4 ===================== -->
+  <div class="step" id="cfPasso4" style="display:none;">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <p class="step-title">Dados do edital</p>
+    </div>
+    <div class="step-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 18px;">
+      <label style="font-size:12.5px;color:var(--ink-soft);">Número do edital (ver número no SEI)<br><input type="text" class="exemplo-input" id="cfF_numEdital" placeholder="Ex.: 4254/2026" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">SEI!TJPR n°<br><input type="text" class="exemplo-input" id="cfF_sei" placeholder="Ex.: 0031822-23.2026.8.16.6000" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Cidade da assinatura<br><input type="text" id="cfF_cidade" value="Curitiba" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Data da assinatura<br><input type="text" id="cfF_dataAss" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Quem assina<br><input type="text" class="exemplo-input" id="cfF_assinante" placeholder="Ex.: Fulana de Tal Exemplo" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);">Cargo<br><input type="text" class="exemplo-input" id="cfF_cargo" placeholder="Ex.: Juíza de Direito" style="width:100%;padding:8px;border:1px solid var(--line);"></label>
+      <label style="font-size:12.5px;color:var(--ink-soft);grid-column:1/-1;">Unidade na assinatura<br><textarea id="cfF_unidade" class="exemplo-input" style="min-height:70px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Ex.: Gabinete do Juízo da Vara de Família e Sucessões da Comarca de Exemplo"></textarea></label>
+    </div>
+    <div class="step-content" style="margin-top:18px;">
+      <button type="button" class="run-btn" id="cfBtnGerar">Gerar edital</button>
+    </div>
+  </div>
+
+  <div class="step" id="cfSaidaBox" style="display:none;">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <p class="step-title">Edital gerado</p>
+    </div>
+    <p class="step-desc" id="cfMsgSaida"></p>
+    <div class="step-content">
+      <div class="download-row" style="margin-bottom:14px;">
+        <button type="button" class="download-btn" id="cfBtnCopiarTudo">Copiar tudo</button>
+        <button type="button" class="download-btn" id="cfBtnPDF" style="background:var(--ink);">Salvar em PDF</button>
+        <button type="button" class="download-btn" id="cfBtnEditarTexto" style="background:var(--teal);">Editar texto</button>
+      </div>
+
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 1 — Nome do documento</p><span style="margin-left:auto;font-size:11.5px;color:var(--ink-soft);">só para nomear o documento no SEI — não sai no PDF</span><button type="button" class="link-btn cf-bloco-copiar" data-bloco="1">Copiar</button></div>
+        <div id="cfBloco1" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 2 — Preâmbulo</p><button type="button" class="link-btn cf-bloco-copiar" data-bloco="2">Copiar</button></div>
+        <div id="cfBloco2" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 3 — Numeração</p><button type="button" class="link-btn cf-bloco-copiar" data-bloco="3">Copiar</button></div>
+        <div id="cfBloco3" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 4 — Conteúdo (tabelas)</p><button type="button" class="link-btn cf-bloco-copiar" data-bloco="4">Copiar</button></div>
+        <div id="cfBloco4" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 5 — Data</p><button type="button" class="link-btn cf-bloco-copiar" data-bloco="5">Copiar</button></div>
+        <div id="cfBloco5" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+      <div class="cv-bloco">
+        <div class="cv-bloco-head"><p class="cv-bloco-tit">Bloco 6 — Quem assina</p><button type="button" class="link-btn cf-bloco-copiar" data-bloco="6">Copiar</button></div>
+        <div id="cfBloco6" class="cv-bloco-conteudo" contenteditable="false"></div>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -34,11 +184,29 @@
 <footer>
   <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
     <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
-    É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer lançamento no Hércules.
+    É de responsabilidade do(a) utilizador(a) conferir integralmente os dados gerados antes de qualquer publicação ou lançamento em sistema oficial.
   </p>
   <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
 </footer>
 </div>
+
+<!-- Rascunho: caixa fixa, sempre recolhida ao abrir a página -->
+<aside class="float-draft collapsed" id="cfDraft">
+  <div class="float-draft-head">
+    <p class="float-draft-tit">Rascunho</p>
+    <button type="button" class="float-draft-toggle" id="cfDraftToggle" title="Abrir" aria-expanded="false">+</button>
+  </div>
+  <div class="float-draft-body">
+    <input type="file" id="cfRascunho" accept="application/json">
+    <button type="button" class="link-btn" id="cfBtnExportar">Salvar (.json)</button>
+    <button type="button" class="link-btn" id="cfBtnAbrirRascunho">Abrir rascunho</button>
+  </div>
+</aside>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.worker.min.js"></script>
+<script src="core.js"></script>
+<script src="residencia_classificacao_logic.js"></script>
 <script src="ferramentas.js"></script>
 <script src="layout.js"></script>
 </body></html>

@@ -139,7 +139,7 @@ const FERRAMENTAS=[
     cor:"--mint",
     eyebrow:"Resultado do certame",
     titulo:"Gerador do Edital de Classificação Final",
-    descricao:"Cruzará o relatório de classificação da Fábrica de Provas com os dados dos inscritos para gerar o Edital de Classificação Final. (Em desenvolvimento.)"
+    descricao:"Lê a Lista de dados dos inscritos, separa os candidatos marcados por cota de reserva em tabelas editáveis por arrastar e soltar, com nota da prova, da entrevista e final digitadas à mão, e gera o Edital de Classificação Final pronto para copiar no Athos."
   },
 
   /* ---------- Fluxo de Processo Seletivo ---------- */
