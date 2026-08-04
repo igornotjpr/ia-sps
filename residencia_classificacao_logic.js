@@ -321,7 +321,8 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         cfBuscaNome=$('cfBuscaNome'),
         cfBtnMarcarTodos=$('cfBtnMarcarTodos'), cfBtnDesmarcarTodos=$('cfBtnDesmarcarTodos'),
         cfBtnGerarTabelas=$('cfBtnGerarTabelas');
-  const cfPasso3=$('cfPasso3'), cfTabelas=$('cfTabelas'), cfBtnEditarTabelas=$('cfBtnEditarTabelas');
+  const cfPasso3=$('cfPasso3'), cfTabelas=$('cfTabelas'), cfBtnEditarTabelas=$('cfBtnEditarTabelas'),
+        cfStatusSalvo=$('cfStatusSalvo');
   const cfPasso4=$('cfPasso4'), cfBtnGerar=$('cfBtnGerar');
   const cfSaidaBox=$('cfSaidaBox'), cfMsgSaida=$('cfMsgSaida');
 
@@ -388,8 +389,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
       const conv = reservaDaModalidade(r.modalidade);
       if(conv.desconhecida) desconhecidas.push({ nome:r.nome, valor:conv.desconhecida });
       if(conv.vs) vsList.push(r.nome);
+      // desmarcado por padrão: o usuário escolhe ativamente quem entra na
+      // classificação, em vez de precisar excluir quem não participa
       return { id: estado.seq++, nome:r.nome, modalidade:r.modalidade,
-               ppp:conv.flags.ppp, pcd:conv.flags.pcd, ind:conv.flags.ind, marcado:true };
+               ppp:conv.flags.ppp, pcd:conv.flags.pcd, ind:conv.flags.ind, marcado:false };
     });
 
     let msg = '<strong>'+estado.inscritos.length+' inscrito(s)</strong> prontos para seleção no Passo 2.';
@@ -473,8 +476,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     if(!marcados.length){ alert('Marque ao menos um candidato para gerar as tabelas.'); return; }
     if(estado.cands.length && !confirm('Isso substitui as tabelas de classificação já geradas — as notas já digitadas serão perdidas. Continuar?')) return;
 
+    // maiúsculas já na montagem — não só na impressão do edital, pra ficar
+    // igual do jeito que aparece na tela de conferência e edição também
     estado.cands = marcados.map(it=>({
-      id: estado.seq++, nome: it.nome,
+      id: estado.seq++, nome: it.nome.toUpperCase(),
       notaProva:null, notaEntrevista:null, notaFinal:null,
       ac:true, ppp:it.ppp, pcd:it.pcd, ind:it.ind
     }));
@@ -575,11 +580,25 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     estado.trabalho = [];
     renderTabelas();
   }
+  let statusSalvoTimer = null;
+  // Confirmação visível do salvamento — sem isso, não tem como o usuário
+  // saber se sair do bloco (ou clicar em "Salvar alterações") realmente
+  // gravou as edições, principalmente no salvamento automático, que não
+  // tem um clique explícito pra se apoiar.
+  function avisarSalvo(){
+    if(!cfStatusSalvo) return;
+    const hora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    cfStatusSalvo.textContent = 'Alterações salvas às ' + hora + '.';
+    clearTimeout(statusSalvoTimer);
+    statusSalvoTimer = setTimeout(()=>{ cfStatusSalvo.textContent = ''; }, 5000);
+  }
+
   function salvarEdicaoTabelas(){
     estado.cands = estado.trabalho;
     estado.editando = false;
     estado.trabalho = [];
     renderTabelas();
+    avisarSalvo();
   }
 
   function commitCampoTabela(el){
@@ -689,7 +708,10 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         const c = estado.trabalho[idxTrabalho(Number(tr.dataset.id))];
         if(!c) return;
         const f = el.dataset.f;
-        if(f!=='nome') el.value = fmtNota(c[f]);
+        // maiúsculas já na montagem da tabela: corrigir o nome à mão também
+        // entra maiúsculo, pra nunca destoar de quem veio da importação
+        if(f==='nome'){ c.nome = c.nome.toUpperCase(); el.value = c.nome; }
+        else el.value = fmtNota(c[f]);
         if(f==='notaProva' || f==='notaEntrevista'){
           const media = calcularMedia(c);
           if(media!=null) c.notaFinal = media;
