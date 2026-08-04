@@ -587,7 +587,11 @@ const COLS_CONF = ['Classificação','Vaga (tipo)','Ordem no edital','CPF','Nome
 // Modalidade da inscrição (Lista de dados) -> colunas S/N do Hércules.
 // Valor não reconhecido NUNCA vira "N" em silêncio: é reportado ao usuário.
 const MAPA_MODALIDADE = [
-  { col:'AFRO',     re:/(PRETO|PARDO|NEGR|AFRO|ETNICO)/ },
+  // PRET[OA]/PARD[OA] cobre as duas concordâncias de gênero — a modalidade
+  // normalmente vem como "Pessoa Preta ou Parda" (feminino), que
+  // "PRETO|PARDO" sozinho não reconhecia (bug: toda inscrição nessa cota
+  // caía em "modalidade não reconhecida" em vez de marcar AFRO).
+  { col:'AFRO',     re:/(PRET[OA]|PARD[OA]|NEGR|AFRO|ETNICO)/ },
   { col:'PNE',      re:/(DEFICI|PCD|PNE|PORTADOR DE NECESSIDADE)/ },
   { col:'INDÍGENA', re:/(INDIGEN)/ },
   { col:'VS',       re:/(VULNERAB|HIPOSSUF|BAIXA RENDA|CADUNICO|CAD UNICO|SOCIOECONOMIC|ESCOLA PUBLICA)/ }
