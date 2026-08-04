@@ -932,9 +932,12 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     let h = '<table border="1" cellspacing="0" style="border:1pt solid #000;border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;margin:0 0 12pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;">';
     h += '<colgroup>'+cols.map(c=>'<col'+(LARGURA_COL_CF[c.k]?(' style="width:'+LARGURA_COL_CF[c.k]+';"'):'')+'>').join('')+'</colgroup>';
     // título da cota primeiro, cabeçalho das colunas embaixo — lido de cima
-    // pra baixo, isso lê "que tabela é essa" antes de "que coluna é essa"
-    h += '<tr><td colspan="'+cols.length+'" style="border:1pt solid #000;padding:3pt 5pt;font-weight:bold;text-align:center;">'+esc(grupo.rot)+'</td></tr>';
-    h += '<tr>'+cols.map(c=>'<td '+td(c.k,true)+'>'+esc(c.t)+'</td>').join('')+'</tr>';
+    // pra baixo, isso lê "que tabela é essa" antes de "que coluna é essa".
+    // O negrito vai em <b> de verdade, não só font-weight no style — mesmo
+    // motivo do border="1" na tabela: só CSS inline não sobrevive de forma
+    // confiável ao colar no Word/Athos.
+    h += '<tr><td colspan="'+cols.length+'" style="border:1pt solid #000;padding:3pt 5pt;font-weight:bold;text-align:center;"><b>'+esc(grupo.rot)+'</b></td></tr>';
+    h += '<tr>'+cols.map(c=>'<td '+td(c.k,true)+'><b>'+esc(c.t)+'</b></td>').join('')+'</tr>';
     lista_.forEach((c,i)=>{
       h += '<tr>'+cols.map(col=>{
         const v = (col.k==='ordem') ? String(i+1)
@@ -977,7 +980,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     b2 += '<p style="'+E0+'">PROCESSO SELETIVO PARA O PROGRAMA DE RESIDÊNCIA JURÍDICA</p>';
 
     // Bloco 3 — Numeração: só o SEI para copiar.
-    const b3 = '<p style="'+C+'">SEI!TJPR N° '+esc(d.sei||'____________')+'</p>';
+    const b3 = '<p style="'+C+'">'+esc(d.sei||'____________')+'</p>';
 
     // Bloco 4 — Conteúdo: direto as tabelas, sem parágrafo introdutório —
     // é assim que sai nos editais publicados. Uma tabela por cota, com um
