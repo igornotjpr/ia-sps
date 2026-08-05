@@ -165,17 +165,21 @@
     <div class="step-content" id="cvDadosEdital" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px 18px;align-items:start;">
       <label><span>Edital de convocação para entrevista (Ver número no SEI)</span><input type="text" class="exemplo-input" id="cvF_nConv" placeholder="Ex.: 3417/2026"></label>
       <label><span>Numeração do edital no Athos - gerada automaticamente</span><input type="text" id="cvF_nEdital" value="EDITAL N° $$(numerar automaticamente)%%"></label>
-      <label><span>SEI!TJPR n°</span><input type="text" class="exemplo-input" id="cvF_sei" placeholder="Ex.: 0039497-37.2026.8.16.6000"></label>
+      <!-- a linha em branco (<br>&nbsp;) iguala a altura do rótulo à dos dois
+           vizinhos da mesma linha da grade, que quebram em 2 linhas — sem
+           isso o campo do SEI ficava mais alto que os outros dois, mesmo com
+           align-items:start (ver comentário no bloco de estilo, no head). -->
+      <label><span>SEI!TJPR n°<br>&nbsp;</span><input type="text" class="exemplo-input" id="cvF_sei" placeholder="Ex.: 0000000-00.0000.8.16.0000"></label>
       <label><span>Data da entrevista</span><input type="text" class="exemplo-input" id="cvF_data" placeholder="Ex.: 27/07/2026"></label>
-      <label><span>Horário geral (se não houver por candidato)</span><input type="text" class="exemplo-input" id="cvF_horarioGeral" placeholder="Ex.: 1330 vira 13h30min sozinho"></label>
-      <label><span>Telefone (opcional)</span><input type="text" class="exemplo-input" id="cvF_telefone" placeholder="Ex.: (44) 3472-2386"></label>
+      <label id="cvCampoHorarioGeral"><span>Horário geral (se não houver por candidato)</span><input type="text" class="exemplo-input" id="cvF_horarioGeral" placeholder="Ex.: 1330 vira 13h30min sozinho"></label>
+      <label><span>Telefone (opcional)</span><input type="text" class="exemplo-input" id="cvF_telefone" placeholder="Ex.: (00) 0000-0000"></label>
       <label style="grid-column:1/-1;"><span>Local da entrevista</span><textarea id="cvF_local" class="exemplo-input" style="min-height:70px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Ex.: Gabinete 704, prédio anexo ao TJPR."></textarea></label>
       <label style="grid-column:1/-1;"><span>Outras informações (opcional)</span><textarea id="cvF_extra" class="exemplo-input" style="min-height:60px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;" placeholder="Ex.: os candidatos deverão apresentar currículo resumido."></textarea></label>
       <label><span>Cidade da assinatura</span><input type="text" id="cvF_cidade" value="Curitiba"></label>
       <label><span>Data da assinatura</span><input type="text" id="cvF_dataAss"></label>
-      <label><span>Quem assina</span><input type="text" class="exemplo-input" id="cvF_assinante" placeholder="Ex.: Alexandre Barbosa Fabiani"></label>
+      <label><span>Quem assina</span><input type="text" class="exemplo-input" id="cvF_assinante" placeholder="Ex.: Fulano de Tal Exemplo"></label>
       <label><span>Cargo</span><input type="text" class="exemplo-input" id="cvF_cargo" placeholder="Ex.: Desembargador"></label>
-      <label style="grid-column:1/-1;"><span>Unidade na assinatura (opcional)</span><input type="text" class="exemplo-input" id="cvF_unidade" placeholder="Ex.: 3ª Vara Criminal da Comarca de Foz do Iguaçu"></label>
+      <label style="grid-column:1/-1;"><span>Unidade na assinatura (opcional)</span><input type="text" class="exemplo-input" id="cvF_unidade" placeholder="Ex.: Vara Cível da Comarca de Exemplo"></label>
     </div>
     <div class="step-content" style="margin-top:18px;">
       <button type="button" class="run-btn" id="cvBtnGerar">Gerar edital</button>

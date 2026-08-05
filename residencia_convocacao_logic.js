@@ -883,9 +883,20 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
 
   // "Colunas do edital": só resta a Hora, opcional (Objetiva/Discursiva/
   // Acertos saíram — a nota agora é um único campo, sempre presente).
+  // "Horário geral" só faz sentido quando NINGUÉM tem horário próprio — com
+  // a coluna Horário ativa na tabela, o campo geral ficaria redundante (e
+  // pode confundir se sobrar um valor antigo digitado antes de ativar a
+  // coluna). O campo some da tela, e o gerarEdital() também ignora qualquer
+  // valor deixado nele enquanto a coluna estiver ativa.
+  function sincronizarCampoHorarioGeral(){
+    const campo = $('cvCampoHorarioGeral');
+    if(campo) campo.style.display = estado.cols.hora ? 'none' : '';
+  }
+
   cvColHora.addEventListener('change', ()=>{
     estado.cols.hora = cvColHora.checked;
     cvPainelHorarios.style.display = estado.cols.hora ? 'flex' : 'none';
+    sincronizarCampoHorarioGeral();
     renderTabelas();
   });
 
@@ -948,6 +959,28 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     el.addEventListener('change', function(){
       const h = interpretarHoraDigitada(el.value);
       if(h) el.value = fmtHora(h);
+    });
+  }
+
+  // Telefone: (XX) XXXXX-XXXX pra 11 dígitos (celular), (XX) XXXX-XXXX pra
+  // 10 (fixo) — reconstruído a partir dos dígitos a cada tecla, mesmo idioma
+  // das outras máscaras. Só dá pra saber se é fixo ou celular com o número
+  // completo, então o formato do corpo (4 ou 5 dígitos antes do traço) só
+  // se decide quando passa de 10 dígitos no total.
+  function ativarMascaraTelefone(el){
+    if(!el) return;
+    el.addEventListener('input', function(){
+      const d = el.value.replace(/\D/g,'').slice(0,11);
+      if(!d.length){ el.value=''; return; }
+      let out = '(' + d.slice(0,2);
+      if(d.length>2){
+        out += ') ';
+        const corpo = d.slice(2);
+        const celular = d.length>10;
+        const primeiraParte = celular ? 5 : 4;   // "99999" (celular) ou "9999" (fixo)
+        out += corpo.slice(0,primeiraParte) + (corpo.length>primeiraParte ? '-'+corpo.slice(primeiraParte,primeiraParte+4) : '');
+      }
+      el.value = out;
     });
   }
 
@@ -1040,7 +1073,9 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       b4 += t;
     });
     let dataLinha = (d.data||'').trim();
-    if(d.horarioGeral) dataLinha += (dataLinha?', ':'')+d.horarioGeral.trim();
+    // ignora qualquer valor deixado no campo — a coluna Horário por
+    // candidato manda, o horário geral não faz sentido junto dela
+    if(d.horarioGeral && !estado.cols.hora) dataLinha += (dataLinha?', ':'')+d.horarioGeral.trim();
     if(dataLinha) b4 += '<p style="'+P+'"><strong>Data:</strong> '+esc(comPontoFinal(dataLinha))+'</p>';
     if(d.local) b4 += '<p style="'+P+'"><strong>Local:</strong> '+esc(comPontoFinal(d.local)).replace(/\n/g,'<br>')+'</p>';
     if(d.telefone) b4 += '<p style="'+P+'"><strong>Telefone:</strong> '+esc(d.telefone)+'</p>';
@@ -1143,6 +1178,7 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
   ativarMascaraSei($('cvF_sei'));
   ativarMascaraEdital($('cvF_nConv'));
   ativarAutoformatoHorarioGeral($('cvF_horarioGeral'));
+  ativarMascaraTelefone($('cvF_telefone'));
 
   /* ---------------- L) rascunho (.json) ---------------- */
 
@@ -1182,6 +1218,7 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       escreverCamposDoc();
       cvColHora.checked = !!estado.cols.hora;
       cvPainelHorarios.style.display = estado.cols.hora ? 'flex' : 'none';
+      sincronizarCampoHorarioGeral();
       renderChecklist();
       if(estado.cands.length){ renderTabelas(); cvPasso3.style.display=''; $('cvPasso4').style.display=''; }
       if(estado.inscritos.length) cvPasso2.style.display='';
@@ -1207,6 +1244,7 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     });
   }
 
+  sincronizarCampoHorarioGeral();
   conferirPasso1();
 }
 
