@@ -117,7 +117,7 @@ const FERRAMENTAS=[
     cor:"--teal",
     eyebrow:"Convocação para a entrevista",
     titulo:"Gerador do Edital de Convocação para Entrevista",
-    descricao:"Lê a relação de convocados enviada pela unidade (PDF do SEI ou tabela colada), permite conferir os dados e marcar as cotas, e gera o Edital de Convocação para Entrevista pronto para copiar ou salvar em PDF."
+    descricao:"Lê a Lista de dados dos inscritos, separa os candidatos marcados por cota de reserva em tabelas editáveis por arrastar e soltar, com nota e horário digitados à mão, e gera o Edital de Convocação para Entrevista pronto para copiar ou salvar em PDF."
   },
   {
     arquivo:"residencia_hercules.html",
