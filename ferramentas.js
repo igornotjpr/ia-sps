@@ -16,6 +16,10 @@
      no índice. Hoje só a de Processo Seletivo o tem (é a porta dos jogos).
    - uma seção com UMA ferramenta só vira link direto no menu, sem submenu. */
 
+// Versão exibida no canto do cabeçalho (formato "v. x.y.z"). Atualizar aqui a
+// cada commit versionado, acompanhando o número usado na mensagem do commit.
+const VERSAO_APP='3.13';
+
 const SECOES=[
   {
     id:"sps",

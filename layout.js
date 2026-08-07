@@ -80,13 +80,16 @@ function fecharDropdowns(){
 // Monta o cabeçalho institucional padrão (logo + identificação da unidade),
 // idêntico em todas as páginas — assim o header é definido em um só lugar.
 function institutionalHtml(){
+  const versao=(typeof VERSAO_APP!=='undefined')?VERSAO_APP:'';
   return '<div class="institutional-header">'
     +'<div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>'
     +'<div class="tjpr-name">'
     +'<strong>Tribunal de Justiça do Estado do Paraná</strong>'
     +'<span class="tjpr-line">Secretaria de Gestão de Pessoas</span>'
     +'<span class="tjpr-line">SG-SGP-CDHO-DSERFTA</span>'
-    +'</div></div>';
+    +'</div>'
+    +(versao?`<span class="tjpr-version" title="Versão do portal">v. ${escHtml(versao)}</span>`:'')
+    +'</div>';
 }
 
 // Monta o HTML de um cartão de ferramenta/jogo — usado tanto para as grades de

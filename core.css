@@ -120,6 +120,16 @@ body{
    mantendo a formatação do bloco tjpr-name */
 .institutional-header .tjpr-name .tjpr-line{ display:block; }
 
+.institutional-header .tjpr-version{
+  margin-left:auto;
+  padding-left:18px;
+  font-family:'Barlow', system-ui, sans-serif;
+  font-size:12px;
+  font-weight:500;
+  color:var(--ink-soft);
+  flex-shrink:0;
+}
+
 .app-header{
   background:var(--navy);
   /* filete de acento na base do cabeçalho — mesma lógica do cartão da home;
