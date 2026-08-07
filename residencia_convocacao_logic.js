@@ -72,6 +72,37 @@ function fmtNota(v){
   return n.toFixed(2).replace('.',',');
 }
 
+// "28/07/1998" ou "1998-07-28" (os dois formatos que a Lista de dados traz,
+// ver RE_DATA) -> Date | null.
+function parseDataNascimento(txt){
+  const s = String(txt==null?'':txt).trim();
+  let m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+  if(m){
+    const d = new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+    return isNaN(d) ? null : d;
+  }
+  m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if(m){
+    const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+    return isNaN(d) ? null : d;
+  }
+  return null;
+}
+// Idade em anos completos numa data de referência (padrão: hoje) — usada só
+// para exibir na tela de conferência, nunca impressa. O desempate por idade
+// (ver reordenarPorNotaEIdade) compara as DATAS diretamente, não esse
+// número, então nunca depende de qual dia o usuário abriu a ferramenta.
+function calcularIdade(dataNascimento, dataRef){
+  const nasc = (dataNascimento instanceof Date) ? dataNascimento : parseDataNascimento(dataNascimento);
+  if(!nasc) return null;
+  const ref = dataRef || new Date();
+  let idade = ref.getFullYear() - nasc.getFullYear();
+  const aniversarioAinda = (ref.getMonth() < nasc.getMonth())
+    || (ref.getMonth()===nasc.getMonth() && ref.getDate() < nasc.getDate());
+  if(aniversarioAinda) idade--;
+  return idade;
+}
+
 // rolagem suave tolerante a navegadores antigos
 function rolarAte(el){
   if(el && typeof el.scrollIntoView==='function'){
@@ -171,6 +202,9 @@ function registroDaLinhaLista(toks){
     modalidade: limpar(modalidade),
     cpf: soDigitos(toks[idxCPF]),
     nome: limpar(nome),
+    // a Data de Nascimento é o próprio marcador usado pra achar onde o Nome
+    // termina (idxData) — já estava sendo localizada, só não era guardada
+    nascimento: toks[idxData],
     celular: extrairTelefone(meio),
     email: limpar(email)
   };
@@ -212,7 +246,7 @@ function reconhecerLista(linhas){
 
 function listaParaTexto(registros){
   return registros.map((r,i)=>
-    [ r.num || (i+1), r.modalidade, r.cpf, r.nome, r.celular, r.email ].join('\t')
+    [ r.num || (i+1), r.modalidade, r.cpf, r.nome, r.nascimento||'', r.celular, r.email ].join('\t')
   ).join('\n');
 }
 
@@ -225,10 +259,22 @@ function lerQuadroLista(texto){
     if(/^N[ºo°]?\s+Modalidade/i.test(linha)) return;
     const porTab = linha.split('\t').map(s=>s.trim());
     if(porTab.length>=5){
-      registros.push({
-        num: porTab[0], modalidade: porTab[1], cpf: soDigitos(porTab[2]),
-        nome: limpar(porTab[3]), celular: limpar(porTab[4]), email: limpar(porTab[5]||'')
-      });
+      // campo 5 (índice 4) é a Data de Nascimento quando parece uma data;
+      // senão, é um quadro no formato antigo (sem essa coluna) — aceito pra
+      // não quebrar rascunho ou texto colado de antes desta mudança.
+      if(RE_DATA.test(porTab[4]||'')){
+        registros.push({
+          num: porTab[0], modalidade: porTab[1], cpf: soDigitos(porTab[2]),
+          nome: limpar(porTab[3]), nascimento: porTab[4],
+          celular: limpar(porTab[5]||''), email: limpar(porTab[6]||'')
+        });
+      } else {
+        registros.push({
+          num: porTab[0], modalidade: porTab[1], cpf: soDigitos(porTab[2]),
+          nome: limpar(porTab[3]), nascimento: '',
+          celular: limpar(porTab[4]||''), email: limpar(porTab[5]||'')
+        });
+      }
       return;
     }
     const reg = registroDaLinhaLista(linha.split(/\s+/));
@@ -495,7 +541,7 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       if(conv.vs) vsList.push(r.nome);
       // desmarcado por padrão: o usuário escolhe ativamente quem vai pra
       // convocação, em vez de precisar excluir quem não participa
-      return { id: estado.seq++, nome:r.nome, modalidade:r.modalidade,
+      return { id: estado.seq++, nome:r.nome, modalidade:r.modalidade, nascimento:r.nascimento||'',
                ppp:conv.flags.ppp, pcd:conv.flags.pcd, ind:conv.flags.ind, marcado:false };
     });
 
@@ -515,7 +561,12 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     if(duplicados.length){
       msg += '<br>Atenção: '+duplicados.length+' nome(s) repetido(s) na lista — confira se não é a mesma pessoa duas vezes.';
     }
-    status(cvStatus, msg, (li.naoReconhecidas.length||vsList.length||desconhecidas.length) ? 'warn' : 'ok');
+    const semNasc = estado.inscritos.filter(i=>!i.nascimento).map(i=>i.nome);
+    if(semNasc.length){
+      msg += '<br><strong style="color:var(--stamp-red)">'+semNasc.length+' inscrito(s) sem data de nascimento reconhecida</strong> — sem idade pra desempate no Passo 3:';
+      msg += lista(semNasc, n=>'<li>'+esc(n)+'</li>');
+    }
+    status(cvStatus, msg, (li.naoReconhecidas.length||vsList.length||desconhecidas.length||semNasc.length) ? 'warn' : 'ok');
 
     renderChecklist();
     cvPasso2.style.display = '';
@@ -577,7 +628,7 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
 
     // maiúsculas já na montagem — não só na impressão do edital
     estado.cands = marcados.map(it=>({
-      id: estado.seq++, nome: it.nome.toUpperCase(),
+      id: estado.seq++, nome: it.nome.toUpperCase(), nascimento: it.nascimento||'',
       nota:null, hora:null,
       ac:true, ppp:it.ppp, pcd:it.pcd, ind:it.ind
     }));
@@ -613,10 +664,13 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     const mostrarHora = estado.cols.hora;
     h += '<div class="table-scroll" style="max-height:none;"><table class="cv-grade-table" style="white-space:normal;">';
     h += '<thead><tr>'+(editando?'<th style="width:30px;"></th>':'')
-      + '<th style="width:62px;white-space:nowrap;">ORDEM</th><th>NOME</th><th style="width:80px;">NOTA</th>'
+      + '<th style="width:62px;white-space:nowrap;">ORDEM</th><th>NOME</th>'
+      + '<th style="width:64px;" title="Só para conferência — não vai para o edital impresso">IDADE</th>'
+      + '<th style="width:80px;">NOTA</th>'
       + (mostrarHora?'<th style="width:96px;">HORÁRIO</th>':'')
       + (editando?'<th style="width:44px;">Ações</th>':'')+'</tr></thead><tbody>';
     lista_.forEach((c,i)=>{
+      const idade = calcularIdade(c.nascimento);
       h += '<tr data-id="'+c.id+'" data-grupo="'+grupo.k+'" draggable="false">';
       if(editando){
         h += '<td style="text-align:center;"><button type="button" class="drag-handle" data-id="'+c.id+'" data-grupo="'+grupo.k+'" tabindex="0"'
@@ -625,12 +679,15 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       h += '<td style="text-align:center;color:var(--ink-soft);">'+(i+1)+'</td>';
       if(editando){
         h += '<td><input class="cvIn" data-f="nome" value="'+escAttr(c.nome)+'" style="width:100%;min-width:190px;padding:5px;border:1px solid var(--line);font-size:12.5px;"></td>';
+        h += '<td style="text-align:center;color:var(--ink-soft);">'+(idade!=null ? idade : '—')+'</td>';
         h += '<td><input class="cvIn" data-f="nota" value="'+escAttr(fmtNota(c.nota))+'" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
         if(mostrarHora) h += '<td><input class="cvIn" data-f="hora" value="'+escAttr(c.hora?fmtHora(c.hora):'')+'" placeholder="—" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
         h += '<td style="text-align:center;"><button type="button" class="row-del-btn" data-id="'+c.id+'" data-grupo="'+grupo.k+'" tabindex="-1"'
           + ' title="'+(grupo.k==='ac' ? 'Excluir este candidato de todas as tabelas' : 'Tirar este candidato desta tabela')+'">✕</button></td>';
       } else {
-        h += '<td>'+esc(c.nome)+'</td><td style="text-align:center;">'+esc(fmtNota(c.nota))+'</td>';
+        h += '<td>'+esc(c.nome)+'</td>'
+          + '<td style="text-align:center;color:var(--ink-soft);">'+(idade!=null ? idade : '—')+'</td>'
+          + '<td style="text-align:center;">'+esc(fmtNota(c.nota))+'</td>';
         if(mostrarHora) h += '<td style="text-align:center;">'+esc(c.hora?fmtHora(c.hora):'')+'</td>';
       }
       h += '</tr>';
@@ -648,17 +705,19 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
         + 'Arraste a linha pela alça <strong>⠿</strong> — ou, com a alça em foco, use <strong>Alt+↑</strong> e <strong>Alt+↓</strong> — para mudar a ordem; '
         + 'a mesma pessoa muda de posição em todas as tabelas em que aparece. '
         + 'Os campos brancos podem ser corrigidos — a nota e o horário são a mesma pessoa em toda tabela. '
+        + 'A coluna <strong>IDADE</strong> é só para conferência (calculada a partir da data de nascimento lida no Passo 1) — não vai para o edital impresso. '
         + '<strong>✕</strong> na tabela <strong>AMPLA CONCORRÊNCIA</strong> exclui o candidato por completo; nas demais, só tira daquela cota. '
         + '<strong>Nada é salvo até clicar em "Salvar alterações"</strong> — o botão "Gerar edital" avisa e não deixa prosseguir se as tabelas ainda estiverem em edição.</div>';
       h += '<div class="download-row" style="margin:14px 0 22px;">'
         + '<button type="button" class="link-btn" id="cvBtnSalvarTabelas" style="background:var(--teal);color:var(--white);">Salvar alterações</button>'
         + '<button type="button" class="link-btn" id="cvBtnCancelarTabelas">Cancelar</button>'
-        + '<button type="button" class="link-btn" id="cvBtnReordenarNota">Reordenar por nota</button>'
+        + '<button type="button" class="link-btn" id="cvBtnReordenarNota">Reordenar por nota e idade</button>'
         + '</div>';
+      h += '<div id="cvAvisosTabelas"></div>';
     }
     GRUPOS_CV.forEach(g=>{ h += tabelaTela(g, estado.editando); });
     cvTabelas.innerHTML = h;
-    if(estado.editando) ligarEventosEdicaoTabelas();
+    if(estado.editando){ ligarEventosEdicaoTabelas(); atualizarAvisosTabelas(); }
     cvBtnEditarTabelas.style.display = estado.editando ? 'none' : '';
   }
 
@@ -716,6 +775,39 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     });
   }
 
+  // Candidatos empatados em Nota, agrupados — só entram no grupo os que TÊM
+  // nota (null nunca "empata" com ninguém).
+  function gruposEmpatadosPorNota(lista){
+    const porNota = new Map();
+    lista.forEach(c=>{
+      if(c.nota==null) return;
+      const chave = c.nota.toFixed(2);
+      if(!porNota.has(chave)) porNota.set(chave, []);
+      porNota.get(chave).push(c);
+    });
+    return Array.from(porNota.values()).filter(g=>g.length>1);
+  }
+
+  // Empate em nota onde pelo menos um dos empatados não tem data de
+  // nascimento reconhecida: a ordem entre ELES não é decidida sozinha por
+  // "Reordenar por nota e idade" — só avisada, pra ajuste manual.
+  function atualizarAvisosTabelas(){
+    const box = $('cvAvisosTabelas');
+    if(!box) return;
+    const gruposSemIdade = gruposEmpatadosPorNota(estado.trabalho)
+      .filter(g=> g.some(c=>!parseDataNascimento(c.nascimento)));
+    if(!gruposSemIdade.length){ box.innerHTML=''; return; }
+    box.innerHTML = '<div class="notice-banner warn" style="margin:12px 0 0;margin-left:0;">'
+      + '<strong>'+gruposSemIdade.length+' empate(s) em Nota sem idade pra desempatar sozinho</strong> — a ordem entre os nomes abaixo não foi decidida automaticamente, ajuste arrastando se for o caso:'
+      + lista(gruposSemIdade, function(g){
+          return '<li>Nota '+esc(fmtNota(g[0].nota))+': '+g.map(function(c){
+            const idade = calcularIdade(c.nascimento);
+            return esc(c.nome||'(sem nome)') + (idade!=null ? ' ('+idade+' anos)' : ' (sem data de nascimento)');
+          }).join(', ')+'</li>';
+        })
+      + '</div>';
+  }
+
   // Move `idOrigem` para o lado de `idAlvo` na ordem única (trabalho) —
   // usado tanto pelo soltar do arrasto quanto pelo Alt+↑/↓. `grupoK`, quando
   // informado, devolve o foco pra alça da linha movida (renderTabelas()
@@ -748,14 +840,20 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     moverParaAoLadoDe(id, viz.id, passo>0, grupoK);
   }
 
-  // Sorteia por NOTA, decrescente, estável — afeta a ordem única, então
-  // vale para todas as tabelas de uma vez.
-  function reordenarPorNota(){
+  // Decrescente por Nota; empate desempatado pelo mais velho (regra do
+  // TJPR). Compara as DATAS de nascimento diretamente — não a idade em anos
+  // exibida na tela — então o resultado nunca muda conforme o dia em que a
+  // ferramenta é usada. Só decide o par quando os DOIS têm data reconhecida;
+  // sem isso, mantém a ordem que já estava entre eles (nunca inventa um
+  // desempate sem dado) e atualizarAvisosTabelas() sinaliza o caso.
+  function reordenarPorNotaEIdade(){
     const comIdx = estado.trabalho.map((c,i)=>({c,i}));
     comIdx.sort((a,b)=>{
       const va = a.c.nota==null ? -Infinity : a.c.nota;
       const vb = b.c.nota==null ? -Infinity : b.c.nota;
       if(vb!==va) return vb-va;
+      const na = parseDataNascimento(a.c.nascimento), nb = parseDataNascimento(b.c.nascimento);
+      if(na && nb && na.getTime()!==nb.getTime()) return na-nb; // data menor = mais velho = primeiro
       return a.i-b.i;
     });
     estado.trabalho = comIdx.map(x=>x.c);
@@ -767,7 +865,7 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
 
     $('cvBtnSalvarTabelas').addEventListener('click', salvarEdicaoTabelas);
     $('cvBtnCancelarTabelas').addEventListener('click', cancelarEdicaoTabelas);
-    $('cvBtnReordenarNota').addEventListener('click', reordenarPorNota);
+    $('cvBtnReordenarNota').addEventListener('click', reordenarPorNotaEIdade);
 
     // 'change' NUNCA chama renderTabelas() aqui — redesenhar a tabela inteira
     // no meio da transição de foco do Tab destrói o campo que acabou de
@@ -1256,6 +1354,7 @@ if(typeof module !== 'undefined' && module.exports){
     reconhecerLista, listaParaTexto, lerQuadroLista,
     reservaDaModalidade, reservaTexto, GRUPOS_CV, candidatosDoGrupo,
     interpretarHoraDigitada, fmtHora, formatarDataExtenso, formatarDataBarra,
+    parseDataNascimento, calcularIdade,
     estado
   };
 }
