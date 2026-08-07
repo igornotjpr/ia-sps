@@ -103,6 +103,28 @@ function calcularIdade(dataNascimento, dataRef){
   return idade;
 }
 
+// Idade completa em anos + dias decorridos desde o último aniversário (ex.: 25 anos e 311 dias)
+function calcularIdadeDetalhada(dataNascimento, dataRef){
+  const nasc = (dataNascimento instanceof Date) ? dataNascimento : parseDataNascimento(dataNascimento);
+  if(!nasc) return null;
+  const ref = dataRef || new Date();
+  const anos = calcularIdade(nasc, ref);
+  if(anos==null) return null;
+  const ultimoAniversario = new Date(nasc.getFullYear()+anos, nasc.getMonth(), nasc.getDate());
+  const msPorDia = 86400000;
+  const dias = Math.round((Date.UTC(ref.getFullYear(),ref.getMonth(),ref.getDate()) - Date.UTC(ultimoAniversario.getFullYear(),ultimoAniversario.getMonth(),ultimoAniversario.getDate())) / msPorDia);
+  return { anos, dias };
+}
+
+// Formata o resultado de calcularIdadeDetalhada como texto ("25 anos e 311 dias")
+function fmtIdadeDetalhada(dataNascimento, dataRef){
+  const id = calcularIdadeDetalhada(dataNascimento, dataRef);
+  if(!id) return '—';
+  const anosTxt = id.anos+' ano'+(id.anos===1?'':'s');
+  const diasTxt = id.dias+' dia'+(id.dias===1?'':'s');
+  return anosTxt+' e '+diasTxt;
+}
+
 // rolagem suave tolerante a navegadores antigos
 function rolarAte(el){
   if(el && typeof el.scrollIntoView==='function'){
@@ -665,12 +687,12 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     h += '<div class="table-scroll" style="max-height:none;"><table class="cv-grade-table" style="white-space:normal;">';
     h += '<thead><tr>'+(editando?'<th style="width:30px;"></th>':'')
       + '<th style="width:62px;white-space:nowrap;">ORDEM</th><th>NOME</th>'
-      + '<th style="width:64px;" title="Só para conferência — não vai para o edital impresso">IDADE</th>'
+      + '<th style="width:132px;white-space:nowrap;" title="Só para conferência — não vai para o edital impresso">IDADE</th>'
       + '<th style="width:80px;">NOTA</th>'
       + (mostrarHora?'<th style="width:96px;">HORÁRIO</th>':'')
       + (editando?'<th style="width:44px;">Ações</th>':'')+'</tr></thead><tbody>';
     lista_.forEach((c,i)=>{
-      const idade = calcularIdade(c.nascimento);
+      const idadeTxt = fmtIdadeDetalhada(c.nascimento);
       h += '<tr data-id="'+c.id+'" data-grupo="'+grupo.k+'" draggable="false">';
       if(editando){
         h += '<td style="text-align:center;"><button type="button" class="drag-handle" data-id="'+c.id+'" data-grupo="'+grupo.k+'" tabindex="0"'
@@ -679,14 +701,14 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       h += '<td style="text-align:center;color:var(--ink-soft);">'+(i+1)+'</td>';
       if(editando){
         h += '<td><input class="cvIn" data-f="nome" value="'+escAttr(c.nome)+'" style="width:100%;min-width:190px;padding:5px;border:1px solid var(--line);font-size:12.5px;"></td>';
-        h += '<td style="text-align:center;color:var(--ink-soft);">'+(idade!=null ? idade : '—')+'</td>';
+        h += '<td style="text-align:center;color:var(--ink-soft);white-space:nowrap;">'+esc(idadeTxt)+'</td>';
         h += '<td><input class="cvIn" data-f="nota" value="'+escAttr(fmtNota(c.nota))+'" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
         if(mostrarHora) h += '<td><input class="cvIn" data-f="hora" value="'+escAttr(c.hora?fmtHora(c.hora):'')+'" placeholder="—" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
         h += '<td style="text-align:center;"><button type="button" class="row-del-btn" data-id="'+c.id+'" data-grupo="'+grupo.k+'" tabindex="-1"'
           + ' title="'+(grupo.k==='ac' ? 'Excluir este candidato de todas as tabelas' : 'Tirar este candidato desta tabela')+'">✕</button></td>';
       } else {
         h += '<td>'+esc(c.nome)+'</td>'
-          + '<td style="text-align:center;color:var(--ink-soft);">'+(idade!=null ? idade : '—')+'</td>'
+          + '<td style="text-align:center;color:var(--ink-soft);white-space:nowrap;">'+esc(idadeTxt)+'</td>'
           + '<td style="text-align:center;">'+esc(fmtNota(c.nota))+'</td>';
         if(mostrarHora) h += '<td style="text-align:center;">'+esc(c.hora?fmtHora(c.hora):'')+'</td>';
       }
@@ -801,8 +823,8 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       + '<strong>'+gruposSemIdade.length+' empate(s) em Nota sem idade pra desempatar sozinho</strong> — a ordem entre os nomes abaixo não foi decidida automaticamente, ajuste arrastando se for o caso:'
       + lista(gruposSemIdade, function(g){
           return '<li>Nota '+esc(fmtNota(g[0].nota))+': '+g.map(function(c){
-            const idade = calcularIdade(c.nascimento);
-            return esc(c.nome||'(sem nome)') + (idade!=null ? ' ('+idade+' anos)' : ' (sem data de nascimento)');
+            const idadeTxt = fmtIdadeDetalhada(c.nascimento);
+            return esc(c.nome||'(sem nome)') + (idadeTxt!=='—' ? ' ('+esc(idadeTxt)+')' : ' (sem data de nascimento)');
           }).join(', ')+'</li>';
         })
       + '</div>';
@@ -1354,7 +1376,7 @@ if(typeof module !== 'undefined' && module.exports){
     reconhecerLista, listaParaTexto, lerQuadroLista,
     reservaDaModalidade, reservaTexto, GRUPOS_CV, candidatosDoGrupo,
     interpretarHoraDigitada, fmtHora, formatarDataExtenso, formatarDataBarra,
-    parseDataNascimento, calcularIdade,
+    parseDataNascimento, calcularIdade, calcularIdadeDetalhada, fmtIdadeDetalhada,
     estado
   };
 }
