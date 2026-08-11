@@ -13,6 +13,10 @@
   .vg-busca-input{ flex:1 1 320px; min-width:220px; padding:11px 14px; border:1px solid var(--line); border-radius:8px;
     font-family:'Barlow',system-ui,sans-serif; font-size:14.5px; color:var(--ink); background:var(--white); }
   .vg-busca-input:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+  .vg-info-head{ cursor:pointer; user-select:none; }
+  .vg-info-head:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+  .vg-info-seta{ margin-left:auto; color:var(--ink-soft); font-size:12px; transition:transform .15s; }
+  .vg-info-head[aria-expanded="true"] .vg-info-seta{ transform:rotate(180deg); }
   .vg-chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
   .vg-chip{ border:1px solid var(--line); background:var(--white); color:var(--ink-soft); border-radius:999px;
     padding:6px 13px; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; font-weight:600; cursor:pointer;
@@ -38,10 +42,19 @@
   .vg-comparativo{ margin-top:26px; }
   .vg-comp-cab{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
   .vg-comp-tit{ font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-weight:700; font-size:15px; color:var(--navy); }
-  .vg-tabela{ width:100%; border-collapse:collapse; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; }
-  .vg-tabela th, .vg-tabela td{ border:1px solid var(--line); padding:7px 9px; text-align:center; vertical-align:middle; }
+  /* table-layout:fixed é o que garante que a coluna Unidade realmente pare
+     de crescer e quebre o texto dentro da largura definida — com layout
+     automático (padrão), max-width numa célula é só uma sugestão e o
+     navegador pode deixar o texto vazar por cima das colunas vizinhas. */
+  /* white-space:normal anula o `table{ white-space:nowrap }` global do
+     core.css — sem isso o nome da unidade não quebra linha e atravessa as
+     colunas vizinhas, mesmo com table-layout:fixed. */
+  .vg-tabela{ width:100%; table-layout:fixed; white-space:normal; border-collapse:collapse; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; }
+  .vg-tabela th, .vg-tabela td{ border:1px solid var(--line); padding:7px 9px; text-align:center; vertical-align:middle; overflow-wrap:break-word; word-break:break-word; }
   .vg-tabela th{ background:var(--paper); font-weight:700; color:var(--ink-soft); font-size:11px; text-transform:uppercase; letter-spacing:.02em; }
-  .vg-tabela td.vg-col-unidade{ text-align:left; min-width:220px; }
+  .vg-tabela th:first-child, .vg-tabela td.vg-col-unidade{ text-align:left; width:200px; }
+  .vg-tabela th:nth-child(8), .vg-tabela td:nth-child(8){ text-align:left; width:160px; }
+  .vg-tabela th:last-child, .vg-tabela td:last-child{ width:26px; padding:7px 4px; }
   .vg-tabela .vg-nome-unidade{ font-weight:600; color:var(--ink); }
   .vg-tabela .vg-sigla-unidade{ color:var(--ink-soft); font-size:11px; }
   .vg-num-disp{ color:var(--teal); font-weight:700; }
@@ -70,17 +83,20 @@
   <main>
 
     <div class="step step-info">
-      <div class="step-head">
+      <div class="step-head vg-info-head" id="vgInfoToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="vgInfoCorpo">
         <span class="step-num">i</span>
         <p class="step-title">Como funciona</p>
+        <span class="vg-info-seta" aria-hidden="true">▾</span>
       </div>
-      <p class="step-desc">Consulta o quantitativo de vagas de estágio — <strong>permanentes</strong> e <strong>provisórias</strong> — de cada unidade do TJPR: disponibilizadas, ocupadas e o que ainda está livre, por nível (Médio, Graduação, Pós-Graduação).</p>
-      <ul class="step-list">
-        <li>Busque por <strong>sigla</strong>, <strong>comarca</strong>, parte do <strong>nome da unidade</strong> ou use os filtros de tipo/entrância abaixo — ou navegue pela lista completa sem digitar nada.</li>
-        <li>Marque uma ou mais unidades para ver a <strong>tabela comparativa</strong> com o quantitativo de cada uma, lado a lado.</li>
-        <li>Vagas <strong>provisórias</strong> também mostram <strong>prazo</strong>, <strong>motivo</strong> e o <strong>SEI</strong> do processo, quando informados na planilha.</li>
-      </ul>
-      <p class="step-desc">Os dados são <strong>compartilhados</strong>: ficam visíveis para todo mundo que abrir esta página, e qualquer pessoa da equipe pode atualizá-los enviando uma planilha nova — ver <strong>Atualizar dados</strong>, no fim da página.</p>
+      <div id="vgInfoCorpo" style="display:none;">
+        <p class="step-desc">Consulta o quantitativo de vagas de estágio — <strong>permanentes</strong> e <strong>provisórias</strong> — de cada unidade do TJPR: disponibilizadas, ocupadas e o que ainda está livre, por nível (Médio, Graduação, Pós-Graduação).</p>
+        <ul class="step-list">
+          <li>Busque por <strong>sigla</strong>, <strong>comarca</strong>, parte do <strong>nome da unidade</strong> ou use os filtros de tipo/entrância abaixo — ou navegue pela lista completa sem digitar nada.</li>
+          <li>Marque uma ou mais unidades para ver a <strong>tabela comparativa</strong> com o quantitativo de cada uma, lado a lado.</li>
+          <li>Vagas <strong>provisórias</strong> também mostram <strong>prazo</strong>, <strong>motivo</strong> e o <strong>SEI</strong> do processo, quando informados na planilha.</li>
+        </ul>
+        <p class="step-desc">Os dados são <strong>compartilhados</strong>: ficam visíveis para todo mundo que abrir esta página, e qualquer pessoa da equipe pode atualizá-los enviando uma planilha nova — ver <strong>Atualizar dados</strong>, no fim da página.</p>
+      </div>
     </div>
 
     <p class="vg-status" id="vgStatus">Carregando dados da nuvem…</p>
