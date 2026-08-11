@@ -62,12 +62,55 @@ Object.keys(FIELDS).forEach(k => values[k] = FIELDS[k].def);
 // continua sendo substituído, apenas sem campo editável no formulário.
 values.ORGAO = 'A Secretaria de Gestão de Pessoas';
 
+// Campos preenchidos automaticamente a partir de uma correspondência (ex.:
+// UNIDADE pela sigla SEI) que continuam com contorno vermelho + aviso mesmo
+// já tendo valor, até a pessoa editar o campo à mão (aí a marca some).
+const camposParaConferir = new Set();
+
 /* ============================== UTIL ============================== */
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function hojeExtenso(){
   const M=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const d=new Date(); return 'Curitiba, '+d.getDate()+' de '+M[d.getMonth()]+' de '+d.getFullYear();
+}
+
+/* Nome por extenso da unidade a partir da cadeia hierárquica bruta da planilha
+   (UNIDADES_SEI, gerada por Recursos/gerar_edital_unidades_sei.py), no formato
+   "COMARCA|VARA|SECRETARIA" (2 a 8 níveis, do mais genérico ao mais específico).
+   Monta o nome invertendo a ordem — unidade mais específica primeiro — e
+   concatenando os demais níveis com "DO"/"DA" (ou "DA COMARCA DE" quando o
+   nível raiz é só o nome de uma cidade, sem "Foro"/"Tribunal" no texto).
+   O gênero do conector é um palpite pelo final da primeira palavra do nível
+   (ex.: "...ÇÃO"/"...A" -> feminino) — como o campo fica sempre marcado para
+   conferência (ver aplicarDados), um encaixe imperfeito é corrigido à mão. */
+function conectorDeGenero(nivel){
+  // primeira palavra (cortando também no hífen — "SECRETARIA-GERAL" deve
+  // concordar pelo gênero de "SECRETARIA", não do composto inteiro)
+  const primeira=nivel.trim().split(/[\s-]+/)[0].toUpperCase();
+  if(primeira==='FORO' || primeira==='TRIBUNAL' || primeira==='JUIZADO' || primeira==='JUÍZO') return 'DO ';
+  // checar sufixos femininos ANTES do "termina em O" genérico: palavras como
+  // "DIVISÃO"/"SEÇÃO"/"COMISSÃO" também terminam na letra O
+  if(/(ª|ÇÃO|ÇÕES|SÃO|SÕES|DADE|DADES|AGEM|AGENS|AS?)$/.test(primeira)) return 'DA ';
+  if(/[ºO]$/.test(primeira)) return 'DO ';
+  return 'DO ';
+}
+function nomeUnidadePorExtenso(bruto){
+  const niveis=String(bruto||'').split('|').map(s=>s.trim()).filter(Boolean);
+  if(!niveis.length) return '';
+  let nome=niveis[niveis.length-1].toUpperCase();
+  for(let i=niveis.length-2;i>=0;i--){
+    const nivel=niveis[i];
+    if(i===0){
+      const primeira=nivel.split(/\s+/)[0].toUpperCase();
+      nome += (primeira==='FORO' || primeira==='TRIBUNAL' || primeira==='COMARCA')
+        ? (' '+conectorDeGenero(nivel)+nivel.toUpperCase())
+        : (' DA COMARCA DE '+nivel.toUpperCase());
+    } else {
+      nome += ' '+conectorDeGenero(nivel)+nivel.toUpperCase();
+    }
+  }
+  return nome;
 }
 const UNID=['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
 const DEZN=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
@@ -255,6 +298,24 @@ function parseFormulario(texto){
 
 function aplicarDados(d, avisos){
   const norm = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  // Unidade solicitante: tenta casar a sigla SEI lida do formulário com a
+  // planilha de unidades do TJPR (UNIDADES_SEI, ver edital_unidades_sei.js).
+  // Quando acha, preenche o campo já com o nome por extenso — mas mantém o
+  // contorno vermelho e o aviso de conferência, porque a montagem do nome é
+  // automática (ver nomeUnidadePorExtenso) e pode não bater 100% com a forma
+  // oficial. Nunca decide silenciosamente: sem sigla localizada, ou sem
+  // correspondência na planilha, o campo continua vazio como hoje.
+  if(d.unidade_sigla){
+    const siglaLida=d.unidade_sigla.trim();
+    const bruto=(typeof UNIDADES_SEI!=='undefined') ? UNIDADES_SEI[siglaLida.toUpperCase()] : undefined;
+    if(bruto){
+      values.UNIDADE=nomeUnidadePorExtenso(bruto);
+      camposParaConferir.add('UNIDADE');
+      avisos.push('Campo "Unidade solicitante" preenchido automaticamente a partir da sigla SEI "'+siglaLida+'" (planilha de unidades do TJPR) — confira se o nome está correto antes de gerar o edital.');
+    } else {
+      avisos.push('Sigla SEI "'+siglaLida+'" não encontrada na planilha de unidades do TJPR — preencha "Unidade solicitante" manualmente.');
+    }
+  }
   // eixos
   if(d.modalidade_ps){ axes.modal = /on-?line/i.test(d.modalidade_ps) ? 'ON' : 'PR'; }
   else avisos.push('Modalidade do processo seletivo não localizada — confira o eixo "Modalidade da prova".');
@@ -397,7 +458,11 @@ function renderConfirma(avisos){
     let g='<div class="ed-grupo"><p class="ed-grupo-tit">'+esc(gtit)+'</p><div class="ed-grid">';
     campos.forEach(k=>{
       const f=FIELDS[k]; const v=values[k]||'';
-      g+='<label class="ed-campo'+(f.full||f.type==='textarea'||f.type==='preset'?' ed-campo-full':'')+(f.req&&String(v).trim()?' ed-req-filled':'')+'"><span>'+esc(f.label)+':'+(f.req?' <span class="ed-req-mark">obrigatório</span>':'')+'</span>';
+      // preenchido automaticamente por correspondência (ex.: UNIDADE pela
+      // sigla SEI) — continua marcado mesmo com valor, até edição manual
+      const conferir=f.req && camposParaConferir.has(k);
+      const mostrarMarca=f.req && (conferir || !String(v).trim());
+      g+='<label class="ed-campo'+(f.full||f.type==='textarea'||f.type==='preset'?' ed-campo-full':'')+(f.req&&String(v).trim()&&!conferir?' ed-req-filled':'')+'"><span>'+esc(f.label)+':'+(mostrarMarca?' <span class="ed-req-mark">'+(conferir?'confira':'obrigatório')+'</span>':'')+'</span>';
       if(f.type==='select'){
         g+='<select data-campo="'+k+'">'+f.opts.map(o=>'<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
       } else if(f.type==='datalist'){
@@ -410,7 +475,7 @@ function renderConfirma(avisos){
       } else if(f.type==='check'){
         g+='<span style="font-weight:400;"><input type="checkbox" data-check="'+k+'"'+(v?' checked':'')+' style="width:auto;margin-right:8px;vertical-align:middle;">'+'Sim, incluir</span>';
       } else {
-        const reqCls=f.req?('ed-required'+(String(v).trim()?'':' ed-empty')):'';
+        const reqCls=f.req?('ed-required'+(String(v).trim()?'':' ed-empty')+(conferir?' ed-conferir':'')):'';
         g+='<input type="text"'+(reqCls?' class="'+reqCls+'"':'')+' data-campo="'+k+'" value="'+esc(v).replace(/"/g,'&quot;')+'">';
       }
       if(f.hintHtml) g+='<small>'+f.hintHtml+'</small>';
@@ -435,7 +500,17 @@ function renderConfirma(avisos){
   }));
   box.querySelectorAll('[data-campo]').forEach(el=>el.addEventListener('input',()=>{
     const k=el.dataset.campo; values[k]=el.value;
-    if(FIELDS[k] && FIELDS[k].req){ const has=!!el.value.trim(); el.classList.toggle('ed-empty', !has); el.closest('.ed-campo').classList.toggle('ed-req-filled', has); renderAvisos(); }
+    if(FIELDS[k] && FIELDS[k].req){
+      // editar à mão já É a conferência: some o "confira" e o contorno vermelho
+      camposParaConferir.delete(k);
+      el.classList.remove('ed-conferir');
+      const has=!!el.value.trim();
+      el.classList.toggle('ed-empty', !has);
+      const campo=el.closest('.ed-campo');
+      campo.classList.toggle('ed-req-filled', has);
+      const marca=campo.querySelector('.ed-req-mark'); if(marca) marca.textContent='obrigatório';
+      renderAvisos();
+    }
     atualizarDraftNota();
   }));
   box.querySelectorAll('[data-check]').forEach(el=>el.addEventListener('change',()=>{ values[el.dataset.check]=el.checked; }));
@@ -929,5 +1004,5 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 /* hook para testes/depuração */
-if (typeof window!=='undefined') window.__ED_TEST__={parseFormulario, aplicarDados, gerarEditalHTML, gerarBlocos, sugestaoComposicao, axes, values};
+if (typeof window!=='undefined') window.__ED_TEST__={parseFormulario, aplicarDados, gerarEditalHTML, gerarBlocos, sugestaoComposicao, axes, values, camposParaConferir, nomeUnidadePorExtenso, renderConfirma};
 })();
