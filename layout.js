@@ -175,6 +175,37 @@ function wireSecretCounter(card){
   });
 }
 
+// Bloco "Como funciona" (.step-info): começa recolhido em toda ferramenta —
+// só o .step-head (cabeçalho) fica visível, e clicar (ou Enter/Espaço) nele
+// abre/fecha o resto do bloco. Não depende de nenhum id nem de estrutura
+// especial no HTML de cada página: qualquer conteúdo que vier depois do
+// .step-head dentro do .step-info é tratado como o corpo a recolher — então
+// basta a página ter o bloco no padrão já usado em todas as ferramentas.
+function wireStepInfo(escopo){
+  escopo.querySelectorAll('.step-info').forEach(caixa=>{
+    const cabeca=caixa.querySelector(':scope > .step-head');
+    if(!cabeca) return;
+    const corpo=Array.from(caixa.children).filter(el=>el!==cabeca);
+    if(!corpo.length) return;
+
+    corpo.forEach(el=>{ el.style.display='none'; });
+    cabeca.setAttribute('role','button');
+    cabeca.setAttribute('tabindex','0');
+    cabeca.setAttribute('aria-expanded','false');
+    cabeca.insertAdjacentHTML('beforeend','<span class="step-info-seta" aria-hidden="true">▾</span>');
+
+    function alternar(){
+      const abrir=corpo[0].style.display==='none';
+      corpo.forEach(el=>{ el.style.display=abrir?'':'none'; });
+      cabeca.setAttribute('aria-expanded',abrir?'true':'false');
+    }
+    cabeca.addEventListener('click',alternar);
+    cabeca.addEventListener('keydown',ev=>{
+      if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); alternar(); }
+    });
+  });
+}
+
 // ---------------------------------------------------------------- montagem
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -270,4 +301,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('keydown',ev=>{
     if(ev.key==='Escape') fecharDropdowns();
   });
+
+  // 6) blocos "Como funciona" começam recolhidos, em qualquer ferramenta
+  wireStepInfo(document);
 });

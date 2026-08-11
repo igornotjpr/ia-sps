@@ -557,18 +557,8 @@ document.addEventListener('DOMContentLoaded', function(){
   $('vgMostrarMais').addEventListener('click', ()=>{ limiteExibido += PASSO_EXIBICAO; renderLista(); });
   $('vgLimparSelecao').addEventListener('click', ()=>{ estado.selecionadas.clear(); renderLista(); renderComparativo(); });
 
-  // bloco "Como funciona" começa recolhido — abre/fecha ao clicar (ou
-  // Enter/Espaço, já que é uma div com role="button", não um <button>)
-  const infoToggle = $('vgInfoToggle'), infoCorpo = $('vgInfoCorpo');
-  function alternarInfo(){
-    const abrir = infoCorpo.style.display === 'none';
-    infoCorpo.style.display = abrir ? '' : 'none';
-    infoToggle.setAttribute('aria-expanded', abrir ? 'true' : 'false');
-  }
-  infoToggle.addEventListener('click', alternarInfo);
-  infoToggle.addEventListener('keydown', ev=>{
-    if(ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); alternarInfo(); }
-  });
+  // o bloco "Como funciona" (.step-info) é recolhido pelo layout.js,
+  // comum a todas as ferramentas — nada a ligar aqui.
 
   $('vgUploadToggle').addEventListener('click', ()=>{
     const corpo = $('vgUploadCorpo');

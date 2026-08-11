@@ -398,6 +398,30 @@ main{ padding:32px 40px 40px; }
   margin-bottom:10px;
 }
 
+/* Cabeçalho do bloco "Como funciona" (.step-info): layout.js liga o
+   colapsar/expandir sozinho em toda página que tiver .step-info, então só
+   o visual mora aqui. Margem negativa só compensa o padding que a própria
+   regra acrescenta — não depende do padding do .step-info pai. A cor do
+   hover usa --accent (definida por página conforme a ferramenta, ver
+   layout.js), então cada ferramenta já responde com a sua própria cor. */
+.step-info .step-head{
+  cursor:pointer;
+  user-select:none;
+  padding:6px 10px;
+  margin:-6px -10px 4px;
+  border-radius:7px;
+  transition:background .12s;
+}
+.step-info .step-head:hover{
+  background:rgba(0,42,58,0.06); /* cor simples de reserva, para navegadores sem color-mix() */
+  background:color-mix(in srgb, var(--accent, var(--teal)) 12%, transparent);
+}
+.step-info .step-head:hover .step-title{ color:var(--navy); }
+.step-info .step-head:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+.step-info-seta{ margin-left:auto; color:var(--ink-soft); font-size:12px; transition:transform .15s,color .12s; }
+.step-info .step-head:hover .step-info-seta{ color:var(--navy); }
+.step-info .step-head[aria-expanded="true"] .step-info-seta{ transform:rotate(180deg); }
+
 .step-num{
   font-family:'Barlow Semi Condensed', system-ui, sans-serif;
   font-weight:700;

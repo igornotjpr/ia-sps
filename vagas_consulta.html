@@ -13,10 +13,8 @@
   .vg-busca-input{ flex:1 1 320px; min-width:220px; padding:11px 14px; border:1px solid var(--line); border-radius:8px;
     font-family:'Barlow',system-ui,sans-serif; font-size:14.5px; color:var(--ink); background:var(--white); }
   .vg-busca-input:focus{ outline:2px solid var(--teal); outline-offset:1px; }
-  .vg-info-head{ cursor:pointer; user-select:none; }
-  .vg-info-head:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
-  .vg-info-seta{ margin-left:auto; color:var(--ink-soft); font-size:12px; transition:transform .15s; }
-  .vg-info-head[aria-expanded="true"] .vg-info-seta{ transform:rotate(180deg); }
+  /* o bloco "Como funciona" (.step-info) já recolhe e ganha o hover sozinho,
+     via layout.js/core.css — comum a todas as ferramentas do portal. */
   .vg-chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
   .vg-chip{ border:1px solid var(--line); background:var(--white); color:var(--ink-soft); border-radius:999px;
     padding:6px 13px; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; font-weight:600; cursor:pointer;
@@ -83,20 +81,17 @@
   <main>
 
     <div class="step step-info">
-      <div class="step-head vg-info-head" id="vgInfoToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="vgInfoCorpo">
+      <div class="step-head">
         <span class="step-num">i</span>
         <p class="step-title">Como funciona</p>
-        <span class="vg-info-seta" aria-hidden="true">▾</span>
       </div>
-      <div id="vgInfoCorpo" style="display:none;">
-        <p class="step-desc">Consulta o quantitativo de vagas de estágio — <strong>permanentes</strong> e <strong>provisórias</strong> — de cada unidade do TJPR: disponibilizadas, ocupadas e o que ainda está livre, por nível (Médio, Graduação, Pós-Graduação).</p>
-        <ul class="step-list">
-          <li>Busque por <strong>sigla</strong>, <strong>comarca</strong>, parte do <strong>nome da unidade</strong> ou use os filtros de tipo/entrância abaixo — ou navegue pela lista completa sem digitar nada.</li>
-          <li>Marque uma ou mais unidades para ver a <strong>tabela comparativa</strong> com o quantitativo de cada uma, lado a lado.</li>
-          <li>Vagas <strong>provisórias</strong> também mostram <strong>prazo</strong>, <strong>motivo</strong> e o <strong>SEI</strong> do processo, quando informados na planilha.</li>
-        </ul>
-        <p class="step-desc">Os dados são <strong>compartilhados</strong>: ficam visíveis para todo mundo que abrir esta página, e qualquer pessoa da equipe pode atualizá-los enviando uma planilha nova — ver <strong>Atualizar dados</strong>, no fim da página.</p>
-      </div>
+      <p class="step-desc">Consulta o quantitativo de vagas de estágio — <strong>permanentes</strong> e <strong>provisórias</strong> — de cada unidade do TJPR: disponibilizadas, ocupadas e o que ainda está livre, por nível (Médio, Graduação, Pós-Graduação).</p>
+      <ul class="step-list">
+        <li>Busque por <strong>sigla</strong>, <strong>comarca</strong>, parte do <strong>nome da unidade</strong> ou use os filtros de tipo/entrância abaixo — ou navegue pela lista completa sem digitar nada.</li>
+        <li>Marque uma ou mais unidades para ver a <strong>tabela comparativa</strong> com o quantitativo de cada uma, lado a lado.</li>
+        <li>Vagas <strong>provisórias</strong> também mostram <strong>prazo</strong>, <strong>motivo</strong> e o <strong>SEI</strong> do processo, quando informados na planilha.</li>
+      </ul>
+      <p class="step-desc">Os dados são <strong>compartilhados</strong>: ficam visíveis para todo mundo que abrir esta página, e qualquer pessoa da equipe pode atualizá-los enviando uma planilha nova — ver <strong>Atualizar dados</strong>, no fim da página.</p>
     </div>
 
     <p class="vg-status" id="vgStatus">Carregando dados da nuvem…</p>
