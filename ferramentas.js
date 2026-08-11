@@ -18,7 +18,7 @@
 
 // Versão exibida no canto do cabeçalho (formato "v. x.y.z"). Atualizar aqui a
 // cada commit versionado, acompanhando o número usado na mensagem do commit.
-const VERSAO_APP='3.14';
+const VERSAO_APP='3.15';
 
 const SECOES=[
   {
@@ -54,6 +54,17 @@ const SECOES=[
     titulo:"Fluxo de Processo Seletivo",
     descricao:"Visão do processo seletivo de ponta a ponta: em que fase cada atividade acontece, quem responde por ela e como é classificada em Ponto, Tag e Vinculação.",
     sufixoTitulo:" — Fluxo do Processo Seletivo (TJPR)"
+  },
+  {
+    id:"gestao",
+    ordem:3,
+    rotulo:"Divisão de Gestão",
+    emoji:"🗃️",
+    cor:"--navy",
+    eyebrow:"Divisão de Gestão de Estágios, Residência e Voluntariado",
+    titulo:"Ferramentas da Divisão de Gestão",
+    descricao:"Apoio ao controle das vagas de estágio (permanentes e provisórias) das unidades do TJPR: consulta interna do quantitativo disponível, ocupado e total por unidade.",
+    sufixoTitulo:" — Divisão de Gestão de Estágios, Residência e Voluntariado (TJPR)"
   }
 ].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 
@@ -157,6 +168,19 @@ const FERRAMENTAS=[
     eyebrow:"Ponto, Tag e Vinculação",
     titulo:"Editor do Fluxo do Processo Seletivo",
     descricao:"Quadro compartilhado com as etapas do processo seletivo — fase, atividade, responsáveis, número da etapa e a marcação de Ponto, Tag e Vinculação. Permite reordenar as etapas arrastando, salvar para todos de uma vez, baixar uma cópia de segurança e gerar o PDF do fluxo."
+  },
+
+  /* ---------- Divisão de Gestão de Estágios, Residência e Voluntariado ---------- */
+  {
+    arquivo:"vagas_consulta.html",
+    secao:"gestao",
+    rotulo:"Consulta de Vagas",
+    ordem:0,
+    emoji:"🔎",
+    cor:"--navy",
+    eyebrow:"Vagas por unidade",
+    titulo:"Consulta de Vagas Disponíveis por Unidade",
+    descricao:"Busca por sigla, comarca, tipo ou nome da unidade e mostra o quantitativo de vagas de estágio — permanentes e provisórias, disponíveis, ocupadas e totais — com prazo, motivo e SEI das vagas provisórias. Os dados são compartilhados e atualizáveis por upload da planilha de controle."
   }
 ];
 

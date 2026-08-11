@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consulta de Vagas Disponíveis por Unidade — TJPR</title>
+<link rel="stylesheet" href="core.css">
+<style>
+  /* estilos próprios desta ferramenta (prefixo vg-), seguindo o padrão do
+     Gerador do Edital de Abertura: não engordar o core.css compartilhado
+     com regras que só esta página usa. */
+  .vg-busca-linha{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:14px 0 10px; }
+  .vg-busca-input{ flex:1 1 320px; min-width:220px; padding:11px 14px; border:1px solid var(--line); border-radius:8px;
+    font-family:'Barlow',system-ui,sans-serif; font-size:14.5px; color:var(--ink); background:var(--white); }
+  .vg-busca-input:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+  .vg-chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+  .vg-chip{ border:1px solid var(--line); background:var(--white); color:var(--ink-soft); border-radius:999px;
+    padding:6px 13px; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; font-weight:600; cursor:pointer;
+    transition:background .12s,color .12s,border-color .12s; }
+  .vg-chip:hover{ border-color:var(--teal); color:var(--ink); }
+  .vg-chip.ativo{ background:var(--navy); border-color:var(--navy); color:var(--white); }
+  .vg-status{ font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; color:var(--ink-soft); margin:0 0 10px; }
+  .vg-lista{ display:flex; flex-direction:column; gap:6px; max-height:480px; overflow-y:auto; border:1px solid var(--line);
+    border-radius:8px; padding:6px; background:var(--paper); }
+  .vg-item{ display:flex; align-items:flex-start; gap:10px; padding:9px 11px; background:var(--white); border:1px solid var(--line);
+    border-radius:7px; cursor:pointer; }
+  .vg-item:hover{ border-color:var(--teal); }
+  .vg-item.marcado{ border-color:var(--navy); background:#eef3f6; }
+  .vg-item input[type="checkbox"]{ margin-top:3px; width:16px; height:16px; flex-shrink:0; accent-color:var(--navy); }
+  .vg-item-corpo{ flex:1; min-width:0; }
+  .vg-item-sigla{ font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-weight:700; font-size:13.5px; color:var(--navy); letter-spacing:.01em; }
+  .vg-item-nome{ font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; color:var(--ink); line-height:1.35; margin-top:1px; }
+  .vg-item-meta{ font-family:'Barlow',system-ui,sans-serif; font-size:11px; color:var(--ink-soft); margin-top:3px; }
+  .vg-item-vagas{ font-family:'Barlow',system-ui,sans-serif; font-size:11px; color:var(--ink-soft); margin-top:4px; display:flex; gap:10px; flex-wrap:wrap; }
+  .vg-tag-disp{ color:var(--teal); font-weight:700; }
+  .vg-tag-prov{ color:var(--coral); font-weight:700; }
+  .vg-mostrar-mais{ margin:10px auto 0; display:block; }
+  .vg-comparativo{ margin-top:26px; }
+  .vg-comp-cab{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .vg-comp-tit{ font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-weight:700; font-size:15px; color:var(--navy); }
+  .vg-tabela{ width:100%; border-collapse:collapse; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; }
+  .vg-tabela th, .vg-tabela td{ border:1px solid var(--line); padding:7px 9px; text-align:center; vertical-align:middle; }
+  .vg-tabela th{ background:var(--paper); font-weight:700; color:var(--ink-soft); font-size:11px; text-transform:uppercase; letter-spacing:.02em; }
+  .vg-tabela td.vg-col-unidade{ text-align:left; min-width:220px; }
+  .vg-tabela .vg-nome-unidade{ font-weight:600; color:var(--ink); }
+  .vg-tabela .vg-sigla-unidade{ color:var(--ink-soft); font-size:11px; }
+  .vg-num-disp{ color:var(--teal); font-weight:700; }
+  .vg-num-ocup{ color:var(--ink-soft); }
+  .vg-num-livre{ font-weight:700; }
+  .vg-num-livre.tem{ color:var(--mint); }
+  .vg-num-livre.zero{ color:var(--ink-soft); }
+  .vg-remover-btn{ border:none; background:none; color:var(--coral); cursor:pointer; font-size:15px; line-height:1; padding:2px; }
+  .vg-prazo-bloco{ font-size:11px; color:var(--ink-soft); text-align:left; }
+  .vg-upload-nota{ font-family:'Barlow',system-ui,sans-serif; font-size:12px; color:var(--ink-soft); margin-top:8px; }
+  .vg-upload-resumo{ font-family:'Barlow',system-ui,sans-serif; font-size:13px; color:var(--ink); margin:10px 0; line-height:1.6; }
+  .vg-upload-resumo b{ color:var(--navy); }
+</style>
+</head>
+<body class="pagina-larga">
+
+<div class="sheet">
+
+  <div id="institutional-placeholder"></div>
+
+  <div class="app-header">
+    <div id="menu-placeholder"></div>
+    <div id="header-title"></div>
+  </div>
+
+  <main>
+
+    <div class="step step-info">
+      <div class="step-head">
+        <span class="step-num">i</span>
+        <p class="step-title">Como funciona</p>
+      </div>
+      <p class="step-desc">Consulta o quantitativo de vagas de estágio — <strong>permanentes</strong> e <strong>provisórias</strong> — de cada unidade do TJPR: disponibilizadas, ocupadas e o que ainda está livre, por nível (Médio, Graduação, Pós-Graduação).</p>
+      <ul class="step-list">
+        <li>Busque por <strong>sigla</strong>, <strong>comarca</strong>, parte do <strong>nome da unidade</strong> ou use os filtros de tipo/entrância abaixo — ou navegue pela lista completa sem digitar nada.</li>
+        <li>Marque uma ou mais unidades para ver a <strong>tabela comparativa</strong> com o quantitativo de cada uma, lado a lado.</li>
+        <li>Vagas <strong>provisórias</strong> também mostram <strong>prazo</strong>, <strong>motivo</strong> e o <strong>SEI</strong> do processo, quando informados na planilha.</li>
+      </ul>
+      <p class="step-desc">Os dados são <strong>compartilhados</strong>: ficam visíveis para todo mundo que abrir esta página, e qualquer pessoa da equipe pode atualizá-los enviando uma planilha nova — ver <strong>Atualizar dados</strong>, no fim da página.</p>
+    </div>
+
+    <p class="vg-status" id="vgStatus">Carregando dados da nuvem…</p>
+
+    <div class="vg-busca-linha">
+      <input type="text" class="vg-busca-input" id="vgBusca" placeholder="Buscar por sigla, comarca, tipo ou nome da unidade..." autocomplete="off">
+      <button type="button" class="link-btn" id="vgLimpar">Limpar</button>
+    </div>
+    <div class="vg-chip-row" id="vgChipsEntrancia"></div>
+    <div class="vg-chip-row" id="vgChipsTipo"></div>
+
+    <div class="vg-lista" id="vgLista"></div>
+    <button type="button" class="link-btn vg-mostrar-mais" id="vgMostrarMais" style="display:none;">Mostrar mais resultados</button>
+
+    <div class="vg-comparativo" id="vgComparativoBox" style="display:none;">
+      <div class="vg-comp-cab">
+        <p class="vg-comp-tit">Comparativo das unidades selecionadas</p>
+        <button type="button" class="link-btn" id="vgLimparSelecao">Limpar seleção</button>
+      </div>
+      <div class="table-scroll" style="max-height:none;">
+        <table class="vg-tabela" id="vgTabelaComparativa"></table>
+      </div>
+    </div>
+
+    <div class="collapse-panel" id="vgUploadPainel" style="margin-top:34px;">
+      <button type="button" class="link-btn" id="vgUploadToggle">Atualizar dados (enviar planilha)</button>
+      <div id="vgUploadCorpo" style="display:none;margin-top:14px;">
+        <p class="step-desc">Envie o arquivo <strong>de controle de vagas</strong> (.xlsx ou .xlsm, com as abas <strong>HERC_VPU</strong> e <strong>GERAL</strong>). Os dados novos <strong>substituem</strong> os que todo mundo vê nesta ferramenta — confira o resumo antes de confirmar.</p>
+        <div class="upload-panel">
+          <button class="file-btn" id="vgArquivoBtn" type="button">Escolher planilha</button>
+          <input type="file" id="vgArquivoInput" accept=".xlsx,.xlsm">
+          <span class="file-name" id="vgArquivoNome">Nenhum arquivo selecionado</span>
+        </div>
+        <div id="vgUploadResultado"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+      <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+      Os números aqui exibidos são um apoio de consulta e podem não refletir alterações muito recentes — em caso de dúvida, confira a planilha oficial da unidade.
+    </p>
+    <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+  </footer>
+</div>
+
+<div class="fluxo-aviso" id="vgAviso" role="status" aria-live="polite"></div>
+
+<script src="vendor/xlsx.min.js"></script>
+<script src="ferramentas.js"></script>
+<script src="vagas_consulta_logic.js"></script>
+<script src="layout.js"></script>
+</body>
+</html>
