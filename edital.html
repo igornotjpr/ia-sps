@@ -38,7 +38,8 @@
   .ed-modelo-val{ font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-size:15px; font-weight:700; letter-spacing:0.01em; color:var(--navy); }
   /* campos obrigatórios: selo no rótulo e destaque enquanto vazios (sem bloquear) */
   .ed-req-mark{ display:inline-block; margin-left:6px; font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--coral); }
-  .ed-campo input.ed-required.ed-empty{ border-color:var(--coral); background:#fff6f4; box-shadow:0 0 0 2px rgba(235,85,59,0.12); }
+  .ed-campo input.ed-required.ed-empty,
+  .ed-campo input.ed-required.ed-conferir{ border-color:var(--coral); background:#fff6f4; box-shadow:0 0 0 2px rgba(235,85,59,0.12); }
   .ed-campo.ed-req-filled .ed-req-mark{ display:none; }
   /* Blocos separados do edital gerado — cada um pensado para colar num campo
      diferente do Athos (título, preâmbulo, numeração, conteúdo, assinatura). */
@@ -222,6 +223,7 @@
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="edital_modelos.js"></script>
+<script src="edital_unidades_sei.js"></script>
 <script src="edital_logic.js"></script>
 <script src="ferramentas.js"></script>
 <script src="layout.js"></script>

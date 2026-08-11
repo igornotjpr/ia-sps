@@ -66,6 +66,59 @@ function fmtNota(v){
   return n.toFixed(2).replace('.',',');
 }
 
+// "28/07/1998" ou "1998-07-28" (os dois formatos que a Lista de dados traz,
+// ver RE_DATA) -> Date | null.
+function parseDataNascimento(txt){
+  const s = String(txt==null?'':txt).trim();
+  let m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+  if(m){
+    const d = new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+    return isNaN(d) ? null : d;
+  }
+  m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if(m){
+    const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+    return isNaN(d) ? null : d;
+  }
+  return null;
+}
+// Idade em anos completos numa data de referência (padrão: hoje) — usada só
+// para exibir na tela de conferência, nunca impressa. O desempate por idade
+// (ver reordenarPorNotaEIdade) compara as DATAS diretamente, não esse
+// número, então nunca depende de qual dia o usuário abriu a ferramenta.
+function calcularIdade(dataNascimento, dataRef){
+  const nasc = (dataNascimento instanceof Date) ? dataNascimento : parseDataNascimento(dataNascimento);
+  if(!nasc) return null;
+  const ref = dataRef || new Date();
+  let idade = ref.getFullYear() - nasc.getFullYear();
+  const aniversarioAinda = (ref.getMonth() < nasc.getMonth())
+    || (ref.getMonth()===nasc.getMonth() && ref.getDate() < nasc.getDate());
+  if(aniversarioAinda) idade--;
+  return idade;
+}
+
+// Idade completa em anos + dias decorridos desde o último aniversário (ex.: 25 anos e 311 dias)
+function calcularIdadeDetalhada(dataNascimento, dataRef){
+  const nasc = (dataNascimento instanceof Date) ? dataNascimento : parseDataNascimento(dataNascimento);
+  if(!nasc) return null;
+  const ref = dataRef || new Date();
+  const anos = calcularIdade(nasc, ref);
+  if(anos==null) return null;
+  const ultimoAniversario = new Date(nasc.getFullYear()+anos, nasc.getMonth(), nasc.getDate());
+  const msPorDia = 86400000;
+  const dias = Math.round((Date.UTC(ref.getFullYear(),ref.getMonth(),ref.getDate()) - Date.UTC(ultimoAniversario.getFullYear(),ultimoAniversario.getMonth(),ultimoAniversario.getDate())) / msPorDia);
+  return { anos, dias };
+}
+
+// Formata o resultado de calcularIdadeDetalhada como texto ("25 anos e 311 dias")
+function fmtIdadeDetalhada(dataNascimento, dataRef){
+  const id = calcularIdadeDetalhada(dataNascimento, dataRef);
+  if(!id) return '—';
+  const anosTxt = id.anos+' ano'+(id.anos===1?'':'s');
+  const diasTxt = id.dias+' dia'+(id.dias===1?'':'s');
+  return anosTxt+' e '+diasTxt;
+}
+
 // Nota Prova e Nota Entrevista preenchidas -> Nota Final vira a média das
 // duas, automaticamente. null quando falta uma das duas — nunca calculamos
 // "média de um número só".
@@ -181,6 +234,9 @@ function registroDaLinhaLista(toks){
     modalidade: limpar(modalidade),
     cpf: soDigitos(toks[idxCPF]),
     nome: limpar(nome),
+    // a Data de Nascimento é o próprio marcador usado pra achar onde o Nome
+    // termina (idxData) — já estava sendo localizada, só não era guardada
+    nascimento: toks[idxData],
     celular: extrairTelefone(meio),
     email: limpar(email)
   };
@@ -222,7 +278,7 @@ function reconhecerLista(linhas){
 
 function listaParaTexto(registros){
   return registros.map((r,i)=>
-    [ r.num || (i+1), r.modalidade, r.cpf, r.nome, r.celular, r.email ].join('\t')
+    [ r.num || (i+1), r.modalidade, r.cpf, r.nome, r.nascimento||'', r.celular, r.email ].join('\t')
   ).join('\n');
 }
 
@@ -235,10 +291,22 @@ function lerQuadroLista(texto){
     if(/^N[ºo°]?\s+Modalidade/i.test(linha)) return;
     const porTab = linha.split('\t').map(s=>s.trim());
     if(porTab.length>=5){
-      registros.push({
-        num: porTab[0], modalidade: porTab[1], cpf: soDigitos(porTab[2]),
-        nome: limpar(porTab[3]), celular: limpar(porTab[4]), email: limpar(porTab[5]||'')
-      });
+      // campo 5 (índice 4) é a Data de Nascimento quando parece uma data;
+      // senão, é um quadro no formato antigo (sem essa coluna) — aceito pra
+      // não quebrar rascunho ou texto colado de antes desta mudança.
+      if(RE_DATA.test(porTab[4]||'')){
+        registros.push({
+          num: porTab[0], modalidade: porTab[1], cpf: soDigitos(porTab[2]),
+          nome: limpar(porTab[3]), nascimento: porTab[4],
+          celular: limpar(porTab[5]||''), email: limpar(porTab[6]||'')
+        });
+      } else {
+        registros.push({
+          num: porTab[0], modalidade: porTab[1], cpf: soDigitos(porTab[2]),
+          nome: limpar(porTab[3]), nascimento: '',
+          celular: limpar(porTab[4]||''), email: limpar(porTab[5]||'')
+        });
+      }
       return;
     }
     const reg = registroDaLinhaLista(linha.split(/\s+/));
@@ -391,7 +459,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
       if(conv.vs) vsList.push(r.nome);
       // desmarcado por padrão: o usuário escolhe ativamente quem entra na
       // classificação, em vez de precisar excluir quem não participa
-      return { id: estado.seq++, nome:r.nome, modalidade:r.modalidade,
+      return { id: estado.seq++, nome:r.nome, modalidade:r.modalidade, nascimento:r.nascimento||'',
                ppp:conv.flags.ppp, pcd:conv.flags.pcd, ind:conv.flags.ind, marcado:false };
     });
 
@@ -411,7 +479,12 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     if(duplicados.length){
       msg += '<br>Atenção: '+duplicados.length+' nome(s) repetido(s) na lista — confira se não é a mesma pessoa duas vezes.';
     }
-    status(cfStatus, msg, (li.naoReconhecidas.length||vsList.length||desconhecidas.length) ? 'warn' : 'ok');
+    const semNasc = estado.inscritos.filter(i=>!i.nascimento).map(i=>i.nome);
+    if(semNasc.length){
+      msg += '<br><strong style="color:var(--stamp-red)">'+semNasc.length+' inscrito(s) sem data de nascimento reconhecida</strong> — sem idade pra desempate no Passo 3:';
+      msg += lista(semNasc, n=>'<li>'+esc(n)+'</li>');
+    }
+    status(cfStatus, msg, (li.naoReconhecidas.length||vsList.length||desconhecidas.length||semNasc.length) ? 'warn' : 'ok');
 
     renderChecklist();
     cfPasso2.style.display = '';
@@ -479,7 +552,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     // maiúsculas já na montagem — não só na impressão do edital, pra ficar
     // igual do jeito que aparece na tela de conferência e edição também
     estado.cands = marcados.map(it=>({
-      id: estado.seq++, nome: it.nome.toUpperCase(),
+      id: estado.seq++, nome: it.nome.toUpperCase(), nascimento: it.nascimento||'',
       notaProva:null, notaEntrevista:null, notaFinal:null,
       ac:true, ppp:it.ppp, pcd:it.pcd, ind:it.ind
     }));
@@ -516,9 +589,11 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     h += '<div class="table-scroll" style="max-height:none;"><table class="cv-grade-table" style="white-space:normal;">';
     h += '<thead><tr>'+(editando?'<th style="width:30px;"></th>':'')
       + '<th style="width:62px;white-space:nowrap;">ORDEM</th><th>NOME</th>'
+      + '<th style="width:132px;white-space:nowrap;" title="Só para conferência — não vai para o edital impresso">IDADE</th>'
       + '<th style="width:96px;">NOTA PROVA</th><th style="width:110px;">NOTA ENTREVISTA</th><th style="width:90px;">NOTA FINAL</th>'
       + (editando?'<th style="width:44px;">Ações</th>':'')+'</tr></thead><tbody>';
     lista_.forEach((c,i)=>{
+      const idadeTxt = fmtIdadeDetalhada(c.nascimento);
       h += '<tr data-id="'+c.id+'" data-grupo="'+grupo.k+'" draggable="false">';
       if(editando){
         h += '<td style="text-align:center;"><button type="button" class="drag-handle" data-id="'+c.id+'" data-grupo="'+grupo.k+'" tabindex="0"'
@@ -527,6 +602,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
       h += '<td style="text-align:center;color:var(--ink-soft);">'+(i+1)+'</td>';
       if(editando){
         h += '<td><input class="cfIn" data-f="nome" value="'+escAttr(c.nome)+'" style="width:100%;min-width:190px;padding:5px;border:1px solid var(--line);font-size:12.5px;"></td>';
+        h += '<td style="text-align:center;color:var(--ink-soft);white-space:nowrap;">'+esc(idadeTxt)+'</td>';
         h += '<td><input class="cfIn" data-f="notaProva" value="'+escAttr(fmtNota(c.notaProva))+'" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
         h += '<td><input class="cfIn" data-f="notaEntrevista" value="'+escAttr(fmtNota(c.notaEntrevista))+'" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
         h += '<td><input class="cfIn" data-f="notaFinal" value="'+escAttr(fmtNota(c.notaFinal))+'" style="width:100%;padding:5px;border:1px solid var(--line);text-align:center;font-size:12.5px;"></td>';
@@ -534,6 +610,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
           + ' title="'+(grupo.k==='ac' ? 'Excluir este candidato de todas as tabelas' : 'Tirar este candidato desta tabela')+'">✕</button></td>';
       } else {
         h += '<td>'+esc(c.nome)+'</td>'
+          + '<td style="text-align:center;color:var(--ink-soft);white-space:nowrap;">'+esc(idadeTxt)+'</td>'
           + '<td style="text-align:center;">'+esc(fmtNota(c.notaProva))+'</td>'
           + '<td style="text-align:center;">'+esc(fmtNota(c.notaEntrevista))+'</td>'
           + '<td style="text-align:center;">'+esc(fmtNota(c.notaFinal))+'</td>';
@@ -555,18 +632,19 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
         + 'Os campos brancos podem ser corrigidos — a nota é a mesma pessoa em toda tabela. '
         + 'Preencher <strong>Nota Prova</strong> e <strong>Nota Entrevista</strong> calcula a <strong>Nota Final</strong> pela média automaticamente; '
         + 'editar a Nota Final à mão continua permitido, mas fica sinalizado se não bater com a média. '
+        + 'A coluna <strong>IDADE</strong> é só para conferência (calculada a partir da data de nascimento lida no Passo 1) — não vai para o edital impresso. '
         + '<strong>✕</strong> na tabela <strong>AMPLA CONCORRÊNCIA</strong> exclui o candidato por completo; nas demais, só tira daquela cota. '
         + '<strong>Nada é salvo até clicar em "Salvar alterações"</strong> — o botão "Gerar edital" avisa e não deixa prosseguir se as tabelas ainda estiverem em edição.</div>';
       h += '<div class="download-row" style="margin:14px 0 22px;">'
         + '<button type="button" class="link-btn" id="cfBtnSalvarTabelas" style="background:var(--teal);color:var(--white);">Salvar alterações</button>'
         + '<button type="button" class="link-btn" id="cfBtnCancelarTabelas">Cancelar</button>'
-        + '<button type="button" class="link-btn" id="cfBtnReordenarNota">Reordenar por nota final</button>'
+        + '<button type="button" class="link-btn" id="cfBtnReordenarNota">Reordenar por nota e idade</button>'
         + '</div>';
       h += '<div id="cfAvisosTabelas"></div>';
     }
     GRUPOS_CF.forEach(g=>{ h += tabelaTela(g, estado.editando); });
     cfTabelas.innerHTML = h;
-    if(estado.editando) ligarEventosEdicaoTabelas();
+    if(estado.editando){ ligarEventosEdicaoTabelas(); atualizarAvisosTabelas(); }
     cfBtnEditarTabelas.style.display = estado.editando ? 'none' : '';
   }
 
@@ -622,17 +700,53 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
     });
   }
 
+  // Candidatos empatados em Nota Final, agrupados — só entram no grupo os
+  // que TÊM nota (null nunca "empata" com ninguém). Usado tanto pelo aviso
+  // quanto, indiretamente, pela decisão de desempate em reordenarPorNotaEIdade.
+  function gruposEmpatadosPorNota(lista){
+    const porNota = new Map();
+    lista.forEach(c=>{
+      if(c.notaFinal==null) return;
+      const chave = c.notaFinal.toFixed(2);
+      if(!porNota.has(chave)) porNota.set(chave, []);
+      porNota.get(chave).push(c);
+    });
+    return Array.from(porNota.values()).filter(g=>g.length>1);
+  }
+
   function atualizarAvisosTabelas(){
     const box = $('cfAvisosTabelas');
     if(!box) return;
+    let html = '';
+
     const divergentes = estado.trabalho.filter(notaFinalDivergente);
-    if(!divergentes.length){ box.innerHTML=''; return; }
-    box.innerHTML = '<div class="notice-banner warn" style="margin:12px 0 0;margin-left:0;">'
-      + '<strong>'+divergentes.length+' candidato(s) com a Nota Final diferente da média de Prova e Entrevista</strong> — o valor digitado foi mantido:'
-      + lista(divergentes, function(c){
-          return '<li>'+esc(c.nome||'(sem nome)')+' — final '+esc(fmtNota(c.notaFinal))+', média seria '+esc(fmtNota(calcularMedia(c)))+'</li>';
-        })
-      + '</div>';
+    if(divergentes.length){
+      html += '<div class="notice-banner warn" style="margin:12px 0 0;margin-left:0;">'
+        + '<strong>'+divergentes.length+' candidato(s) com a Nota Final diferente da média de Prova e Entrevista</strong> — o valor digitado foi mantido:'
+        + lista(divergentes, function(c){
+            return '<li>'+esc(c.nome||'(sem nome)')+' — final '+esc(fmtNota(c.notaFinal))+', média seria '+esc(fmtNota(calcularMedia(c)))+'</li>';
+          })
+        + '</div>';
+    }
+
+    // empate em nota onde pelo menos um dos empatados não tem data de
+    // nascimento reconhecida: a ordem entre ELES não é decidida sozinha por
+    // "Reordenar por nota e idade" — só avisada, pra ajuste manual.
+    const gruposSemIdade = gruposEmpatadosPorNota(estado.trabalho)
+      .filter(g=> g.some(c=>!parseDataNascimento(c.nascimento)));
+    if(gruposSemIdade.length){
+      html += '<div class="notice-banner warn" style="margin:12px 0 0;margin-left:0;">'
+        + '<strong>'+gruposSemIdade.length+' empate(s) em Nota Final sem idade pra desempatar sozinho</strong> — a ordem entre os nomes abaixo não foi decidida automaticamente, ajuste arrastando se for o caso:'
+        + lista(gruposSemIdade, function(g){
+            return '<li>Nota '+esc(fmtNota(g[0].notaFinal))+': '+g.map(function(c){
+              const idadeTxt = fmtIdadeDetalhada(c.nascimento);
+              return esc(c.nome||'(sem nome)') + (idadeTxt!=='—' ? ' ('+esc(idadeTxt)+')' : ' (sem data de nascimento)');
+            }).join(', ')+'</li>';
+          })
+        + '</div>';
+    }
+
+    box.innerHTML = html;
   }
 
   // Move `idOrigem` para o lado de `idAlvo` na ordem única (trabalho) —
@@ -669,12 +783,20 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
 
   // Sorteia por NOTA FINAL, decrescente, estável — afeta a ordem única, então
   // vale para todas as tabelas de uma vez.
-  function reordenarPorNotaFinal(){
+  // Decrescente por Nota Final; empate desempatado pelo mais velho (regra do
+  // TJPR). Compara as DATAS de nascimento diretamente — não a idade em anos
+  // exibida na tela — então o resultado nunca muda conforme o dia em que a
+  // ferramenta é usada. Só decide o par quando os DOIS têm data reconhecida;
+  // sem isso, mantém a ordem que já estava entre eles (nunca inventa um
+  // desempate sem dado) e atualizarAvisosTabelas() sinaliza o caso.
+  function reordenarPorNotaEIdade(){
     const comIdx = estado.trabalho.map((c,i)=>({c,i}));
     comIdx.sort((a,b)=>{
       const va = a.c.notaFinal==null ? -Infinity : a.c.notaFinal;
       const vb = b.c.notaFinal==null ? -Infinity : b.c.notaFinal;
       if(vb!==va) return vb-va;
+      const na = parseDataNascimento(a.c.nascimento), nb = parseDataNascimento(b.c.nascimento);
+      if(na && nb && na.getTime()!==nb.getTime()) return na-nb; // data menor = mais velho = primeiro
       return a.i-b.i;
     });
     estado.trabalho = comIdx.map(x=>x.c);
@@ -686,7 +808,7 @@ if(typeof document !== 'undefined' && document.getElementById('cfBtnProcessar'))
 
     $('cfBtnSalvarTabelas').addEventListener('click', salvarEdicaoTabelas);
     $('cfBtnCancelarTabelas').addEventListener('click', cancelarEdicaoTabelas);
-    $('cfBtnReordenarNota').addEventListener('click', reordenarPorNotaFinal);
+    $('cfBtnReordenarNota').addEventListener('click', reordenarPorNotaEIdade);
 
     // 'change' NUNCA chama renderTabelas() aqui — redesenhar a tabela inteira
     // no meio da transição de foco do Tab destrói o campo que acabou de
@@ -1160,6 +1282,7 @@ if(typeof module !== 'undefined' && module.exports){
     reconhecerLista, listaParaTexto, lerQuadroLista,
     reservaDaModalidade, reservaTexto, GRUPOS_CF, candidatosDoGrupo,
     calcularMedia, notaFinalDivergente,
+    parseDataNascimento, calcularIdade, calcularIdadeDetalhada, fmtIdadeDetalhada,
     estado
   };
 }

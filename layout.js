@@ -80,13 +80,16 @@ function fecharDropdowns(){
 // Monta o cabeçalho institucional padrão (logo + identificação da unidade),
 // idêntico em todas as páginas — assim o header é definido em um só lugar.
 function institutionalHtml(){
+  const versao=(typeof VERSAO_APP!=='undefined')?VERSAO_APP:'';
   return '<div class="institutional-header">'
     +'<div class="tjpr-fallback" style="display:block;">TJPR<small>TRIBUNAL DE JUSTIÇA<br>DO ESTADO DO PARANÁ</small></div>'
     +'<div class="tjpr-name">'
     +'<strong>Tribunal de Justiça do Estado do Paraná</strong>'
     +'<span class="tjpr-line">Secretaria de Gestão de Pessoas</span>'
     +'<span class="tjpr-line">SG-SGP-CDHO-DSERFTA</span>'
-    +'</div></div>';
+    +'</div>'
+    +(versao?`<span class="tjpr-version" title="Versão do portal">v. ${escHtml(versao)}</span>`:'')
+    +'</div>';
 }
 
 // Monta o HTML de um cartão de ferramenta/jogo — usado tanto para as grades de
@@ -169,6 +172,37 @@ function wireSecretCounter(card){
       card.style.pointerEvents='none';
       setTimeout(()=>{ window.location.href='jogos.html'; },NAV_DELAY_MS);
     }
+  });
+}
+
+// Bloco "Como funciona" (.step-info): começa recolhido em toda ferramenta —
+// só o .step-head (cabeçalho) fica visível, e clicar (ou Enter/Espaço) nele
+// abre/fecha o resto do bloco. Não depende de nenhum id nem de estrutura
+// especial no HTML de cada página: qualquer conteúdo que vier depois do
+// .step-head dentro do .step-info é tratado como o corpo a recolher — então
+// basta a página ter o bloco no padrão já usado em todas as ferramentas.
+function wireStepInfo(escopo){
+  escopo.querySelectorAll('.step-info').forEach(caixa=>{
+    const cabeca=caixa.querySelector(':scope > .step-head');
+    if(!cabeca) return;
+    const corpo=Array.from(caixa.children).filter(el=>el!==cabeca);
+    if(!corpo.length) return;
+
+    corpo.forEach(el=>{ el.style.display='none'; });
+    cabeca.setAttribute('role','button');
+    cabeca.setAttribute('tabindex','0');
+    cabeca.setAttribute('aria-expanded','false');
+    cabeca.insertAdjacentHTML('beforeend','<span class="step-info-seta" aria-hidden="true">▾</span>');
+
+    function alternar(){
+      const abrir=corpo[0].style.display==='none';
+      corpo.forEach(el=>{ el.style.display=abrir?'':'none'; });
+      cabeca.setAttribute('aria-expanded',abrir?'true':'false');
+    }
+    cabeca.addEventListener('click',alternar);
+    cabeca.addEventListener('keydown',ev=>{
+      if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); alternar(); }
+    });
   });
 }
 
@@ -267,4 +301,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('keydown',ev=>{
     if(ev.key==='Escape') fecharDropdowns();
   });
+
+  // 6) blocos "Como funciona" começam recolhidos, em qualquer ferramenta
+  wireStepInfo(document);
 });

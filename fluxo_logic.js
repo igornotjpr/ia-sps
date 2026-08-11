@@ -99,7 +99,10 @@ const SUPABASE_URL = 'https://xmuduqgwwplrtnfbfgtf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_O3f7DXw4K3DYf34k3QaF6w_ZJgpwExw';
 const TABELA_NUVEM = 'fluxo_estado';
 const LINHA_NUVEM  = 'estado';
-const CHAVE_LOCAL  = 'tjpr_fluxo_processo_seletivo_v4_fase_editavel';
+// _v5: versão anterior podia conter dados de teste salvos antes da migração
+// para a nuvem — mudar o nome da chave garante que esse cache velho não
+// volte a ser lido em nenhum navegador.
+const CHAVE_LOCAL  = 'tjpr_fluxo_processo_seletivo_v5_fase_editavel';
 const VERSAO_ESTADO = 4;
 
 function cabecalhosNuvem(extra){
@@ -176,7 +179,6 @@ function montarEstado(linhas){
 const estado = {
   linhas: [],
   excluidas: [],   // pilha para "Desfazer exclusão"
-  tocado: false,   // a pessoa já editou algo nesta sessão?
   seq: 0
 };
 
@@ -228,7 +230,6 @@ async function gravar(avisarSucesso){
 }
 
 function agendarGravacao(){
-  estado.tocado = true;
   clearTimeout(temporizadorGravacao);
   temporizadorGravacao = setTimeout(()=> gravar(false), 1000);
 }
@@ -667,35 +668,31 @@ function ligarCaixaFlutuante(){
 }
 
 async function carregar(){
-  // 1) mostra imediatamente o que houver localmente — a página fica utilizável
-  //    mesmo antes de a nuvem responder (ou se ela nunca responder)
-  let inicial = null;
-  try{
-    const bruto = localStorage.getItem(CHAVE_LOCAL);
-    if(bruto) inicial = lerEstado(JSON.parse(bruto));
-  }catch(e){}
-  estado.linhas = (inicial || QUADRO_SEMENTE.map(normalizarLinha)).map(comId);
-  desenhar();
-
-  // 2) busca a versão da nuvem, que é a boa
+  // A nuvem é a fonte da verdade: a página espera a resposta dela antes de
+  // desenhar qualquer coisa, pra nunca mostrar um quadro desatualizado (ou de
+  // teste) só porque estava mais rápido. O cache local só entra em cena se a
+  // nuvem falhar.
+  const corpo = $('fxCorpo');
+  if(corpo) corpo.innerHTML = '<tr><td colspan="6"><p class="empty-hint" style="text-align:center;">Carregando o fluxo salvo na nuvem…</p></td></tr>';
   try{
     const daNuvem = lerEstado(await lerDaNuvem());
     if(!daNuvem){
+      estado.linhas = QUADRO_SEMENTE.map(normalizarLinha).map(comId);
+      desenhar();
       avisar('Ainda não há um fluxo salvo na nuvem — o que você editar aqui será o primeiro.');
       return;
     }
-    if(estado.tocado){
-      // a resposta demorou e a pessoa já começou a mexer: sobrescrever seria
-      // apagar o que ela acabou de digitar, então preferimos avisar
-      avisar('Há uma versão mais recente na nuvem, mas você já começou a editar. Recarregue a página para vê-la (perdendo o que digitou agora).', 'erro');
-      return;
-    }
     estado.linhas = daNuvem.map(comId);
-    estado.excluidas = [];
     desenhar();
-    avisar('Versão mais recente carregada da nuvem.');
   }catch(erro){
     console.error('Falha ao carregar o fluxo da nuvem:', erro);
+    let inicial = null;
+    try{
+      const bruto = localStorage.getItem(CHAVE_LOCAL);
+      if(bruto) inicial = lerEstado(JSON.parse(bruto));
+    }catch(e){}
+    estado.linhas = (inicial || QUADRO_SEMENTE.map(normalizarLinha)).map(comId);
+    desenhar();
     avisar(inicial
       ? 'Sem conexão com a nuvem — mostrando a última cópia deste navegador.'
       : 'Sem conexão com a nuvem — mostrando o fluxo padrão. Não salve por cima antes de conferir.', 'erro');
