@@ -13,10 +13,11 @@
    edital_unidades_sei.js e este arquivo são necessários.
 
    Saídas:
-     - PDF (via impressão do navegador): cabeçalho institucional + tabela em
-       texto extraível. FORMATO DOCUMENTADO para leitura por ferramenta:
-       linhas de cabeçalho centralizadas (TRIBUNAL / unidade / PROCESSO
-       SELETIVO DE ESTAGIÁRIOS / PROCESSO SELETIVO SEI Nº x / RESULTADO FINAL),
+     - PDF (montado byte a byte, baixado direto): cabeçalho institucional +
+       tabela em texto extraível. FORMATO DOCUMENTADO para leitura por
+       ferramenta: linhas de cabeçalho centralizadas, nesta ordem — TRIBUNAL
+       DE JUSTIÇA DO ESTADO DO PARANÁ / PROCESSO SELETIVO DE ESTAGIÁRIOS /
+       SEI Nº x / TABELA DE CLASSIFICAÇÃO FINAL / nome da unidade —,
        depois uma tabela com bordas em que cada candidato ocupa UMA linha,
        nas colunas fixas: CLASSIFICAÇÃO | INSCRIÇÃO | NOME | E-MAIL | PROVA |
        ENTREVISTA | FINAL | RESERVA | NASCIMENTO (mesmo com colunas vazias,
@@ -166,25 +167,38 @@ function renderTabela(){
   if(!corpo) return;
 
   if(!estado.linhas.length){
-    corpo.innerHTML = '<tr><td colspan="11"><p class="empty-hint" style="text-align:center;margin:8px 0;">Nenhum candidato — use “+ Adicionar candidato” para começar.</p></td></tr>';
+    corpo.innerHTML = '<tr><td colspan="11"><p class="empty-hint" style="text-align:center;margin:8px 0;">'
+      + (travado ? 'Nenhum candidato na tabela.' : 'Nenhum candidato — use “+ Adicionar candidato” para começar.')
+      + '</p></td></tr>';
   } else {
+    // travado: campos em somente-leitura (o texto continua selecionável, para
+    // poder ser copiado) e nada de alça de arraste nem botão de excluir
+    const ro = travado ? ' readonly' : '';
+    const cls = travado ? ' rf-in-travado' : '';
     corpo.innerHTML = estado.linhas.map((l,i)=>{
       const divergente = notaFinalDivergente(l) ? ' rf-nota-divergente' : '';
       return '<tr data-id="'+l.id+'" draggable="false">'
-        + '<td style="text-align:center;"><button type="button" class="drag-handle" data-id="'+l.id+'" tabindex="0"'
-        +   ' title="Arrastar para reordenar (ou Alt+↑ / Alt+↓)" aria-label="Remanejar '+escAttr(l.nome||'linha em branco')+'">⠿</button></td>'
+        + '<td style="text-align:center;">'
+        +   (travado ? '' : '<button type="button" class="drag-handle" data-id="'+l.id+'" tabindex="0"'
+            + ' title="Arrastar para reordenar (ou Alt+↑ / Alt+↓)" aria-label="Remanejar '+escAttr(l.nome||'linha em branco')+'">⠿</button>')
+        + '</td>'
         + '<td class="rf-col-class">'+(i+1)+'</td>'
-        + '<td><input class="rfIn" data-f="inscricao" value="'+escAttr(l.inscricao)+'"></td>'
-        + '<td><input class="rfIn" data-f="nome" value="'+escAttr(l.nome)+'"></td>'
-        + '<td><input class="rfIn" data-f="email" type="email" value="'+escAttr(l.email)+'"></td>'
-        + '<td><input class="rfIn" data-f="notaProva" inputmode="decimal" value="'+escAttr(fmtNota(l.notaProva))+'" style="text-align:center;"></td>'
-        + '<td><input class="rfIn" data-f="notaEntrevista" inputmode="decimal" value="'+escAttr(fmtNota(l.notaEntrevista))+'" style="text-align:center;"></td>'
-        + '<td><input class="rfIn'+divergente+'" data-f="notaFinal" inputmode="decimal" value="'+escAttr(fmtNota(l.notaFinal))+'" style="text-align:center;"></td>'
-        + '<td><select class="rfIn" data-f="reserva">'
-        +   RESERVAS.map(r=>'<option value="'+escAttr(r)+'"'+(l.reserva===r?' selected':'')+'>'+(r?esc(r):'— Ampla concorrência —')+'</option>').join('')
-        + '</select></td>'
-        + '<td><input class="rfIn" data-f="nascimento" inputmode="numeric" placeholder="DD/MM/AAAA" value="'+escAttr(l.nascimento)+'" style="text-align:center;"></td>'
-        + '<td style="text-align:center;"><button type="button" class="row-del-btn" data-id="'+l.id+'" tabindex="-1" title="Excluir esta linha">✕</button></td>'
+        + '<td><input class="rfIn'+cls+'" data-f="inscricao" value="'+escAttr(l.inscricao)+'"'+ro+'></td>'
+        + '<td><input class="rfIn'+cls+'" data-f="nome" value="'+escAttr(l.nome)+'"'+ro+'></td>'
+        + '<td><input class="rfIn'+cls+'" data-f="email" type="email" value="'+escAttr(l.email)+'"'+ro+'></td>'
+        + '<td><input class="rfIn'+cls+'" data-f="notaProva" inputmode="decimal" value="'+escAttr(fmtNota(l.notaProva))+'" style="text-align:center;"'+ro+'></td>'
+        + '<td><input class="rfIn'+cls+'" data-f="notaEntrevista" inputmode="decimal" value="'+escAttr(fmtNota(l.notaEntrevista))+'" style="text-align:center;"'+ro+'></td>'
+        + '<td><input class="rfIn'+cls+divergente+'" data-f="notaFinal" inputmode="decimal" value="'+escAttr(fmtNota(l.notaFinal))+'" style="text-align:center;"'+ro+'></td>'
+        // <select> não tem readonly: travado, ele vira texto simples
+        + '<td>'+(travado
+            ? '<span class="rf-reserva-travada">'+(l.reserva ? esc(l.reserva) : '—')+'</span>'
+            : '<select class="rfIn" data-f="reserva">'
+              + RESERVAS.map(r=>'<option value="'+escAttr(r)+'"'+(l.reserva===r?' selected':'')+'>'+(r?esc(r):'— Ampla concorrência —')+'</option>').join('')
+              + '</select>')+'</td>'
+        + '<td><input class="rfIn'+cls+'" data-f="nascimento" inputmode="numeric" placeholder="DD/MM/AAAA" value="'+escAttr(l.nascimento)+'" style="text-align:center;"'+ro+'></td>'
+        + '<td style="text-align:center;">'
+        +   (travado ? '' : '<button type="button" class="row-del-btn" data-id="'+l.id+'" tabindex="-1" title="Excluir esta linha">✕</button>')
+        + '</td>'
         + '</tr>';
     }).join('');
   }
@@ -470,10 +484,10 @@ function montarDocumentoHtml(st){
     + '<img src="'+(typeof TJPR_LOGO_DATA_URI!=='undefined'?TJPR_LOGO_DATA_URI:'')
     + '" alt="Tribunal de Justiça do Estado do Paraná" style="width:110pt;height:65pt;"></p>';
   h += '<p style="'+P_CENTRO+'margin-bottom:18pt;">'+neg('TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ')+'</p>';
-  h += '<p style="'+P_CENTRO+'">'+neg(esc(limpar(s.unidade).toUpperCase()))+'</p>';
   h += '<p style="'+P_CENTRO+'">'+neg('PROCESSO SELETIVO DE ESTAGIÁRIOS')+'</p>';
-  h += '<p style="'+P_CENTRO+'">'+neg('PROCESSO SELETIVO SEI Nº '+esc(limpar(s.sei)))+'</p>';
-  h += '<p style="'+P_CENTRO+'margin-bottom:22pt;">'+neg('RESULTADO FINAL')+'</p>';
+  h += '<p style="'+P_CENTRO+'">'+neg('SEI Nº '+esc(limpar(s.sei)))+'</p>';
+  h += '<p style="'+P_CENTRO+'">'+neg('TABELA DE CLASSIFICAÇÃO FINAL')+'</p>';
+  h += '<p style="'+P_CENTRO+'margin-bottom:22pt;">'+neg(esc(limpar(s.unidade).toUpperCase()))+'</p>';
 
   // tabela: border="1" (atributo legado) + estilo — o par que sobrevive tanto
   // à impressão quanto à colagem em editores; th/td com padding em pt
@@ -682,8 +696,12 @@ function construirPdf(st){
 
   /* ---- 2) distribui as linhas em páginas ---- */
   const unidadeLinhas = pdfQuebrarTexto(limpar(s.unidade).toUpperCase(), PDF_PAG.largura - 2*M, true, 9);
-  // altura do bloco de cabeçalho institucional na primeira página
-  const alturaTopo1 = 46 + 8 + 12 + unidadeLinhas.length*11 + 11 + 11 + 14 + 12;
+  // Altura do bloco de cabeçalho da primeira página, somando os mesmos
+  // deslocamentos aplicados ao desenhar (logo 43 + 12, tribunal 16, certame
+  // 11, SEI 14, título 13, unidade 11 por linha, respiro 9). Serve só para
+  // decidir quantas linhas cabem — arredondado para cima de propósito:
+  // sobrar espaço é inofensivo, faltar empurraria a tabela para fora da folha.
+  const alturaTopo1 = 124 + unidadeLinhas.length*11;
   const alturaTopoN = 24;
   const limiteInferior = M + 22;   // espaço reservado para o rodapé
 
@@ -740,13 +758,16 @@ function construirPdf(st){
       } else {
         yy -= 10;
       }
+      // ordem do cabeçalho: tribunal, certame, SEI, título do documento e —
+      // por último — a unidade, logo acima da tabela a que ela se refere
       c += textoCentro(yy, 'TRIBUNAL DE JUSTIÇA DO ESTADO DO PARANÁ', true, 10); yy -= 16;
-      unidadeLinhas.forEach(function(l){ c += textoCentro(yy, l, true, 9); yy -= 11; });
       c += textoCentro(yy, 'PROCESSO SELETIVO DE ESTAGIÁRIOS', true, 9); yy -= 11;
-      c += textoCentro(yy, 'PROCESSO SELETIVO SEI Nº '+limpar(s.sei), true, 9); yy -= 14;
-      c += textoCentro(yy, 'RESULTADO FINAL', true, 10); yy -= 20;
+      c += textoCentro(yy, 'SEI Nº '+limpar(s.sei), true, 9); yy -= 14;
+      c += textoCentro(yy, 'TABELA DE CLASSIFICAÇÃO FINAL', true, 10); yy -= 13;
+      unidadeLinhas.forEach(function(l){ c += textoCentro(yy, l, true, 9); yy -= 11; });
+      yy -= 9;
     } else {
-      c += textoCentro(yy-8, 'RESULTADO FINAL — continuação (página '+(iPag+1)+' de '+paginas.length+')', true, 8);
+      c += textoCentro(yy-8, 'TABELA DE CLASSIFICAÇÃO FINAL — continuação (página '+(iPag+1)+' de '+paginas.length+')', true, 8);
       yy -= 24;
     }
 
@@ -886,6 +907,84 @@ function baixarCsv(){
   baixarArquivo(nomeBaseArquivo()+'.csv', gerarCsvTexto(), 'text/csv;charset=utf-8');
 }
 
+/* ---------------- finalizar / voltar a editar ----------------
+   Dois estados, um só interruptor (`travado`):
+
+     travado = false  edição livre; documentos e prévia OCULTOS
+     travado = true   tela em somente-leitura; documentos e prévia à mostra
+
+   Assim o que está na tela é sempre o que está no documento gerado — não
+   existe o intervalo em que se edita com o PDF já disponível, que era o que
+   antes obrigava a exibir um aviso de "prévia desatualizada". */
+let travado = false;
+
+// Alterna a tela entre edição e somente-leitura. Redesenha a tabela porque é
+// ela quem monta (ou não) os campos, alças de arraste e botões de excluir.
+function aplicarTravamento(){
+  const inUnidade = $('rfUnidade'), inSei = $('rfSei');
+  if(inUnidade) inUnidade.readOnly = travado;
+  if(inSei) inSei.readOnly = travado;
+
+  [['rfBtnAdicionar'],['rfBtnOrdenarNota'],['rfBtnOrdenarNome']].forEach(function(par){
+    const b = $(par[0]);
+    if(b) b.disabled = travado;
+  });
+
+  const btnFinalizar = $('rfBtnFinalizar'), btnEditar = $('rfBtnEditar');
+  if(btnFinalizar) btnFinalizar.style.display = travado ? 'none' : '';
+  if(btnEditar) btnEditar.style.display = travado ? '' : 'none';
+
+  const aviso = $('rfTravadoAviso');
+  if(aviso) aviso.style.display = travado ? '' : 'none';
+
+  // documentos e prévia acompanham o travamento
+  const espera = $('rfDocsEspera'), area = $('rfDocsArea'), doc = $('rfDocumento');
+  if(espera) espera.style.display = travado ? 'none' : '';
+  if(area) area.style.display = travado ? '' : 'none';
+  if(doc && !travado){ doc.innerHTML = ''; doc.style.display = 'none'; }
+
+  if(travado) fecharSugestoes();
+  renderTabela();
+}
+
+async function finalizarPreenchimento(){
+  const problemas = validarParaDocumento();
+  const st = $('rfNuvemStatus');
+  if(problemas.length){
+    if(st) st.innerHTML = '<span style="color:var(--coral);">'+problemas.map(esc).join(' ')+'</span>';
+    return false;
+  }
+
+  const gravou = await salvarNuvem();
+
+  // Trava e libera os documentos MESMO se a gravação falhar: sem isso, uma
+  // indisponibilidade da nuvem impediria a unidade de produzir o documento
+  // oficial dela. O resultado da gravação fica dito no status do Passo 3.
+  travado = true;
+  aplicarTravamento();
+  const doc = $('rfDocumento');
+  if(doc){ doc.innerHTML = montarDocumentoHtml(); doc.style.display = 'block'; }
+
+  const msg = $('rfMsgDocs');
+  if(msg) msg.textContent = 'Baixe abaixo o PDF e o CSV desta tabela.';
+
+  agendarRascunhoLocal();   // guarda também o estado de finalizado
+  const area = $('rfDocsArea');
+  if(area && area.scrollIntoView) area.scrollIntoView({behavior:'smooth', block:'nearest'});
+  return gravou;
+}
+
+// Volta ao modo de edição: os documentos e a prévia somem, para não ficar
+// disponível um arquivo que não corresponde mais ao que está na tela.
+function voltarAEditar(){
+  travado = false;
+  aplicarTravamento();
+  const msg = $('rfMsgDocs'); if(msg) msg.textContent = '';
+  const st = $('rfNuvemStatus'); if(st) st.textContent = '';
+  agendarRascunhoLocal();
+  avisar('Edição liberada — finalize de novo ao terminar.');
+}
+
 /* ============ G) nuvem: salvar, buscar, carregar, backup ============
    Mesmo projeto Supabase das demais ferramentas (ver fluxo_logic.js);
    tabela própria: resultado_final_unidades. Diferente do Fluxo (linha
@@ -921,6 +1020,9 @@ function pacoteAtual(){
       notaProva: l.notaProva, notaEntrevista: l.notaEntrevista, notaFinal: l.notaFinal,
       reserva: l.reserva || '', nascimento: limpar(l.nascimento)
     })),
+    // guardado para a tela voltar como foi deixada: finalizada volta travada,
+    // com os documentos à mão, sem obrigar a refinalizar sem ter mudado nada
+    finalizado: travado,
     salvoEm: new Date().toISOString()
   };
 }
@@ -943,7 +1045,13 @@ function aplicarPacote(p){
   const inUnidade=$('rfUnidade'), inSei=$('rfSei');
   if(inUnidade){ inUnidade.value = estado.unidade; marcarObrigatorio(inUnidade,'rfUnidadeObrig'); }
   if(inSei){ inSei.value = estado.sei; marcarObrigatorio(inSei,'rfSeiObrig'); }
-  renderTabela();
+  // retoma o estado em que o preenchimento foi deixado (travado ou em edição)
+  travado = !!p.finalizado;
+  const msgDocs = $('rfMsgDocs');
+  if(msgDocs) msgDocs.textContent = travado ? 'Baixe abaixo o PDF e o CSV desta tabela.' : '';
+  aplicarTravamento();   // já redesenha a tabela
+  const doc = $('rfDocumento');
+  if(doc && travado){ doc.innerHTML = montarDocumentoHtml(); doc.style.display = 'block'; }
   return true;
 }
 
@@ -1016,10 +1124,17 @@ async function buscarNuvem(){
         +   '<div class="rf-nuvem-meta">SEI '+esc(reg.sei||'?')+(quando?' · atualizado em '+esc(quando):'')+'</div>'
         + '</div>'
         + '<button type="button" class="link-btn" data-carregar="'+escAttr(reg.id)+'">Carregar</button>'
+        + '<button type="button" class="link-btn rf-btn-excluir" data-excluir="'+escAttr(reg.id)+'"'
+        +   ' data-unidade="'+escAttr(reg.unidade||'')+'" data-sei="'+escAttr(reg.sei||'')+'">Excluir</button>'
         + '</div>';
     }).join('');
     Array.prototype.forEach.call(lista.querySelectorAll('[data-carregar]'), function(b){
       b.addEventListener('click', function(){ carregarRegistro(b.dataset.carregar); });
+    });
+    Array.prototype.forEach.call(lista.querySelectorAll('[data-excluir]'), function(b){
+      b.addEventListener('click', function(){
+        excluirRegistro(b.dataset.excluir, b.dataset.unidade, b.dataset.sei);
+      });
     });
   }catch(e){
     console.error('Falha ao buscar na nuvem:', e);
@@ -1039,10 +1154,48 @@ async function carregarRegistro(id){
     const regs = await r.json();
     if(!regs.length || !aplicarPacote(regs[0].data)) throw new Error('registro vazio ou em formato desconhecido');
     if(st) st.textContent = '';
-    avisar('Registro carregado — edite e salve na nuvem para substituir.');
+    avisar('Registro carregado — edite e finalize de novo para substituir.');
   }catch(e){
     console.error('Falha ao carregar registro:', e);
     if(st) st.innerHTML = '<span style="color:var(--coral);">Não foi possível carregar ('+esc(e.message)+').</span>';
+  }
+}
+
+/* Apaga um registro da base. É DEFINITIVO: não há lixeira, e o caminho de
+   volta é o backup .json (botão logo abaixo na própria área administrativa).
+   Por isso a confirmação mostra unidade e SEI — para ninguém apagar o
+   registro errado por ter clicado na linha de cima. */
+async function excluirRegistro(id, unidade, sei){
+  const st = $('rfNuvemStatusAdmin');
+  const quem = (unidade ? unidade : '(sem unidade)') + (sei ? ' — SEI '+sei : '');
+  if(!confirm('Excluir definitivamente este registro?\n\n'+quem
+    + '\n\nNão há como desfazer. Se ainda não baixou um backup recente, cancele e baixe antes.')) return false;
+  if(st) st.textContent = 'Excluindo…';
+  try{
+    // return=representation devolve as linhas apagadas. É o que permite saber
+    // se a exclusão REALMENTE aconteceu: com RLS ativo e sem policy de DELETE
+    // a API responde 200 sem apagar nada, e um simples "deu certo" mentiria.
+    const r = await fetch(SUPABASE_URL+'/rest/v1/'+TABELA_NUVEM+'?id=eq.'+encodeURIComponent(id)+'&select=id', {
+      method:'DELETE',
+      headers: cabecalhosNuvem({ 'Accept':'application/json', 'Prefer':'return=representation' })
+    });
+    if(!r.ok){
+      const detalhe = await r.text().catch(()=> '');
+      throw new Error('HTTP '+r.status+(detalhe?' — '+detalhe.slice(0,160):''));
+    }
+    const apagados = await r.json().catch(()=> []);
+    if(!Array.isArray(apagados) || !apagados.length){
+      throw new Error('a base não apagou o registro — provavelmente falta a policy de DELETE na tabela');
+    }
+    if(st) st.innerHTML = '<span style="color:var(--teal);">Registro excluído.</span>';
+    avisar('Registro excluído da base.');
+    buscarNuvem();   // relista, para a linha apagada sumir
+    return true;
+  }catch(e){
+    console.error('Falha ao excluir registro:', e);
+    if(st) st.innerHTML = '<span style="color:var(--coral);">Não foi possível excluir ('+esc(e.message)+'). '
+      + 'Se a mensagem citar permissão, falta a policy de DELETE na tabela — ver Recursos/resultado_final_unidades.sql.</span>';
+    return false;
   }
 }
 
@@ -1240,8 +1393,12 @@ function limparTudo(apagarRascunho){
   fecharSugestoes();
   const msg = $('rfMsgDocs'); if(msg) msg.textContent = '';
   const salvoEm = $('rfNuvemSalvoEm'); if(salvoEm) salvoEm.textContent = '';
+  const st = $('rfNuvemStatus'); if(st) st.textContent = '';
   const doc = $('rfDocumento'); if(doc){ doc.innerHTML = ''; doc.style.display = 'none'; }
-  renderTabela();
+  // outro preenchimento recomeça em edição, com os documentos ocultos até
+  // que ESTE novo trabalho seja finalizado
+  travado = false;
+  aplicarTravamento();   // já redesenha a tabela
 }
 
 // Limpa a tela para começar outro processo seletivo — o caso de uma mesma
@@ -1391,8 +1548,10 @@ document.addEventListener('DOMContentLoaded', function(){
     renderTabela();
   });
 
-  // Passo 3 — salvar na nuvem (ação do próprio usuário, fora da área administrativa)
-  $('rfBtnSalvarNuvem').addEventListener('click', salvarNuvem);
+  // Passo 3 — finalizar (grava, trava a tela e libera os documentos) e o
+  // caminho de volta, que destrava e esconde os documentos de novo
+  $('rfBtnFinalizar').addEventListener('click', finalizarPreenchimento);
+  $('rfBtnEditar').addEventListener('click', voltarAEditar);
 
   // Área administrativa (fora dos passos) — recuperar registros e backup,
   // atrás do PIN. Salvar NÃO está aqui: é do usuário, no Passo 3.
@@ -1455,7 +1614,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(nota) nota.textContent = 'preenchimento anterior retomado';
   });
 
-  renderTabela();
+  aplicarTravamento();   // estado inicial (em edição) + primeiro desenho da tabela
   mostrarTelaInicial();
 });
 
@@ -1470,6 +1629,9 @@ window.ResultadoFinal = {
   pdfBase64ParaBinario, pdfDimensoesJpeg,
   obterIndiceUnidades, atualizarSugestoes, escolherSugestao, fecharSugestoes,
   novoPreenchimento, limparTudo, tentarPin, PIN_ADMIN,
-  lerRascunhoGuardado, descreverRascunho, mostrarTelaInicial, abrirAreaDeTrabalho
+  lerRascunhoGuardado, descreverRascunho, mostrarTelaInicial, abrirAreaDeTrabalho,
+  finalizarPreenchimento, voltarAEditar, aplicarTravamento, salvarNuvem,
+  excluirRegistro,
+  estaTravado: function(){ return travado; }
 };
 })();
