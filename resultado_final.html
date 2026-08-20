@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criação da tabela de resultado final - Unidades externas — TJPR</title>
+<link rel="stylesheet" href="core.css">
+<style>
+  /* Estilos próprios desta ferramenta (prefixo rf-). Ficam aqui, e não no
+     core.css compartilhado, porque esta página está desenhada para poder ser
+     hospedada sozinha no futuro (portal do TJPR) — quanto menos ela depender
+     de regras específicas no CSS comum, mais fácil a extração. */
+  .rf-basicos{ display:grid; grid-template-columns:minmax(260px,340px) 1fr; gap:14px 18px; margin:0 0 6px 36px; }
+  .rf-campo{ display:flex; flex-direction:column; gap:5px; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; color:var(--ink); font-weight:600; }
+  .rf-campo input{ padding:9px 12px; border:1px solid var(--line); border-radius:7px; font-family:'Barlow',system-ui,sans-serif; font-size:13.5px; color:var(--ink); background:var(--white); font-weight:400; }
+  .rf-campo input:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+  .rf-campo small{ font-weight:400; color:var(--ink-soft); }
+  .rf-campo-obrig{ color:var(--coral); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-left:6px; }
+  @media (max-width:720px){ .rf-basicos{ grid-template-columns:1fr; margin-left:0; } }
+
+  /* autocomplete da unidade: lista sobreposta ao fluxo da página, por isso o
+     campo fica em position:relative e a lista em absolute. display:block nos
+     itens é obrigatório — são <span> dentro de <label>, e como inline eles
+     emendariam um no outro numa parede de texto ilegível. */
+  .rf-auto{ position:relative; display:block; }
+  .rf-auto input{ width:100%; box-sizing:border-box; }
+  .rf-auto-lista{ position:absolute; z-index:30; top:100%; left:0; right:0; margin-top:2px;
+    background:var(--white); border:1px solid var(--line); border-radius:7px; box-shadow:0 6px 18px rgba(0,42,58,.13);
+    max-height:300px; overflow-y:auto; display:none; }
+  .rf-auto-lista.aberta{ display:block; }
+  .rf-auto-item{ display:block; padding:9px 12px; cursor:pointer; font-family:'Barlow',system-ui,sans-serif;
+    font-size:12.5px; font-weight:400; color:var(--ink); line-height:1.4; border-bottom:1px solid var(--paper); }
+  .rf-auto-item:last-child{ border-bottom:none; }
+  .rf-auto-item:hover, .rf-auto-item.ativo{ background:#eef3f6; }
+  .rf-auto-sigla{ display:block; font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-weight:700;
+    font-size:12px; color:var(--navy); letter-spacing:.02em; }
+  .rf-auto-nome{ display:block; }
+
+  /* tela inicial: as duas escolhas antes de qualquer campo */
+  .rf-inicio-botoes{ display:flex; gap:14px; flex-wrap:wrap; margin:4px 0 0 36px; }
+  @media (max-width:900px){ .rf-inicio-botoes{ margin-left:0; } }
+  .rf-inicio-botoes .rf-btn-inicio{ min-width:240px; text-align:center; justify-content:center; }
+  .rf-inicio-nota{ font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; color:var(--ink-soft);
+    margin:12px 0 0 36px; line-height:1.5; }
+  @media (max-width:900px){ .rf-inicio-nota{ margin-left:0; } }
+
+  /* botões de documento com a mesma largura, lado a lado */
+  .rf-doc-botoes{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-left:36px; }
+  @media (max-width:900px){ .rf-doc-botoes{ margin-left:0; } }
+  .rf-doc-botoes .rf-btn-doc{ min-width:190px; text-align:center; justify-content:center; }
+
+  /* área administrativa: separada do fluxo do usuário final, discreta */
+  .rf-admin{ margin:46px 0 0; padding:18px 20px; border:1px dashed var(--line); border-radius:8px; background:#fafcfc; }
+  .rf-admin-cab{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .rf-admin-tit{ font-family:'Barlow Semi Condensed',system-ui,sans-serif; font-weight:700; font-size:14px; color:var(--ink-soft); margin:0; }
+  .rf-admin-nota{ font-family:'Barlow',system-ui,sans-serif; font-size:11.5px; color:var(--ink-soft); margin:6px 0 0; }
+  .rf-pin-linha{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+  .rf-pin-linha input{ width:120px; padding:9px 12px; border:1px solid var(--line); border-radius:7px;
+    font-family:'IBM Plex Mono',Consolas,monospace; font-size:14px; letter-spacing:.28em; text-align:center; }
+
+  /* tabela de candidatos: white-space:normal anula o nowrap global de tabelas
+     do core.css; sem table-layout fixo porque as colunas são inputs de largura
+     controlada e o nome precisa poder crescer */
+  .rf-tabela-wrap{ margin-left:36px; }
+  @media (max-width:900px){ .rf-tabela-wrap{ margin-left:0; } }
+  .rf-tabela{ width:100%; border-collapse:collapse; white-space:normal; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; }
+  .rf-tabela th, .rf-tabela td{ border:1px solid var(--line); padding:5px 6px; vertical-align:middle; }
+  .rf-tabela th{ background:var(--paper); font-weight:700; color:var(--ink-soft); font-size:10.5px; text-transform:uppercase; letter-spacing:.02em; text-align:center; white-space:nowrap; }
+  .rf-tabela input, .rf-tabela select{ width:100%; padding:5px 6px; border:1px solid var(--line); border-radius:4px; font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; color:var(--ink); background:var(--white); }
+  .rf-tabela input:focus, .rf-tabela select:focus{ outline:2px solid var(--teal); outline-offset:0; }
+  .rf-col-class{ width:52px; text-align:center; color:var(--ink-soft); font-weight:700; }
+  .rf-nota-divergente{ background:#fdf3f1; border-color:var(--coral); }
+  .rf-barra-tabela{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0 12px 36px; }
+  @media (max-width:900px){ .rf-barra-tabela{ margin-left:0; } }
+
+  .rf-nuvem-status{ font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; color:var(--ink-soft); margin:8px 0 0 36px; }
+  .rf-nuvem-lista{ margin:12px 0 0 36px; display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; }
+  @media (max-width:900px){ .rf-nuvem-lista, .rf-nuvem-status{ margin-left:0; } }
+  .rf-nuvem-item{ display:flex; gap:12px; align-items:center; padding:8px 12px; border:1px solid var(--line); border-radius:7px; background:var(--white); font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; }
+  .rf-nuvem-item .rf-nuvem-info{ flex:1; min-width:0; }
+  .rf-nuvem-item .rf-nuvem-unidade{ font-weight:600; color:var(--ink); overflow-wrap:break-word; }
+  .rf-nuvem-item .rf-nuvem-meta{ color:var(--ink-soft); font-size:11.5px; }
+
+  #rfDocumento{ border:1px solid var(--line); background:var(--white); padding:28px 34px; margin:14px 0 0 36px; overflow-x:auto; }
+  @media (max-width:900px){ #rfDocumento{ margin-left:0; } }
+</style>
+</head>
+<body class="pagina-larga">
+
+<div class="sheet">
+
+  <div id="institutional-placeholder"></div>
+
+  <div class="app-header">
+    <div id="menu-placeholder"></div>
+    <div id="header-title"></div>
+  </div>
+
+  <main>
+
+    <div class="step step-info">
+      <div class="step-head">
+        <span class="step-num">i</span>
+        <p class="step-title">Como funciona</p>
+      </div>
+      <p class="step-desc">Monta a <strong>tabela de resultado final</strong> do processo seletivo de estágio no mesmo modelo do relatório da Fábrica de Provas — para a unidade que conduz o próprio certame informar as notas <strong>sem precisar cadastrá-las na Fábrica</strong>. O documento gerado alimenta as etapas seguintes (elaboração do edital de classificação final).</p>
+      <ul class="step-list">
+        <li><strong>Passo 1</strong> — informe a unidade (digitar a sigla ou parte do nome sugere as unidades do TJPR) e o número do processo SEI.</li>
+        <li><strong>Passo 2</strong> — cadastre os candidatos linha por linha. A <strong>classificação</strong> segue a posição na tabela (arraste pela alça ⠿ para mudar) e a <strong>nota final</strong> é calculada pela média de prova e entrevista — editável, com aviso quando divergir. Botões reordenam por nota ou por ordem alfabética.</li>
+        <li><strong>Passo 3</strong> — salve o preenchimento na nuvem, identificado pelo número SEI. Salvar de novo com o mesmo SEI substitui o anterior, então dá para corrigir depois.</li>
+        <li><strong>Passo 4</strong> — baixe o <strong>PDF</strong> (cabeçalho institucional, pronto para juntar ao processo) e o <strong>CSV</strong>, aceito diretamente pela ferramenta do Ponto 20.</li>
+      </ul>
+      <p class="step-desc">Todo o preenchimento acontece no seu navegador. O que está na tela é guardado automaticamente neste computador — ao reabrir a página você escolhe entre continuar de onde parou ou começar outro processo seletivo do zero. Uma cópia em arquivo pode ser baixada e reaberta pela caixa <strong>Rascunho</strong>, no canto inferior direito.</p>
+    </div>
+
+    <!-- ===================== tela inicial =====================
+         Nada de campo em tela antes desta escolha: abrir a página puxando
+         sozinha o preenchimento anterior confundia quem ia começar outro
+         processo seletivo (uma unidade com certames de graduação e de
+         pós-graduação, por exemplo). -->
+    <div class="step" id="rfInicio">
+      <div class="step-head">
+        <span class="step-num">→</span>
+        <p class="step-title">Como deseja começar?</p>
+      </div>
+      <div class="rf-inicio-botoes">
+        <button type="button" class="download-btn rf-btn-inicio" id="rfBtnInicioNovo">Novo preenchimento</button>
+        <button type="button" class="download-btn rf-btn-inicio" id="rfBtnInicioAnterior">Continuar o anterior</button>
+      </div>
+      <p class="rf-inicio-nota" id="rfInicioNota"></p>
+    </div>
+
+    <div id="rfTrabalho" style="display:none;">
+
+    <!-- ============================ 1 ============================ -->
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">1</span>
+        <p class="step-title">Informações básicas</p>
+      </div>
+      <div class="rf-basicos">
+        <label class="rf-campo" style="grid-column:1 / -1;">Unidade (nome por extenso)<span class="rf-campo-obrig" id="rfUnidadeObrig">obrigatório</span>
+          <span class="rf-auto">
+            <!-- O autocomplete deste campo é o nosso (lista abaixo), não o do
+                 navegador. autocomplete="off" sozinho não basta: o Chrome o
+                 ignora em campos de texto que ele classifica como nome/
+                 endereço. Um valor NÃO PADRÃO impede essa classificação, e
+                 então nada é sugerido nem guardado. Os data-* desligam os
+                 gerenciadores de senha, que também se intrometem. -->
+            <input type="text" id="rfUnidade" placeholder="Digite a sigla SEI ou parte do nome da unidade..."
+                   autocomplete="rf-sem-autofill" autocorrect="off" autocapitalize="off" spellcheck="false"
+                   data-lpignore="true" data-form-type="other" data-1p-ignore
+                   role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="rfUnidadeLista">
+            <span class="rf-auto-lista" id="rfUnidadeLista" role="listbox"></span>
+          </span>
+          <small>Digitar sugere unidades da base do TJPR — escolher é opcional, o campo aceita qualquer texto. É o nome que sai no cabeçalho do PDF.</small>
+        </label>
+        <label class="rf-campo" style="grid-column:1;">Número SEI do processo seletivo<span class="rf-campo-obrig" id="rfSeiObrig">obrigatório</span>
+          <input type="text" id="rfSei" placeholder="0000000-00.0000.8.16.0000" inputmode="numeric" autocomplete="off">
+          <small>Identifica este preenchimento — cada processo seletivo tem o seu.</small>
+        </label>
+      </div>
+      <div class="rf-barra-tabela" style="margin-top:16px;">
+        <button type="button" class="link-btn" id="rfBtnNovo">Recomeçar do zero</button>
+        <span class="count-note">Limpa a tela para começar outro processo seletivo (o atual precisa já estar salvo ou baixado).</span>
+      </div>
+    </div>
+
+    <!-- ============================ 2 ============================ -->
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">2</span>
+        <p class="step-title">Tabela de candidatos</p>
+      </div>
+      <p class="step-desc">A coluna <strong>CLASS.</strong> acompanha a posição da linha; arraste pela alça <strong>⠿</strong> (ou use <strong>Alt+↑</strong> / <strong>Alt+↓</strong> com a alça em foco) para reordenar. Notas aceitam vírgula ou ponto; a <strong>FINAL</strong> vem da média de PROVA e ENTREVISTA e pode ser corrigida à mão — divergências ficam sinalizadas, nunca corrigidas em silêncio.</p>
+      <div class="notice-banner" style="margin:12px 0 16px 36px;">
+        <strong>Candidatos cotistas:</strong> basta o alcance de nota <strong>20% inferior</strong> à nota mínima estabelecida para os demais candidatos para serem considerados aprovados na etapa da prova.
+      </div>
+      <div class="rf-barra-tabela">
+        <button type="button" class="link-btn" id="rfBtnAdicionar">+ Adicionar candidato</button>
+        <button type="button" class="link-btn" id="rfBtnOrdenarNota">Reordenar por nota final</button>
+        <button type="button" class="link-btn" id="rfBtnOrdenarNome">Reordenar por ordem alfabética</button>
+        <span class="count-note" id="rfContagem"></span>
+      </div>
+      <div class="rf-tabela-wrap">
+        <div class="table-scroll" style="max-height:none;">
+          <table class="rf-tabela">
+            <thead>
+              <tr>
+                <th style="width:30px;"></th>
+                <th style="width:52px;" title="Posição na tabela — recalculada ao reordenar">CLASS.</th>
+                <th style="width:110px;">INSCRIÇÃO</th>
+                <th style="min-width:190px;">NOME</th>
+                <th style="min-width:150px;">E-MAIL</th>
+                <th style="width:76px;">PROVA</th>
+                <th style="width:76px;">ENTREVISTA</th>
+                <th style="width:76px;">FINAL</th>
+                <th style="width:150px;">RESERVA</th>
+                <th style="width:108px;">NASCIMENTO</th>
+                <th style="width:44px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="rfCorpo"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="rfAvisosTabela"></div>
+    </div>
+
+    <!-- ============================ 3 ============================ -->
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">3</span>
+        <p class="step-title">Salvar na nuvem</p>
+      </div>
+      <p class="step-desc">Guarda este preenchimento na base da Divisão de Gestão, identificado pelo <strong>número SEI</strong>. Salvar de novo com o mesmo SEI substitui o que estava lá — é assim que se corrige um envio. Nada é gravado sozinho: só ao clicar no botão.</p>
+      <div class="rf-doc-botoes">
+        <button type="button" class="download-btn rf-btn-doc" id="rfBtnSalvarNuvem">Salvar na nuvem</button>
+      </div>
+      <p class="rf-nuvem-status" id="rfNuvemSalvoEm"></p>
+      <p class="rf-nuvem-status" id="rfNuvemStatus"></p>
+    </div>
+
+    <!-- ============================ 4 ============================ -->
+    <div class="step">
+      <div class="step-head">
+        <span class="step-num">4</span>
+        <p class="step-title">Gerar documentos</p>
+      </div>
+      <div class="rf-doc-botoes">
+        <button type="button" class="download-btn rf-btn-doc" id="rfBtnPdf">Baixar PDF</button>
+        <button type="button" class="download-btn rf-btn-doc" id="rfBtnCsv">Baixar CSV</button>
+      </div>
+      <p class="rf-nuvem-status" id="rfMsgDocs"></p>
+      <div id="rfDocumento" style="display:none;"></div>
+    </div>
+
+    <!-- ===================== área administrativa =====================
+         Fora da numeração dos passos e no fim da página, de propósito: são
+         ações que mexem na base compartilhada e não fazem parte do trabalho
+         de quem só precisa gerar o documento da sua unidade. -->
+    <div class="rf-admin" id="rfAdmin">
+      <div class="rf-admin-cab">
+        <p class="rf-admin-tit">Área administrativa</p>
+        <button type="button" class="link-btn" id="rfAdminToggle" aria-expanded="false" aria-controls="rfAdminCorpo">Abrir</button>
+      </div>
+      <p class="rf-admin-nota">Recuperação de registros já gravados e backup da base. Restrita à equipe gestora — salvar o próprio preenchimento é o Passo 3, acima.</p>
+
+      <div id="rfAdminCorpo" style="display:none;">
+        <div id="rfAdminTrava">
+          <div class="rf-pin-linha">
+            <label class="rf-campo" style="flex-direction:row;align-items:center;gap:10px;">PIN de acesso
+              <input type="password" id="rfPin" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="off">
+            </label>
+            <button type="button" class="link-btn" id="rfBtnPin">Entrar</button>
+            <span class="count-note" id="rfPinMsg"></span>
+          </div>
+        </div>
+
+        <div id="rfAdminConteudo" style="display:none;">
+          <p class="step-desc" style="margin-left:0;">Abrir um registro <strong>substitui</strong> o que estiver na tela — salve ou baixe antes, se ainda precisar.</p>
+          <div class="rf-barra-tabela" style="margin-left:0;">
+            <input type="text" id="rfNuvemBusca" placeholder="Buscar registro salvo por SEI ou unidade..." autocomplete="off"
+                   style="flex:1 1 280px;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:7px;font-family:'Barlow',system-ui,sans-serif;font-size:13px;">
+            <button type="button" class="link-btn" id="rfBtnNuvemBuscar">Buscar salvos</button>
+          </div>
+          <div class="rf-nuvem-lista" style="margin-left:0;" id="rfNuvemLista"></div>
+          <p class="rf-nuvem-status" style="margin-left:0;" id="rfNuvemStatusAdmin"></p>
+
+          <div class="rf-barra-tabela" style="margin-left:0;margin-top:18px;">
+            <button type="button" class="link-btn" id="rfBtnBackupBaixar">Baixar backup completo (.json)</button>
+            <button type="button" class="link-btn" id="rfBtnBackupRestaurar">Restaurar backup</button>
+            <input type="file" id="rfBackupArquivo" accept="application/json" style="display:none;">
+            <span class="count-note">O backup traz todos os registros da base — guarde uma cópia periodicamente.</span>
+          </div>
+          <div id="rfAvisoBackup"></div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- /rfTrabalho -->
+
+  </main>
+
+  <footer>
+    <p style="max-width:640px;margin:0 auto 14px;font-family:'Barlow',system-ui,sans-serif;font-size:12px;line-height:1.6;color:var(--ink-soft);">
+      <strong style="color:var(--coral);">Aviso:</strong> esta ferramenta está em fase de testes e não é um sistema oficial do Tribunal de Justiça do Estado do Paraná (TJPR).
+      O documento gerado é um apoio de trabalho — a conferência das notas e da classificação é responsabilidade da unidade.
+    </p>
+    <p style="margin-top:10px;font-size:9.5px;letter-spacing:0.02em;color:var(--paper-dark);">elaborado com o uso de ia por igor pankiewicz</p>
+  </footer>
+</div>
+
+<!-- começa recolhida: ação ocasional, e aberta cobriria o pé da tabela -->
+<aside class="float-draft collapsed" id="rfDraft">
+  <div class="float-draft-head">
+    <p class="float-draft-tit">Rascunho</p>
+    <button type="button" class="float-draft-toggle" id="rfDraftToggle" title="Abrir" aria-expanded="false">+</button>
+  </div>
+  <div class="float-draft-body">
+    <input type="file" id="rfRascunhoArquivo" accept="application/json" style="display:none;">
+    <button type="button" class="link-btn" id="rfBtnRascunhoBaixar">Salvar (.json)</button>
+    <button type="button" class="link-btn" id="rfBtnRascunhoAbrir">Abrir rascunho</button>
+    <p class="float-draft-nota" id="rfDraftNota">rascunho local guardado automaticamente</p>
+  </div>
+</aside>
+
+<div class="fluxo-aviso" id="rfAviso" role="status" aria-live="polite"></div>
+
+<script src="tjpr_logo.js"></script>
+<script src="edital_unidades_sei.js"></script>
+<script src="ferramentas.js"></script>
+<script src="resultado_final_logic.js"></script>
+<script src="layout.js"></script>
+</body>
+</html>

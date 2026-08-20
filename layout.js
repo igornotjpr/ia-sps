@@ -79,6 +79,12 @@ function fecharDropdowns(){
 
 // Monta o cabeçalho institucional padrão (logo + identificação da unidade),
 // idêntico em todas as páginas — assim o header é definido em um só lugar.
+// Nome por extenso da unidade, exibido ao passar o mouse (ou dar foco pelo
+// teclado) sobre a sigla SEI no cabeçalho — a sigla sozinha não diz nada a
+// quem chega de fora.
+const DSERFTA_EXTENSO = 'Divisão de Seleção de Estagiários e Residentes, Formação de Talentos e Ambientação '
+  + 'da Coordenadoria de Desenvolvimento Humano e Organizacional da Secretaria de Gestão de Pessoas';
+
 function institutionalHtml(){
   const versao=(typeof VERSAO_APP!=='undefined')?VERSAO_APP:'';
   return '<div class="institutional-header">'
@@ -86,7 +92,11 @@ function institutionalHtml(){
     +'<div class="tjpr-name">'
     +'<strong>Tribunal de Justiça do Estado do Paraná</strong>'
     +'<span class="tjpr-line">Secretaria de Gestão de Pessoas</span>'
-    +'<span class="tjpr-line">SG-SGP-CDHO-DSERFTA</span>'
+    // tabindex="0" para o nome também aparecer a quem navega por teclado;
+    // aria-describedby liga a sigla ao texto por extenso para leitores de tela
+    +'<span class="tjpr-line tjpr-sigla" tabindex="0" aria-describedby="tjprSiglaExtenso">SG-SGP-CDHO-DSERFTA'
+    +`<span class="tjpr-sigla-tip" id="tjprSiglaExtenso" role="tooltip">${escHtml(DSERFTA_EXTENSO)}</span>`
+    +'</span>'
     +'</div>'
     +(versao?`<span class="tjpr-version" title="Versão do portal">v. ${escHtml(versao)}</span>`:'')
     +'</div>';
