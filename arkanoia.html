@@ -7,8 +7,10 @@
 <style>
   /* Área do jogo. Diferente do Flappy, que é desenhado em <pre> nesta própria
      página, o Arkanoia é um build Godot (WebAssembly) hospedado no repositório
-     igornotjpr/Arkanoia e embutido por iframe. O build tem 36 MB, então mantê-lo
-     fora deste repositório evita inflar o histórico do git a cada reexportação. */
+     tjprselecao/Arkanoia e embutido por iframe. O build tem 36 MB, então mantê-lo
+     fora deste repositório evita inflar o histórico do git a cada reexportação.
+     Atenção: este endereço é de OUTRO repositório — se a conta do GitHub for
+     renomeada de novo, ele precisa ser atualizado à mão junto com o remote. */
   .ak-wrap{ display:flex; flex-direction:column; align-items:center; gap:14px; }
 
   .ak-frame{
@@ -81,7 +83,7 @@
       <div class="ak-wrap">
         <div class="ak-frame">
           <iframe
-            src="https://igornotjpr.github.io/Arkanoia/"
+            src="https://tjprselecao.github.io/Arkanoia/"
             title="Arkanoia — clone de Arkanoid"
             allow="autoplay; fullscreen"
             loading="lazy"></iframe>
