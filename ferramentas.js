@@ -18,16 +18,16 @@
 
 // Versão exibida no canto do cabeçalho (formato "v. x.y.z"). Atualizar aqui a
 // cada commit versionado, acompanhando o número usado na mensagem do commit.
-const VERSAO_APP='3.16';
+const VERSAO_APP='3.17';
 
 const SECOES=[
   {
     id:"sps",
     ordem:0,
-    rotulo:"Processo Seletivo",          // texto do item principal do menu
+    rotulo:"Estágio",                    // texto do item principal do menu
     emoji:"🗂️",
     cor:"--teal",
-    eyebrow:"Seção de Processo Seletivo",
+    eyebrow:"Seção de Estágio",
     titulo:"Ferramentas do Processo Seletivo",
     descricao:"Apoio operacional ao processo seletivo de estágio: elaboração de editais, cruzamento de listas da Fábrica de Provas e preparo de dados para o Hércules.",
     sufixoTitulo:" — Seção de Processo Seletivo (TJPR)",
@@ -65,6 +65,19 @@ const SECOES=[
     titulo:"Ferramentas da Divisão de Gestão",
     descricao:"Apoio ao controle das vagas de estágio (permanentes e provisórias) das unidades do TJPR: consulta interna do quantitativo disponível, ocupado e total por unidade.",
     sufixoTitulo:" — Divisão de Gestão de Estágios, Residência e Voluntariado (TJPR)"
+  },
+  {
+    id:"externas",
+    ordem:4,
+    rotulo:"UE",
+    emoji:"🏢",
+    cor:"--mint",
+    eyebrow:"Unidades gestoras de processo seletivo",
+    titulo:"Ferramentas para Unidades Externas",
+    descricao:"Ferramentas de apoio às comarcas e unidades do TJPR que conduzem o próprio processo seletivo de estágio — a começar pela geração da tabela de resultado final no formato padrão, sem depender da Fábrica de Provas.",
+    // o título da ferramenta já termina em "Unidades externas": um sufixo
+    // repetindo a seção deixaria a aba do navegador redundante
+    sufixoTitulo:" — TJPR"
   }
 ].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 
@@ -181,6 +194,19 @@ const FERRAMENTAS=[
     eyebrow:"Vagas por unidade",
     titulo:"Consulta de Vagas Disponíveis por Unidade",
     descricao:"Busca por sigla, comarca, tipo ou nome da unidade e mostra o quantitativo de vagas de estágio — permanentes e provisórias, disponíveis, ocupadas e totais — com prazo, motivo e SEI das vagas provisórias. Os dados são compartilhados e atualizáveis por upload da planilha de controle."
+  },
+
+  /* ---------- Unidades Externas ---------- */
+  {
+    arquivo:"resultado_final.html",
+    secao:"externas",
+    rotulo:"Resultado Final",
+    ordem:0,
+    emoji:"📋",
+    cor:"--mint",
+    eyebrow:"Resultado final do processo seletivo",
+    titulo:"Criação da tabela de resultado final - Unidades externas",
+    descricao:"Cadastro das notas dos candidatos no modelo da classificação final da Fábrica de Provas, com tabela editável por arrastar e soltar, classificação e nota final automáticas, gravação compartilhada por SEI + unidade, e exportação em PDF com cabeçalho institucional e CSV compatível com o Ponto 20."
   }
 ];
 
