@@ -70,6 +70,14 @@
   .rf-tabela input:focus, .rf-tabela select:focus{ outline:2px solid var(--teal); outline-offset:0; }
   .rf-col-class{ width:52px; text-align:center; color:var(--ink-soft); font-weight:700; }
   .rf-nota-divergente{ background:#fdf3f1; border-color:var(--coral); }
+  /* campos em somente-leitura depois de finalizar: sem cara de caixa de
+     digitação, mas com o texto ainda selecionável para poder ser copiado */
+  .rf-tabela input.rf-in-travado{ background:var(--paper); border-color:transparent; color:var(--ink); cursor:default; }
+  .rf-tabela input.rf-in-travado:focus{ outline:1px solid var(--line); }
+  .rf-reserva-travada{ font-family:'Barlow',system-ui,sans-serif; font-size:12.5px; color:var(--ink); padding:0 4px; }
+  .rf-barra-tabela button:disabled{ opacity:.45; cursor:not-allowed; }
+  .rf-btn-excluir{ color:var(--coral); border-color:var(--coral); }
+  .rf-btn-excluir:hover{ background:var(--coral); color:var(--white); }
   .rf-barra-tabela{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0 12px 36px; }
   @media (max-width:900px){ .rf-barra-tabela{ margin-left:0; } }
 
@@ -211,28 +219,38 @@
     <div class="step">
       <div class="step-head">
         <span class="step-num">3</span>
-        <p class="step-title">Salvar na nuvem</p>
+        <p class="step-title">Finalizar preenchimento</p>
       </div>
-      <p class="step-desc">Guarda este preenchimento na base da Divisão de Gestão, identificado pelo <strong>número SEI</strong>. Salvar de novo com o mesmo SEI substitui o que estava lá — é assim que se corrige um envio. Nada é gravado sozinho: só ao clicar no botão.</p>
+      <p class="step-desc">Conclui o trabalho: grava esta tabela na base da Divisão de Gestão (identificada pelo <strong>número SEI</strong>), <strong>bloqueia a edição</strong> e libera os documentos. Finalizar de novo com o mesmo SEI substitui o que estava gravado — é assim que se corrige um envio.</p>
+      <div class="notice-banner" id="rfTravadoAviso" style="display:none;margin:0 0 14px 36px;">
+        <strong>Preenchimento finalizado.</strong> A tabela está bloqueada para edição — os documentos abaixo correspondem exatamente ao que está na tela. Para mudar alguma coisa, use <strong>Editar preenchimento</strong>.
+      </div>
       <div class="rf-doc-botoes">
-        <button type="button" class="download-btn rf-btn-doc" id="rfBtnSalvarNuvem">Salvar na nuvem</button>
+        <button type="button" class="download-btn rf-btn-doc" id="rfBtnFinalizar">Finalizar preenchimento</button>
+        <button type="button" class="download-btn rf-btn-doc" id="rfBtnEditar" style="display:none;">Editar preenchimento</button>
       </div>
       <p class="rf-nuvem-status" id="rfNuvemSalvoEm"></p>
       <p class="rf-nuvem-status" id="rfNuvemStatus"></p>
     </div>
 
-    <!-- ============================ 4 ============================ -->
+    <!-- ============================ 4 ============================
+         Os botões e a prévia só aparecem depois de finalizar (rfFinalizado),
+         para o documento não sair antes de a tabela estar gravada. -->
     <div class="step">
       <div class="step-head">
         <span class="step-num">4</span>
-        <p class="step-title">Gerar documentos</p>
+        <p class="step-title">Documentos</p>
       </div>
-      <div class="rf-doc-botoes">
-        <button type="button" class="download-btn rf-btn-doc" id="rfBtnPdf">Baixar PDF</button>
-        <button type="button" class="download-btn rf-btn-doc" id="rfBtnCsv">Baixar CSV</button>
+      <p class="step-desc" id="rfDocsEspera">Disponível depois de <strong>finalizar o preenchimento</strong>, no Passo 3.</p>
+      <div id="rfDocsArea" style="display:none;">
+        <div class="rf-doc-botoes">
+          <button type="button" class="download-btn rf-btn-doc" id="rfBtnPdf">Baixar PDF</button>
+          <button type="button" class="download-btn rf-btn-doc" id="rfBtnCsv">Baixar CSV</button>
+        </div>
+        <p class="rf-nuvem-status" id="rfMsgDocs"></p>
+        <p class="step-desc" style="margin-top:14px;">Prévia do documento:</p>
+        <div id="rfDocumento" style="display:none;"></div>
       </div>
-      <p class="rf-nuvem-status" id="rfMsgDocs"></p>
-      <div id="rfDocumento" style="display:none;"></div>
     </div>
 
     <!-- ===================== área administrativa =====================
