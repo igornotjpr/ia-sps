@@ -98,8 +98,80 @@ function institutionalHtml(){
     +`<span class="tjpr-sigla-tip" id="tjprSiglaExtenso" role="tooltip">${escHtml(DSERFTA_EXTENSO)}</span>`
     +'</span>'
     +'</div>'
-    +(versao?`<span class="tjpr-version" title="Versão do portal">v. ${escHtml(versao)}</span>`:'')
+    +(versao?`<button type="button" class="tjpr-version" id="tjprVersaoBtn" title="Ver o histórico de versões" aria-haspopup="dialog">v. ${escHtml(versao)}</button>`:'')
     +'</div>';
+}
+
+// ------------------------------------------------------- histórico de versões
+
+/* Painel do changelog, aberto ao clicar no número da versão no cabeçalho.
+   Os dados vêm de changelog.js (CHANGELOG); se o arquivo não estiver
+   carregado, o número da versão simplesmente deixa de ser clicável, em vez
+   de a página quebrar. */
+function changelogHtml(){
+  const lista = (typeof CHANGELOG !== 'undefined') ? CHANGELOG : [];
+  const atual = (typeof VERSAO_APP !== 'undefined') ? VERSAO_APP : '';
+  const itens = lista.map(e=>{
+    const ehAtual = e.v === atual;
+    // data vem em AAAA-MM-DD; exibida em DD/MM/AAAA sem passar por Date(),
+    // que interpretaria a string como UTC e poderia mostrar o dia anterior
+    const p = String(e.data||'').split('-');
+    const data = p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : (e.data||'');
+    return '<li class="cl-item'+(ehAtual?' cl-atual':'')+'">'
+      + '<div class="cl-cab"><span class="cl-v">v. '+escHtml(e.v)+'</span>'
+      +   (ehAtual?'<span class="cl-tag">em uso</span>':'')
+      +   '<span class="cl-data">'+escHtml(data)+'</span></div>'
+      + (e.titulo?'<p class="cl-tit">'+escHtml(e.titulo)+'</p>':'')
+      + (e.itens&&e.itens.length
+          ? '<ul class="cl-lista">'+e.itens.map(i=>'<li>'+escHtml(i)+'</li>').join('')+'</ul>'
+          : '')
+      + '</li>';
+  }).join('');
+
+  return '<div class="cl-overlay" id="tjprChangelog" role="dialog" aria-modal="true" aria-labelledby="tjprChangelogTit">'
+    + '<div class="cl-caixa">'
+    +   '<div class="cl-topo">'
+    +     '<div><p class="eyebrow" style="margin:0 0 2px;">Portal de ferramentas</p>'
+    +     '<h2 class="cl-titulo" id="tjprChangelogTit">Histórico de versões</h2></div>'
+    +     '<button type="button" class="cl-fechar" id="tjprChangelogFechar" aria-label="Fechar">✕</button>'
+    +   '</div>'
+    +   (itens ? '<ul class="cl-versoes">'+itens+'</ul>'
+             : '<p class="empty-hint">Histórico indisponível nesta página.</p>')
+    + '</div></div>';
+}
+
+// Liga o clique no número da versão. Só faz algo se houver changelog para
+// mostrar — sem ele, o número volta a ser apenas um rótulo.
+function wireChangelog(){
+  const btn = document.getElementById('tjprVersaoBtn');
+  if(!btn) return;
+  if(typeof CHANGELOG === 'undefined' || !CHANGELOG.length){
+    btn.classList.add('sem-changelog');
+    btn.title = 'Versão do portal';
+    return;
+  }
+
+  let painel = null, ultimoFoco = null;
+  function fechar(){
+    if(!painel) return;
+    painel.remove(); painel = null;
+    document.removeEventListener('keydown', aoTeclar);
+    if(ultimoFoco && ultimoFoco.focus) ultimoFoco.focus();
+  }
+  function aoTeclar(ev){ if(ev.key==='Escape') fechar(); }
+
+  btn.addEventListener('click', ()=>{
+    if(painel){ fechar(); return; }
+    ultimoFoco = document.activeElement;
+    document.body.insertAdjacentHTML('beforeend', changelogHtml());
+    painel = document.getElementById('tjprChangelog');
+    document.getElementById('tjprChangelogFechar').addEventListener('click', fechar);
+    // clique no fundo escuro fecha; dentro da caixa, não
+    painel.addEventListener('click', ev=>{ if(ev.target===painel) fechar(); });
+    document.addEventListener('keydown', aoTeclar);
+    const fecharBtn = document.getElementById('tjprChangelogFechar');
+    if(fecharBtn && fecharBtn.focus) fecharBtn.focus();
+  });
 }
 
 // Monta o HTML de um cartão de ferramenta/jogo — usado tanto para as grades de
@@ -314,4 +386,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   // 6) blocos "Como funciona" começam recolhidos, em qualquer ferramenta
   wireStepInfo(document);
+
+  // 7) número da versão no cabeçalho abre o histórico de versões
+  wireChangelog();
 });
