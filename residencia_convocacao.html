@@ -92,6 +92,24 @@
         <button type="button" class="link-btn" id="cvBtnLimpar">Limpar quadro</button>
       </div>
     </div>
+    <!-- Etapa opcional: quando a prova foi aplicada pela Fábrica de Provas,
+         o relatório de aprovados já diz quem deve ser convocado. Ele NÃO traz
+         a cota, por isso continua sendo cruzado com a lista do PDF acima. -->
+    <div class="alt-action" style="margin-top:18px;">
+      <label class="campo-check" style="font-weight:600;">
+        <input type="checkbox" id="cvUsarFabrica">
+        A prova foi aplicada pela <strong>Fábrica de Provas</strong> — tenho o relatório de aprovados
+      </label>
+      <div id="cvFabricaPainel" style="display:none;margin-top:12px;">
+        <p class="step-desc" style="margin-left:0;">Envie o <strong>Relatório de aprovados</strong> (.xlsx) baixado da Fábrica. Os candidatos marcados como <strong>(Aprovado)</strong> já vêm selecionados no Passo 2, com a <strong>nota</strong> preenchida; os <strong>(Reprovado)</strong> entram na lista desmarcados. O cruzamento é feito <strong>pelo nome</strong> — é o único identificador que o relatório traz.</p>
+        <div class="upload-panel">
+          <input type="file" id="cvArquivoFabrica" accept=".xlsx,.xls">
+          <button type="button" class="file-btn" id="cvBtnArquivoFabrica">Escolher relatório (.xlsx)</button>
+          <span class="file-name" id="cvNomeArquivoFabrica">nenhum arquivo escolhido</span>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-top:16px;"><button class="run-btn" id="cvBtnProcessar" disabled>Processar lista</button></div>
   </div>
 
@@ -252,6 +270,8 @@
 
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf.worker.min.js"></script>
+<!-- só para ler o relatório da Fábrica (.xlsx) na etapa opcional do Passo 1 -->
+<script src="vendor/xlsx.min.js"></script>
 <script src="core.js"></script>
 <script src="residencia_convocacao_logic.js"></script>
 <script src="ferramentas.js"></script>

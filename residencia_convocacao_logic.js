@@ -340,6 +340,152 @@ function reservaTexto(item){
   return rot.length ? rot.join(' + ') : '—';
 }
 
+/* ====== D2) relatório de aprovados da Fábrica de Provas (.xlsx) ======
+   Etapa OPCIONAL do Passo 1. Quando a prova foi aplicada pela Fábrica, o
+   relatório já diz quem passou — mas ele NÃO traz a cota de reserva, que só
+   existe na Lista de dados dos inscritos (o PDF). Por isso o relatório nunca
+   é usado sozinho: ele é cruzado com a lista, e o cruzamento é feito PELO
+   NOME, único identificador em comum (o relatório não traz CPF nem inscrição).
+
+   Colunas usadas (localizadas pelo cabeçalho, não pela posição):
+     Candidato   nome, a chave do cruzamento
+     Nota        aproveitada como nota da prova, editável depois no Passo 3
+     Aprovado    "(Aprovado)" -> vem marcado; "(Reprovado)" -> vem desmarcado
+   Monitoramento, Reconhecimento facial e Discursivas não decidem nada: só
+   geram aviso quando indicam pendência, para a unidade conferir. */
+
+const RE_APROVADO_FABRICA  = /\(?\s*APROVAD/;
+const RE_REPROVADO_FABRICA = /\(?\s*REPROVAD/;
+
+// Uma pendência é qualquer valor que NÃO seja o "tudo certo" esperado da
+// coluna. É de propósito o inverso do usual (listar o que é problema): assim
+// um rótulo novo, que a Fábrica passe a usar amanhã, aparece como pendência
+// para conferência humana em vez de passar batido como se fosse normal.
+function pendenciasDaLinhaFabrica(reg){
+  const p = [];
+  const monit = semAcento(limpar(reg.monitoramento)).toUpperCase();
+  const facial = semAcento(limpar(reg.facial)).toUpperCase();
+  const disc = semAcento(limpar(reg.discursivas)).toUpperCase();
+  if(monit && monit !== 'COMPORTAMENTO OK') p.push(limpar(reg.monitoramento));
+  if(facial && facial !== 'APROVADO') p.push('Reconhecimento facial: '+limpar(reg.facial));
+  if(disc && disc !== 'CORRIGIDAS') p.push('Discursivas: '+limpar(reg.discursivas));
+  return p;
+}
+
+// Lê a planilha já convertida em matriz (linhas x colunas) e devolve os
+// registros reconhecidos. Separado da leitura do arquivo para poder ser
+// testado sem navegador.
+function lerMatrizFabrica(linhas){
+  if(!linhas || !linhas.length) throw new Error('A planilha está vazia.');
+
+  // o cabeçalho nem sempre é a primeira linha (a Fábrica às vezes exporta
+  // com título acima), então procuramos a linha que tem "Candidato"
+  let iCab = -1, cab = null;
+  for(let i=0;i<Math.min(linhas.length, 20);i++){
+    const norm = (linhas[i]||[]).map(c=>semAcento(limpar(c)).toUpperCase());
+    if(norm.indexOf('CANDIDATO') >= 0){ iCab = i; cab = norm; break; }
+  }
+  if(iCab < 0) throw new Error('Não encontrei a coluna "Candidato" no relatório — confira se é o arquivo certo.');
+
+  const col = nome => cab.indexOf(nome);
+  const iNome = col('CANDIDATO'), iNota = col('NOTA'), iAprov = col('APROVADO');
+  if(iAprov < 0) throw new Error('Não encontrei a coluna "Aprovado" no relatório.');
+
+  const iMonit = col('MONITORAMENTO'), iFacial = col('RECONHECIMENTO FACIAL'), iDisc = col('DISCURSIVAS');
+  const registros = [], semSituacao = [];
+
+  for(let r=iCab+1;r<linhas.length;r++){
+    const l = linhas[r] || [];
+    const nome = limpar(l[iNome]);
+    if(!nome) continue;
+    const bruto = limpar(l[iAprov]);
+    const chaveSit = semAcento(bruto).toUpperCase();
+    let aprovado = null;
+    if(RE_APROVADO_FABRICA.test(chaveSit) && !RE_REPROVADO_FABRICA.test(chaveSit)) aprovado = true;
+    else if(RE_REPROVADO_FABRICA.test(chaveSit)) aprovado = false;
+    // situação em branco ou desconhecida não vira "reprovado" em silêncio:
+    // entra desmarcado E é reportado para decisão manual
+    if(aprovado === null) semSituacao.push({ nome, valor: bruto || '(em branco)' });
+
+    const reg = {
+      nome,
+      chave: chaveNome(nome),
+      nota: iNota>=0 ? paraNumero(l[iNota]) : null,
+      aprovado,
+      situacao: bruto,
+      monitoramento: iMonit>=0 ? l[iMonit] : '',
+      facial: iFacial>=0 ? l[iFacial] : '',
+      discursivas: iDisc>=0 ? l[iDisc] : ''
+    };
+    reg.pendencias = pendenciasDaLinhaFabrica(reg);
+    registros.push(reg);
+  }
+
+  if(!registros.length) throw new Error('Nenhum candidato foi lido do relatório.');
+
+  // nomes repetidos dentro do próprio relatório: o cruzamento por nome não
+  // conseguiria distinguir os dois, então é avisado em vez de escolher um
+  const vistos = {}, duplicados = [];
+  registros.forEach(r=>{
+    if(!r.chave) return;
+    if(vistos[r.chave]) { if(duplicados.indexOf(r.nome)<0) duplicados.push(r.nome); }
+    else vistos[r.chave] = true;
+  });
+
+  return { registros, semSituacao, duplicados };
+}
+
+function lerRelatorioFabrica(file){
+  return new Promise(function(resolve, reject){
+    if(typeof XLSX === 'undefined'){ reject(new Error('Biblioteca de planilhas não carregada (vendor/xlsx.min.js).')); return; }
+    const fr = new FileReader();
+    fr.onerror = function(){ reject(new Error('Não foi possível ler o arquivo.')); };
+    fr.onload = function(){
+      try{
+        const wb = XLSX.read(new Uint8Array(fr.result), { type:'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        // raw:false devolve o que está formatado na célula (a nota sai "6,9",
+        // no mesmo formato que paraNumero já entende)
+        resolve(lerMatrizFabrica(XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' })));
+      }catch(e){ reject(e); }
+    };
+    fr.readAsArrayBuffer(file);
+  });
+}
+
+/* Cruza o relatório com os inscritos lidos do PDF. Não altera nada em
+   silêncio: devolve o que casou, o que não casou e as pendências, e quem
+   chama decide o que mostrar. */
+function cruzarComFabrica(inscritos, dadosFabrica){
+  const porChave = {};
+  inscritos.forEach(it=>{ const c = chaveNome(it.nome); if(c && !porChave[c]) porChave[c] = it; });
+
+  const semPar = [], comPendencia = [];
+  let marcados = 0, desmarcados = 0, notas = 0;
+
+  dadosFabrica.registros.forEach(reg=>{
+    const it = reg.chave ? porChave[reg.chave] : null;
+    if(!it){
+      // só os aprovados fazem falta: um reprovado ausente da lista não muda
+      // nada na convocação
+      if(reg.aprovado) semPar.push(reg.nome);
+      return;
+    }
+    it.marcado = reg.aprovado === true;
+    it.fabrica = { situacao: reg.situacao, nota: reg.nota, aprovado: reg.aprovado, pendencias: reg.pendencias };
+    if(reg.nota != null){ it.notaFabrica = reg.nota; notas++; }
+    if(it.marcado) marcados++; else desmarcados++;
+    if(reg.pendencias.length) comPendencia.push({ nome: it.nome, itens: reg.pendencias, aprovado: reg.aprovado });
+  });
+
+  return {
+    marcados, desmarcados, notas, semPar, comPendencia,
+    semSituacao: dadosFabrica.semSituacao,
+    duplicados: dadosFabrica.duplicados,
+    total: dadosFabrica.registros.length
+  };
+}
+
 /* ==================== E) datas e horários ==================== */
 
 const MESES_EXTENSO=['janeiro','fevereiro','março','abril','maio','junho',
@@ -488,6 +634,10 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
 
   const cvArquivo=$('cvArquivo'), cvBtnArquivo=$('cvBtnArquivo'), cvNomeArquivo=$('cvNomeArquivo'),
         cvStatus=$('cvStatus'), cvTexto=$('cvTexto'), cvBtnLimpar=$('cvBtnLimpar'), cvBtnProcessar=$('cvBtnProcessar');
+  // etapa opcional do Passo 1 — relatório de aprovados da Fábrica de Provas
+  const cvUsarFabrica=$('cvUsarFabrica'), cvFabricaPainel=$('cvFabricaPainel'),
+        cvArquivoFabrica=$('cvArquivoFabrica'), cvBtnArquivoFabrica=$('cvBtnArquivoFabrica'),
+        cvNomeArquivoFabrica=$('cvNomeArquivoFabrica');
   const cvPasso2=$('cvPasso2'), cvChecklist=$('cvChecklist'), cvResumoSelecao=$('cvResumoSelecao'),
         cvBuscaNome=$('cvBuscaNome'),
         cvBtnMarcarTodos=$('cvBtnMarcarTodos'), cvBtnDesmarcarTodos=$('cvBtnDesmarcarTodos'),
@@ -523,6 +673,22 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     conferirPasso1();
   });
 
+  // etapa opcional: o painel do relatório só aparece com o checkbox marcado.
+  // Desmarcar limpa o arquivo escolhido — senão ele seguiria selecionado,
+  // invisível, e voltaria a valer se o checkbox fosse remarcado sem querer.
+  cvUsarFabrica.addEventListener('change', ()=>{
+    cvFabricaPainel.style.display = cvUsarFabrica.checked ? '' : 'none';
+    if(!cvUsarFabrica.checked){
+      cvArquivoFabrica.value = '';
+      cvNomeArquivoFabrica.textContent = 'nenhum arquivo escolhido';
+    }
+  });
+  cvBtnArquivoFabrica.addEventListener('click', ()=> cvArquivoFabrica.click());
+  cvArquivoFabrica.addEventListener('change', ()=>{
+    const f = cvArquivoFabrica.files && cvArquivoFabrica.files[0];
+    cvNomeArquivoFabrica.textContent = f ? f.name : 'nenhum arquivo escolhido';
+  });
+
   cvArquivo.addEventListener('change', async ()=>{
     const f = cvArquivo.files && cvArquivo.files[0];
     cvNomeArquivo.textContent = f ? f.name : 'nenhum arquivo escolhido';
@@ -549,9 +715,26 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     }
   });
 
-  cvBtnProcessar.addEventListener('click', ()=>{
+  cvBtnProcessar.addEventListener('click', async ()=>{
     const li = lerQuadroLista(cvTexto.value);
     if(!li.registros.length){ alert('Nenhum inscrito reconhecido no quadro. Cada linha deve trazer Nº, Modalidade, CPF, Nome, Celular e E-mail (separados por tabulação).'); return; }
+
+    // Etapa opcional: relatório da Fábrica. Lido ANTES de mexer no estado —
+    // se o arquivo estiver errado, a lista do PDF não é processada pela
+    // metade, e a tela continua como estava.
+    const usarFabrica = cvUsarFabrica && cvUsarFabrica.checked;
+    const arqFabrica = cvArquivoFabrica && cvArquivoFabrica.files && cvArquivoFabrica.files[0];
+    let dadosFabrica = null;
+    if(usarFabrica){
+      if(!arqFabrica){ alert('Escolha o relatório de aprovados (.xlsx) da Fábrica, ou desmarque a opção.'); return; }
+      try{
+        dadosFabrica = await lerRelatorioFabrica(arqFabrica);
+      }catch(e){
+        status(cvStatus, '<strong>Não foi possível ler o relatório da Fábrica:</strong> '+esc(e.message), 'warn');
+        rolarAte(cvStatus);
+        return;
+      }
+    }
 
     const desconhecidas = [], vsList = [], duplicados = [];
     const vistos = new Set();
@@ -588,7 +771,42 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       msg += '<br><strong style="color:var(--stamp-red)">'+semNasc.length+' inscrito(s) sem data de nascimento reconhecida</strong> — sem idade pra desempate no Passo 3:';
       msg += lista(semNasc, n=>'<li>'+esc(n)+'</li>');
     }
-    status(cvStatus, msg, (li.naoReconhecidas.length||vsList.length||desconhecidas.length||semNasc.length) ? 'warn' : 'ok');
+
+    // cruzamento com o relatório da Fábrica (etapa opcional)
+    let avisoFabrica = false;
+    if(dadosFabrica){
+      const cz = cruzarComFabrica(estado.inscritos, dadosFabrica);
+      msg += '<br><br><strong>Relatório da Fábrica:</strong> '+cz.total+' candidato(s) lido(s) — '
+        + '<strong>'+cz.marcados+' aprovado(s)</strong> já marcado(s) para convocação e '
+        + cz.desmarcados+' desmarcado(s)'
+        + (cz.notas ? '. Nota da prova preenchida para '+cz.notas+' candidato(s)' : '')+'.';
+
+      if(cz.semPar.length){
+        avisoFabrica = true;
+        msg += '<br><strong style="color:var(--stamp-red)">'+cz.semPar.length+' aprovado(s) do relatório sem correspondência na lista do PDF</strong> — '
+          + 'o cruzamento é pelo nome, então grafia diferente não casa. Marque à mão no Passo 2:';
+        msg += lista(cz.semPar, n=>'<li>'+esc(n)+'</li>');
+      }
+      if(cz.semSituacao.length){
+        avisoFabrica = true;
+        msg += '<br><strong style="color:var(--stamp-red)">'+cz.semSituacao.length+' candidato(s) sem "Aprovado/Reprovado" reconhecido</strong> — ficaram desmarcados:';
+        msg += lista(cz.semSituacao, x=>'<li>'+esc(x.nome)+' — "'+esc(x.valor)+'"</li>');
+      }
+      if(cz.duplicados.length){
+        avisoFabrica = true;
+        msg += '<br><strong style="color:var(--stamp-red)">'+cz.duplicados.length+' nome(s) repetido(s) no relatório</strong> — '
+          + 'o cruzamento por nome não distingue os dois; confira essas linhas:';
+        msg += lista(cz.duplicados, n=>'<li>'+esc(n)+'</li>');
+      }
+      if(cz.comPendencia.length){
+        avisoFabrica = true;
+        msg += '<br><strong style="color:var(--stamp-red)">'+cz.comPendencia.length+' candidato(s) com pendência na prova</strong> — '
+          + 'a marcação seguiu a coluna Aprovado, confira antes de convocar:';
+        msg += lista(cz.comPendencia, x=>'<li>'+esc(x.nome)+(x.aprovado?' (Aprovado)':'')+' — '+esc(x.itens.join('; '))+'</li>');
+      }
+    }
+
+    status(cvStatus, msg, (li.naoReconhecidas.length||vsList.length||desconhecidas.length||semNasc.length||avisoFabrica) ? 'warn' : 'ok');
 
     renderChecklist();
     cvPasso2.style.display = '';
@@ -603,6 +821,21 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     return estado.inscritos.filter(it=> chaveNome(it.nome).indexOf(termo) >= 0);
   }
 
+  /* Etiqueta da coluna "Prova (Fábrica)" no Passo 2: diz de onde veio a
+     marcação de cada linha. Quem não está no relatório fica sem etiqueta —
+     e a ausência é informação: significa que não fez a prova pela Fábrica. */
+  function etiquetaFabrica(it){
+    if(!it.fabrica) return '<span style="color:var(--ink-soft);">—</span>';
+    const f = it.fabrica;
+    const cor = f.aprovado === true ? 'var(--teal)' : (f.aprovado === false ? 'var(--stamp-red)' : 'var(--ink-soft)');
+    const rot = f.aprovado === true ? 'Aprovado' : (f.aprovado === false ? 'Reprovado' : 'situação não reconhecida');
+    let h = '<strong style="color:'+cor+';">'+esc(rot)+'</strong>';
+    if(f.nota != null) h += ' <span style="color:var(--ink-soft);">· nota '+esc(fmtNota(f.nota))+'</span>';
+    if(f.pendencias && f.pendencias.length)
+      h += '<div style="font-size:11px;color:var(--stamp-red);">'+esc(f.pendencias.join('; '))+'</div>';
+    return h;
+  }
+
   function renderChecklist(){
     if(!estado.inscritos.length){
       cvChecklist.innerHTML = '<p class="empty-hint">Nenhum inscrito. Processe a lista no Passo 1.</p>';
@@ -610,15 +843,21 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
       return;
     }
     const visiveis = inscritosFiltrados();
+    // a coluna da Fábrica só existe quando um relatório foi cruzado — sem
+    // isso a tabela fica como sempre foi
+    const temFabrica = estado.inscritos.some(i=>i.fabrica);
     let h = '<div class="table-scroll"><table><thead><tr>'
       + '<th style="width:34px;"></th><th>Nome</th><th style="width:180px;">Reserva de vaga</th>'
+      + (temFabrica ? '<th style="width:190px;">Prova (Fábrica)</th>' : '')
       + '</tr></thead><tbody>';
     if(!visiveis.length){
-      h += '<tr><td colspan="3" class="empty-hint">Nenhum nome bate com o filtro.</td></tr>';
+      h += '<tr><td colspan="'+(temFabrica?4:3)+'" class="empty-hint">Nenhum nome bate com o filtro.</td></tr>';
     }
     visiveis.forEach(it=>{
       h += '<tr><td style="text-align:center;"><input type="checkbox" class="cvChkInsc" data-id="'+it.id+'"'+(it.marcado?' checked':'')+'></td>'
-        + '<td>'+esc(it.nome)+'</td><td>'+esc(reservaTexto(it))+'</td></tr>';
+        + '<td>'+esc(it.nome)+'</td><td>'+esc(reservaTexto(it))+'</td>';
+      if(temFabrica) h += '<td>'+etiquetaFabrica(it)+'</td>';
+      h += '</tr>';
     });
     h += '</tbody></table></div>';
     cvChecklist.innerHTML = h;
@@ -648,10 +887,12 @@ if(typeof document !== 'undefined' && document.getElementById('cvBtnProcessar'))
     if(!marcados.length){ alert('Marque ao menos um candidato para gerar as tabelas.'); return; }
     if(estado.cands.length && !confirm('Isso substitui as tabelas de convocação já geradas — as notas já digitadas serão perdidas. Continuar?')) return;
 
-    // maiúsculas já na montagem — não só na impressão do edital
+    // maiúsculas já na montagem — não só na impressão do edital.
+    // A nota vem do relatório da Fábrica quando houve cruzamento; sem ele
+    // continua vazia, para ser digitada no Passo 3 como sempre.
     estado.cands = marcados.map(it=>({
       id: estado.seq++, nome: it.nome.toUpperCase(), nascimento: it.nascimento||'',
-      nota:null, hora:null,
+      nota: (it.notaFabrica != null ? it.notaFabrica : null), hora:null,
       ac:true, ppp:it.ppp, pcd:it.pcd, ind:it.ind
     }));
     estado.editando = false;
@@ -1377,6 +1618,7 @@ if(typeof module !== 'undefined' && module.exports){
     reservaDaModalidade, reservaTexto, GRUPOS_CV, candidatosDoGrupo,
     interpretarHoraDigitada, fmtHora, formatarDataExtenso, formatarDataBarra,
     parseDataNascimento, calcularIdade, calcularIdadeDetalhada, fmtIdadeDetalhada,
+    lerMatrizFabrica, cruzarComFabrica, pendenciasDaLinhaFabrica,
     estado
   };
 }
